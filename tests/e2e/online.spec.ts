@@ -2,8 +2,11 @@ import { test, expect, type Browser, type Page } from '@playwright/test';
 
 const SERVER = 'http://localhost:8790';
 
+const contexts: import('@playwright/test').BrowserContext[] = [];
+
 async function join(browser: Browser, name: string, mode: 'register' | 'login'): Promise<Page> {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
+  contexts.push(context);
   const page = await context.newPage();
   await page.addInitScript(() => localStorage.setItem('neon-dynasty.seenIntro', '1'));
   await page.goto('/');
@@ -17,6 +20,11 @@ async function join(browser: Browser, name: string, mode: 'register' | 'login'):
   await expect(page.getByTestId('online-badge')).toContainText('Online');
   return page;
 }
+
+test.afterEach(async () => {
+  // Free the WebGL contexts, otherwise the next test in this browser cannot create a renderer.
+  for (const c of contexts.splice(0)) await c.close().catch(() => {});
+});
 
 test('two accounts share one city: buildings, presence and the server clock', async ({ browser }) => {
   test.setTimeout(360_000); // two WebGL pages plus a world catch-up take a while in headless mode
