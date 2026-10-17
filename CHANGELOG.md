@@ -8,6 +8,7 @@
 - Endpunkte auf Node-Server und Vercel-Funktion: `GET /api/cloud/account`, `POST /api/cloud/password`, `DELETE /api/cloud/save`, `DELETE /api/cloud/account`.
 - Tokens tragen jetzt eine Konto-Epoche: Nach einer Passwortänderung sind alle anderen Geräte abgemeldet und müssen sich mit dem neuen Passwort anmelden. Bestehende Anmeldungen aus 0.15/0.16 verfallen einmalig (neu anmelden, Konten und Spielstände bleiben).
 - Tests: Unit (Dienst und HTTP) und E2E (Passwort am PC ändern, Handy wird abgemeldet und meldet sich neu an, Konto löschen).
+- Vercel-Funktion wird als esbuild-Bündel `api/cloud/[action].js` ausgeliefert (Quelle `server/vercelCloud.ts`): Die bisherige TypeScript-Funktion mit relativen Imports lud unter Vercels ESM-Laufzeit nicht (`FUNCTION_INVOCATION_FAILED`, nackter 500er bei jedem Aufruf). Die GitHub-Action für den Webspace-Upload startet nur noch manuell, damit Pushes ohne gesetzte FTP-Secrets nicht rot sind.
 - Vercel-Funktion: Fehler werden als JSON mit Meldung beantwortet und geloggt statt als nackter 500er; Blob-Store wird automatisch als privat oder öffentlich erkannt (ein öffentlicher Store führte bisher zum 500er beim Konto-Anlegen). Blob-Anbindung in `server/blobStore.ts` mit Unit-Tests.
 - Cheat: Eine Ramen-Bar namens „McNoodle6969“ bucht jede Spielstunde 2.500 ¢ Umsatz als Verkauf „Stammkundschaft“, auch bei geschlossener Bar.
 

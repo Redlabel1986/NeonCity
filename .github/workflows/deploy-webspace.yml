@@ -6,9 +6,8 @@
 # Optional als Variable: ONLINE_SERVER (https://…), damit das Hauptmenü die Online-Welt vorträgt.
 name: Deploy Client auf Webspace
 
+# Manuell starten (Actions → Deploy Client auf Webspace → Run workflow), sobald die Secrets gesetzt sind.
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 jobs:

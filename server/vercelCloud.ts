@@ -1,5 +1,6 @@
 /**
- * Vercel function for cloud saves: /api/cloud/register | login | meta | save | account | password.
+ * Vercel function for cloud saves (source; bundled by `npm run build:api` into api/cloud/[action].js so the
+ * deployed ESM function has no relative imports): /api/cloud/register | login | meta | save | account | password.
  * Storage: a Vercel Blob store (BLOB_READ_WRITE_TOKEN is injected once the
  * store is connected to the project); private stores are preferred, public
  * ones work too. CLOUD_SECRET signs tokens and must be set in the project's
@@ -8,8 +9,8 @@
  */
 
 import { del, get, put } from '@vercel/blob';
-import { CloudService, handleCloudRequest } from '../../server/cloud';
-import { BlobCloudStore, type BlobAccess } from '../../server/blobStore';
+import { CloudService, handleCloudRequest } from './cloud';
+import { BlobCloudStore, type BlobAccess } from './blobStore';
 
 let service: CloudService | null = null;
 
