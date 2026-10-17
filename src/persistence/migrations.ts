@@ -15,6 +15,7 @@ import { createPolitics } from '../sim/systems/politics';
 import { createDecisionState } from '../sim/systems/decisions';
 import { createCorporateState } from '../sim/systems/corporate';
 import { createResearchState } from '../sim/systems/research';
+import { TileKind } from '../sim/world/grid';
 import { createCrisisState } from '../sim/systems/crises';
 import { createWeather } from '../sim/systems/weather';
 import { stateFromJSON, stateToJSON, type GameStateJSON } from '../sim/state';
@@ -142,6 +143,37 @@ const migrateV8toV9: Migration = (raw) => {
   return raw;
 };
 
+/** v9 → v10: building facing (entrance edge); chosen from the road-side edges of the footprint. */
+const migrateV9toV10: Migration = (raw) => {
+  const grid = raw.grid as { width: number; height: number; kind: number[] } | undefined;
+  const isRoad = (x: number, y: number): boolean =>
+    !!grid && x >= 0 && y >= 0 && x < grid.width && y < grid.height && grid.kind[y * grid.width + x] === TileKind.Road;
+  const buildings = (raw.buildings ?? {}) as Record<string, Record<string, unknown>>;
+  for (const b of Object.values(buildings)) {
+    if (typeof b.facing === 'number') continue;
+    const x = b.x as number;
+    const y = b.y as number;
+    const w = b.w as number;
+    const h = b.h as number;
+    let facing = 0;
+    const edges: [number, () => boolean][] = [
+      [0, () => Array.from({ length: h }, (_, i) => isRoad(x + w, y + i)).some(Boolean)],
+      [1, () => Array.from({ length: w }, (_, i) => isRoad(x + i, y + h)).some(Boolean)],
+      [2, () => Array.from({ length: h }, (_, i) => isRoad(x - 1, y + i)).some(Boolean)],
+      [3, () => Array.from({ length: w }, (_, i) => isRoad(x + i, y - 1)).some(Boolean)],
+    ];
+    for (const [f, test] of edges) {
+      if (test()) {
+        facing = f;
+        break;
+      }
+    }
+    b.facing = facing;
+  }
+  raw.version = 10;
+  return raw;
+};
+
 export const MIGRATIONS: Record<number, Migration> = {
   1: migrateV1toV2,
   2: migrateV2toV3,
@@ -151,4 +183,5 @@ export const MIGRATIONS: Record<number, Migration> = {
   6: migrateV6toV7,
   7: migrateV7toV8,
   8: migrateV8toV9,
+  9: migrateV9toV10,
 };

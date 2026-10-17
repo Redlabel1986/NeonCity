@@ -1,6 +1,7 @@
 import { useGameStore, useSimState } from '../store/gameStore';
 import { BUILDING_DEFINITIONS, CURRENT_PHASE } from '../../sim/data/buildings';
 import { PLACEMENT_ERROR_TEXT } from '../../sim/systems/construction';
+import { FACING_LABELS } from '../../sim/state';
 import { DIFFICULTIES, BACKGROUNDS } from '../../sim/data/difficulty';
 import { credits, duration } from '../format';
 
@@ -21,6 +22,8 @@ export function BuildPanel() {
   const placementCheck = useGameStore((s) => s.placementCheck);
   const startPlacement = useGameStore((s) => s.startPlacement);
   const cancelPlacement = useGameStore((s) => s.cancelPlacement);
+  const rotatePlacement = useGameStore((s) => s.rotatePlacement);
+  const placementFacing = useGameStore((s) => s.placementFacing);
   if (!state) return null;
   const difficulty = DIFFICULTIES[state.player.difficulty];
   const background = BACKGROUNDS[state.player.background];
@@ -47,6 +50,17 @@ export function BuildPanel() {
                 : PLACEMENT_ERROR_TEXT[placementCheck.error ?? 'tile_occupied']
               : 'Bewege die Maus über die Karte.'}
           </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+            <span className="text-muted">Eingang:</span>
+            <span className="text-white">{FACING_LABELS[placementFacing ?? placementCheck?.facing ?? 0]}</span>
+            {placementFacing === null && <span className="text-muted">(automatisch zur Straße)</span>}
+            <button type="button" className="btn px-2 py-0.5" onClick={() => rotatePlacement(-1)} aria-label="Gebäude nach links drehen">
+              ⟲ Q
+            </button>
+            <button type="button" className="btn px-2 py-0.5" onClick={() => rotatePlacement(1)} aria-label="Gebäude nach rechts drehen">
+              ⟳ E
+            </button>
+          </div>
         </div>
       )}
       <ul className="space-y-2">

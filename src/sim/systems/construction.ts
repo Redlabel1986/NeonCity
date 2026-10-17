@@ -3,7 +3,7 @@
  */
 
 import type { SimContext } from '../core/context';
-import type { Building, GameState } from '../state';
+import type { Building, Facing, GameState } from '../state';
 import { TileKind } from '../world/grid';
 import { occupy, vacate } from '../world/generator';
 import { BUILDING_DEFINITIONS, CURRENT_PHASE, type BuildingDefinition } from '../data/buildings';
@@ -19,6 +19,7 @@ export type PlacementError =
   | 'out_of_bounds'
   | 'tile_occupied'
   | 'no_road_access'
+  | 'entrance_off_road'
   | 'no_power'
   | 'insufficient_funds';
 
@@ -28,6 +29,7 @@ export const PLACEMENT_ERROR_TEXT: Record<PlacementError, string> = {
   out_of_bounds: 'Das Grundstück liegt außerhalb der Stadtgrenzen.',
   tile_occupied: 'Das Grundstück ist bereits bebaut oder nicht bebaubar.',
   no_road_access: 'Das Gebäude braucht einen Straßenanschluss.',
+  entrance_off_road: 'Der Eingang muss zur Straße zeigen. Drehe das Gebäude mit Q oder E.',
   no_power: 'Die Energieversorgung in diesem Bezirk reicht für einen Neubau nicht aus.',
   insufficient_funds: 'Nicht genug Credits für Grundstück und Bau.',
 };
@@ -47,6 +49,8 @@ export interface PlacementCheck {
   quote?: PlacementQuote;
   /** Per-tile validity for the renderer ghost. */
   tiles: { x: number; y: number; ok: boolean }[];
+  /** Facing that would be used (the requested one, or the automatically chosen road-side edge). */
+  facing: Facing;
 }
 
 export const MIN_ENERGY_FOR_CONSTRUCTION = 20;
@@ -66,9 +70,14 @@ export function quotePlacement(state: GameState, def: BuildingDefinition, distri
   return { def, landCost, constructionCost: zonedConstruction, total: landCost + zonedConstruction, buildTime, districtId };
 }
 
-export function checkPlacement(state: GameState, defId: string, x: number, y: number): PlacementCheck {
+/**
+ * Validates a placement. `facing` selects the entrance edge; when omitted the
+ * first edge bordering a road is chosen automatically.
+ */
+export function checkPlacement(state: GameState, defId: string, x: number, y: number, facing?: Facing): PlacementCheck {
   const def = BUILDING_DEFINITIONS[defId];
-  if (!def) return { ok: false, error: 'unknown_building', tiles: [] };
+  const requested: Facing = facing ?? 0;
+  if (!def) return { ok: false, error: 'unknown_building', tiles: [], facing: requested };
   const { w, h } = def.footprint;
   const tiles: PlacementCheck['tiles'] = [];
   let allFree = true;
@@ -84,20 +93,26 @@ export function checkPlacement(state: GameState, defId: string, x: number, y: nu
       if (!free) allFree = false;
     }
   }
-  if (def.availability > CURRENT_PHASE) return { ok: false, error: 'not_available', tiles };
-  if (!allInside) return { ok: false, error: 'out_of_bounds', tiles };
-  if (!allFree) return { ok: false, error: 'tile_occupied', tiles };
+  if (def.availability > CURRENT_PHASE) return { ok: false, error: 'not_available', tiles, facing: requested };
+  if (!allInside) return { ok: false, error: 'out_of_bounds', tiles, facing: requested };
+  if (!allFree) return { ok: false, error: 'tile_occupied', tiles, facing: requested };
+  const blocked = tiles.map((t) => ({ ...t, ok: false }));
   if (!state.grid.footprintTouchesRoad(x, y, w, h)) {
-    return { ok: false, error: 'no_road_access', tiles: tiles.map((t) => ({ ...t, ok: false })) };
+    return { ok: false, error: 'no_road_access', tiles: blocked, facing: requested };
+  }
+  const chosen: Facing | null = facing ?? state.grid.pickFacing(x, y, w, h);
+  if (chosen === null) return { ok: false, error: 'no_road_access', tiles: blocked, facing: requested };
+  if (!state.grid.edgeTouchesRoad(x, y, w, h, chosen)) {
+    return { ok: false, error: 'entrance_off_road', tiles: blocked, facing: chosen };
   }
   const districtId = state.grid.districtAt(x, y);
   const district = state.districts[districtId]!;
   if (district.stats.energySupply < MIN_ENERGY_FOR_CONSTRUCTION) {
-    return { ok: false, error: 'no_power', tiles: tiles.map((t) => ({ ...t, ok: false })), quote: undefined };
+    return { ok: false, error: 'no_power', tiles: blocked, quote: undefined, facing: chosen };
   }
   const quote = quotePlacement(state, def, districtId);
-  if (!canAfford(state, quote.total)) return { ok: false, error: 'insufficient_funds', quote, tiles };
-  return { ok: true, quote, tiles };
+  if (!canAfford(state, quote.total)) return { ok: false, error: 'insufficient_funds', quote, tiles, facing: chosen };
+  return { ok: true, quote, tiles, facing: chosen };
 }
 
 export function placeBuilding(
@@ -105,9 +120,10 @@ export function placeBuilding(
   defId: string,
   x: number,
   y: number,
+  facing?: Facing,
 ): { ok: true; building: Building } | { ok: false; error: PlacementError } {
   const { state, events } = ctx;
-  const check = checkPlacement(state, defId, x, y);
+  const check = checkPlacement(state, defId, x, y, facing);
   if (!check.ok || !check.quote) return { ok: false, error: check.error ?? 'tile_occupied' };
   const { def, landCost, constructionCost, buildTime, districtId } = check.quote;
   const id = state.nextBuildingId++;
@@ -115,6 +131,7 @@ export function placeBuilding(
   const building: Building = {
     id,
     defId,
+    facing: check.facing,
     label: def.name,
     owner: 'player',
     x,

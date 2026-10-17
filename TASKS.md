@@ -1,5 +1,13 @@
 # Aufgaben
 
+## Erledigt (Phase 10 – Grafik und Ausrichtung)
+
+- [x] Gebäude mit Gehweg-Abstand, Pflaster unter Gebäuden, offenere Blöcke im Generator
+- [x] Variierte Fassaden, Fenstermuster, Erdgeschosse, Dächer; Neonschilder je Gebäude unterschiedlich und beleuchtet
+- [x] Fahrzeuge als isometrische Körper mit Richtung, Spur und Lichtern
+- [x] Gebäudeausrichtung mit Straßenprüfung, Drehen bei der Platzierung (`Q`/`E`), Spielstand v10
+- [x] Git-Repository angelegt (GitHub: Redlabel1986/NeonCity)
+
 ## Erledigt (Phase 9)
 
 - [x] Megakonzern-Status mit Kettenübernahmen und Lieferverträgen
@@ -88,6 +96,8 @@
 - [ ] Web Worker für die Simulation, sobald NPC-Zahlen oder Branchen die Last spürbar erhöhen (Engine ist vorbereitet)
 - [ ] Bürger per Klick auf Passanten inspizieren
 - [ ] Innenraum-Modus (Räume und Einrichtung sichtbar) und Gebäudetransparenz
+- [ ] Ausrichtung bestehender Gebäude nachträglich ändern (derzeit nur beim Platzieren)
+- [ ] Fahrzeuge mit Abbiegeanimation und Wartezeit an Kreuzungen (derzeit Richtungswechsel ohne Übergang)
 - [ ] Interne Fabriklieferungen mit Verrechnungspreis statt Nullbuchung (derzeit bewusst ohne Geldfluss)
 - [ ] Screenreader-Beschreibung der Kartenkacheln (Tastatur-Cursor über die Karte)
 - [ ] Pinch-Zoom auf Tablets
@@ -114,4 +124,4 @@
 
 ## Stand
 
-Alle acht Phasen des Entwicklungsplans plus Phase 9 (Konzern und Karriere) sind umgesetzt. Offene Punkte oben sind Erweiterungen über den Plan hinaus; als nächste Phase bietet sich die öffentliche Polizeibehörde oder der Innenraum-Modus an.
+Alle acht Phasen des Entwicklungsplans plus Phase 9 (Konzern und Karriere) und Phase 10 (Grafik und Ausrichtung) sind umgesetzt. Offene Punkte oben sind Erweiterungen über den Plan hinaus; als nächste Phase bietet sich die öffentliche Polizeibehörde oder der Innenraum-Modus an.

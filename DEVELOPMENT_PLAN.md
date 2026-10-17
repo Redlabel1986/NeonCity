@@ -145,6 +145,18 @@ Umfang: Megakonzern-Status mit Kettenübernahmen und Lieferverträgen, Verkauf d
 | Verkauf tilgt Kredite, löst Organisation auf, blockiert mit Investoren; neue Karriere setzt Hintergrund, Beziehungen und Aufgaben | `phase9.test.ts`, `phase9.spec.ts` |
 | Spielstand v9 mit Migration | `phase9.test.ts` |
 
+## Phase 10 – Grafik und Gebäudeausrichtung ✅ abgeschlossen (über den Plan hinaus)
+
+Umfang: offenere Stadt (Gehweg um jedes Gebäude, freie Plätze), variierte und beleuchtete Fassaden und Neonschilder, isometrische Fahrzeuge, Gebäudeausrichtung mit Drehung bei der Platzierung.
+
+| Kriterium | Nachweis |
+|---|---|
+| Jedes Stadtgebäude zeigt mit seiner Fassade zu einer Straße, sichtbare Seiten bevorzugt | `phase10.test.ts` |
+| Platzierung wählt automatisch eine Straßenseite; eine Kante ohne Straße wird abgelehnt; gewählte Ausrichtung wird gespeichert | `phase10.test.ts`, `phase10.spec.ts` |
+| Drehen per `Q`/`E` und Knöpfen im Baumenü, Hinweistext bei falscher Ausrichtung | `phase10.spec.ts` |
+| Spielstand v10 mit Migration aus dem Straßennetz | `phase10.test.ts` |
+| Sichtprüfung Tag/Nacht, Makro/Meso (Screenshots in `tests/e2e/output/`) | `visual.spec.ts` |
+
 ## Gesamtstand
 
-Alle acht Phasen sind abgeschlossen, mit Version 0.8.1 auditiert und mit Phase 9 erweitert. Stand der Prüfung: 102 Unit-Tests (Vitest) und 14 E2E-Tests (Playwright) laufen fehlerfrei; Typecheck strict und Lint sind sauber bis auf zwei dokumentierte Hinweise.
+Alle acht Phasen sind abgeschlossen, mit Version 0.8.1 auditiert und mit Phase 9 und 10 erweitert. Stand der Prüfung: 105 Unit-Tests (Vitest) und 15 E2E-Tests (Playwright) laufen fehlerfrei; Typecheck strict und Lint sind sauber bis auf zwei dokumentierte Hinweise.

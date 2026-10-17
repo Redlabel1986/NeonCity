@@ -5,7 +5,7 @@
 
 import { create } from 'zustand';
 import { createNewGame, Simulation, type Command, type NewGameOptions, type Speed } from '../../sim/engine';
-import type { GameState } from '../../sim/state';
+import type { Facing, GameState } from '../../sim/state';
 import { checkPlacement, type PlacementCheck } from '../../sim/systems/construction';
 import type { LogLevel } from '../../sim/core/events';
 import { session, pendingGroundRefresh } from '../session';
@@ -118,6 +118,8 @@ export interface GameStore {
   hoverTile: { x: number; y: number } | null;
   placementDefId: string | null;
   placementCheck: PlacementCheck | null;
+  /** Requested entrance edge while placing; null = automatic (first road-side edge). */
+  placementFacing: Facing | null;
   toasts: Toast[];
   settings: Settings;
   busy: string | null;
@@ -135,6 +137,8 @@ export interface GameStore {
   selectTile: (tile: { x: number; y: number } | null) => void;
   startPlacement: (defId: string) => void;
   cancelPlacement: () => void;
+  /** Rotates the pending placement by a quarter turn. */
+  rotatePlacement: (delta: 1 | -1) => void;
   setHover: (tile: { x: number; y: number } | null) => void;
   handleTileClick: (x: number, y: number, button: number) => void;
   notify: (level: LogLevel, message: string) => void;
@@ -197,6 +201,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   hoverTile: null,
   placementDefId: null,
   placementCheck: null,
+  placementFacing: null,
   toasts: [],
   settings: loadSettings(),
   busy: null,
@@ -297,14 +302,23 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   startPlacement: (defId) => {
-    set({ placementDefId: defId, placementCheck: null, panel: 'build' });
+    set({ placementDefId: defId, placementCheck: null, placementFacing: null, panel: 'build' });
     const hover = get().hoverTile;
     if (hover) get().setHover(hover);
   },
 
   cancelPlacement: () => {
-    set({ placementDefId: null, placementCheck: null });
+    set({ placementDefId: null, placementCheck: null, placementFacing: null });
     session.renderer?.setGhost(null, null);
+  },
+
+  rotatePlacement: (delta) => {
+    if (!get().placementDefId) return;
+    const current = get().placementFacing ?? get().placementCheck?.facing ?? 0;
+    const next = (((current + delta) % 4) + 4) % 4 as Facing;
+    set({ placementFacing: next });
+    const hover = get().hoverTile;
+    if (hover) get().setHover(hover);
   },
 
   setHover: (tile) => {
@@ -314,9 +328,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!r || !sim) return;
     const defId = get().placementDefId;
     if (defId && tile) {
-      const check = checkPlacement(sim.state, defId, tile.x, tile.y);
+      const check = checkPlacement(sim.state, defId, tile.x, tile.y, get().placementFacing ?? undefined);
       set({ placementCheck: check });
-      r.setGhost({ defId, x: tile.x, y: tile.y, tiles: check.tiles, ok: check.ok }, sim.state);
+      r.setGhost({ defId, x: tile.x, y: tile.y, facing: check.facing, tiles: check.tiles, ok: check.ok }, sim.state);
       r.setHover(null);
     } else {
       if (defId) {
@@ -341,7 +355,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return;
     }
     if (defId) {
-      const ok = get().dispatch({ type: 'placeBuilding', defId, x, y });
+      const ok = get().dispatch({ type: 'placeBuilding', defId, x, y, facing: get().placementFacing ?? undefined });
       if (ok) {
         const placed = Object.values(sim.state.buildings).find((b) => b.owner === 'player' && b.x === x && b.y === y);
         get().notify('success', `${placed?.label ?? 'Gebäude'} platziert.`);

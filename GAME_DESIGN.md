@@ -20,9 +20,9 @@ Zehn Hintergründe (Straßenkind, Ex-Konzernangestellter, Gastronom, Immobiliene
 
 ## Bau und Immobilien
 
-Grundstück kaufen, bauen, Bauzeit abwarten, Rückgängig bei laufender Baustelle, Abriss. Räume sind als Ausbauten je Branche umgesetzt (Gastraum, Küche, Lager, Lobby, Zimmer, Werkstatt, Regale, Maschinenpark, Filter); Vermietung und Renovierung über die Immobilienverwaltung. Ein sichtbarer Innenraum-Modus ist nicht umgesetzt (TASKS.md).
+Grundstück kaufen, bauen, Bauzeit abwarten, Rückgängig bei laufender Baustelle, Abriss. Jedes Gebäude hat eine Ausrichtung: Eingang und Beschriftung liegen auf einer Grundstückskante, die an eine Straße grenzen muss. Beim Platzieren wird automatisch eine Straßenseite gewählt; `Q`/`E` dreht das Gebäude, eine Kante ohne Straße wird abgelehnt. Räume sind als Ausbauten je Branche umgesetzt (Gastraum, Küche, Lager, Lobby, Zimmer, Werkstatt, Regale, Maschinenpark, Filter); Vermietung und Renovierung über die Immobilienverwaltung. Ein sichtbarer Innenraum-Modus ist nicht umgesetzt (TASKS.md).
 
-**Stand Phase 1:** Ramenbar und Streetfood-Stand baubar; Kapselhotel und Taxidepot sichtbar, aber als „Phase 4“ gesperrt. Bau benötigt Credits, Zeit, Straßenanschluss und Energie; Materialien und Arbeitskräfte folgen mit der Industrie (Phase 7).
+**Stand:** Alle elf Gebäudetypen baubar. Bau benötigt Credits, Zeit, Straßenanschluss an der Eingangskante und Energie; Baukosten und -zeit werden von Gesetzen und Forschung beeinflusst.
 
 ## Unternehmen
 
@@ -95,7 +95,7 @@ Umgesetzt: Tastaturbedienung aller Panels und Dialoge, sichtbarer Fokus, semanti
 
 ## Visueller Stil
 
-Isometrisches 2,5D, prozedural gezeichnet: Straßen mit Bordsteinen und Markierungen, Gebäude mit Fenstern, Dachaufbauten, Antennen, Neonstreifen, Werbetafeln; bezirksabhängige Paletten; Tag-/Nachtzyklus mit Fensterlicht, Straßenlaternen, Leuchtreklame und Flackern; Passanten und Fahrzeuge; Regen, Nebel und Gewitter mit Reflexen auf nassen Straßen. Alle Effekte sind abschaltbar.
+Isometrisches 2,5D, prozedural gezeichnet: Straßen mit Bordsteinen, Markierungen und Laternen; Gebäude mit Gehweg rundherum, je Gebäude variierter Palette, Fenstermustern, Erdgeschossen (Lobby, Laden mit Markise, Rolltor), Dachaufbauten, Antennen; Neonschilder je Gebäude unterschiedlich (Hängeschilder, Leuchtkästen mit Wortmarke, Logos, LED-Wände, Dachtafeln) und auch am Tag an; bezirksabhängige Paletten; Tag-/Nachtzyklus mit Fensterlicht, Lichtkegeln vor Eingängen, Leuchtreklame und Flackern; Passanten und isometrische Fahrzeuge mit Scheinwerfern; Regen, Nebel und Gewitter mit Reflexen auf nassen Straßen. Alle Effekte sind abschaltbar.
 
 ## Audio
 

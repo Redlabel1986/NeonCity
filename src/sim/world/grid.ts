@@ -69,6 +69,24 @@ export class CityGrid {
     return this.inBounds(x, y) && this.kind[this.index(x, y)] === TileKind.Road;
   }
 
+  /** True when the footprint edge given by `facing` (0 = +x, 1 = +y, 2 = -x, 3 = -y) borders at least one road tile. */
+  edgeTouchesRoad(x: number, y: number, w: number, h: number, facing: 0 | 1 | 2 | 3): boolean {
+    if (facing === 0 || facing === 2) {
+      const tx = facing === 0 ? x + w : x - 1;
+      for (let dy = 0; dy < h; dy++) if (this.isRoad(tx, y + dy)) return true;
+      return false;
+    }
+    const ty = facing === 1 ? y + h : y - 1;
+    for (let dx = 0; dx < w; dx++) if (this.isRoad(x + dx, ty)) return true;
+    return false;
+  }
+
+  /** First facing whose edge borders a road, preferring the two edges visible on screen; null without road access. */
+  pickFacing(x: number, y: number, w: number, h: number): 0 | 1 | 2 | 3 | null {
+    for (const f of [0, 1, 2, 3] as const) if (this.edgeTouchesRoad(x, y, w, h, f)) return f;
+    return null;
+  }
+
   /** Recomputes road connection masks into `variant` for all road tiles. */
   recomputeRoadMasks(): void {
     for (let y = 0; y < this.height; y++) {

@@ -39,9 +39,9 @@ import { createCrisisState, closeCrisisDay, crisisFactors, activeCrisis } from '
 import { createWeather, stepWeatherHour } from './systems/weather';
 import type { FactionId } from './data/factions';
 import { wantedLevelFor } from './data/underworld';
-import { LOG_LIMIT, type GameState } from './state';
+import { LOG_LIMIT, type Facing, type GameState } from './state';
 
-export const SAVE_FORMAT_VERSION = 9;
+export const SAVE_FORMAT_VERSION = 10;
 export const SPEEDS = [0, 1, 3, 8] as const;
 export type Speed = (typeof SPEEDS)[number];
 
@@ -54,7 +54,7 @@ export interface NewGameOptions {
 }
 
 export type Command =
-  | { type: 'placeBuilding'; defId: string; x: number; y: number }
+  | { type: 'placeBuilding'; defId: string; x: number; y: number; facing?: Facing }
   | { type: 'undoPlacement' }
   | { type: 'demolish'; buildingId: number }
   | { type: 'setSpeed'; speed: Speed }
@@ -266,7 +266,7 @@ export class Simulation {
     const state = this.state;
     switch (command.type) {
       case 'placeBuilding': {
-        const result = placeBuilding(this.ctx, command.defId, command.x, command.y);
+        const result = placeBuilding(this.ctx, command.defId, command.x, command.y, command.facing);
         this.syncRng();
         if (!result.ok) return { ok: false, error: PLACEMENT_ERROR_TEXT[result.error] };
         return { ok: true };

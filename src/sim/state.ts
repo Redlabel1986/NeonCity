@@ -453,9 +453,25 @@ export interface PropertyState {
   tenants: number;
 }
 
+/**
+ * Which footprint edge carries the entrance and signage.
+ * 0 = +x edge (front-right wall on screen, south-east), 1 = +y edge (front-left wall, south-west),
+ * 2 = -x edge (back, north-west), 3 = -y edge (back, north-east).
+ */
+export type Facing = 0 | 1 | 2 | 3;
+
+export const FACING_LABELS: Record<Facing, string> = {
+  0: 'Südost (vorne rechts)',
+  1: 'Südwest (vorne links)',
+  2: 'Nordwest (hinten links)',
+  3: 'Nordost (hinten rechts)',
+};
+
 export interface Building {
   id: number;
   defId: string;
+  /** Edge of the footprint with entrance and signs; must border a road. */
+  facing: Facing;
   /** For city buildings: style + label; for player buildings: the definition id. */
   cityStyle?: string;
   label: string;

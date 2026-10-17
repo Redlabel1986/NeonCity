@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.10.0 – Grafik und Gebäudeausrichtung (2026-10-17)
+
+### Hinzugefügt
+
+- Gebäude haben eine Ausrichtung (`facing`): Eingang und Beschriftung liegen auf einer der vier Grundstückskanten, die an eine Straße grenzen muss. Beim Platzieren wird automatisch eine Straßenseite gewählt (sichtbare Seiten bevorzugt); `Q`/`E` oder die Knöpfe im Baumenü drehen das Gebäude, der Geist auf der Karte zeigt die Fassade. Eine Kante ohne Straße wird mit Hinweis abgelehnt. Stadtgebäude erhalten ihre Ausrichtung im Generator, sodass Schaufronten zu den Straßen zeigen. Gebäude, deren Fassade von der Kamera wegzeigt, tragen ihr Schild auf dem Dach.
+- Spielstandformat Version 10 mit Migration (Ausrichtung aus dem Straßennetz abgeleitet); 3 neue Unit-Tests und ein Phase-10-E2E-Test.
+
+### Geändert
+
+- Gebäude stehen nicht mehr Wand an Wand: Jede Grundfläche behält 0,14 Felder Gehweg auf allen Seiten, Gebäudekacheln zeigen Pflaster mit Bordstein. Der Stadtgenerator lässt zusätzlich 6 % der Grundstücke als Plätze oder Grün frei.
+- Fassaden: hellere, je Gebäude leicht variierte Paletten (acht Varianten), vier Fenstermuster je Stil, Stockwerkslinien, Glasfenster mit Lichtkante am Tag, warm erleuchtete Fenster mit Lichthof bei Nacht, Attika und Lichtkante am Dach.
+- Erdgeschosse: Lobby mit Glasfront (Konzern, Chrome, Skyline), Laden mit Tür, Schaufenster und gestreifter Markise (Markt, Altstadt), Rolltor mit Warnstreifen (Docks); nachts Lichtkegel auf dem Gehweg vor dem Eingang.
+- Neonschilder je Gebäude unterschiedlich und auch am Tag leuchtend: senkrechte Hängeschilder mit Glyphen, Leuchtkästen mit Wortmarke (bezirksabhängige Wortlisten), runde Logos, LED-Wände mit Farbbändern, Dachwerbetafeln mit Text; nachts mit Glühen, in Ghost Quarter und Undercity flackernd gedimmt. Eigene Betriebe tragen HOTEL, LAB, WERK, SECURITY, TAXI, RAMEN, KIOSK, DINER.
+- Dächer: Zugangshäuschen, ein bis drei Klimageräte, Wassertanks (Altstadt, Ghost, Undercity, Docks), Dachgärten, Hubschrauberlandeplätze auf hohen Türmen, Antennen mit Warnlicht.
+- Fahrzeuge sind isometrische Körper (Chassis, Kabine mit dunklen Scheiben, Scheinwerfer und Rücklichter) in vier Fahrtrichtungen, fahren auf der rechten Spur und drehen nicht auf der Stelle um; nachts Scheinwerferkegel und rote Rücklichter. Passanten mit Kopf, Rumpf und Beinen auf dem Gehweg.
+- Straßen heller mit Bordsteinkanten, Laternenmasten als tiefensortierte Sprites mit Lichtkegel, beleuchtete Plätze, Parks mit Bäumen und Wegen, Himmel hinter der Stadt blendet zwischen Nacht und Tag.
+
+### Behoben
+
+- Fensterraster auf nicht quadratischen Grundflächen (2×1, 1×2, 2×3) nutzten die falsche Wandlänge.
+
 ## 0.9.0 – Phase 9: Konzern und Karriere (2026-10-16)
 
 ### Hinzugefügt

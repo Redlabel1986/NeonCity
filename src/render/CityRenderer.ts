@@ -7,11 +7,11 @@
  */
 
 import { Application, Container, Graphics, Sprite, Text } from 'pixi.js';
-import { ArtCache, type ArtStyle, type BuildingArtKey, type GeneratedTexture } from './art';
+import { ArtCache, roadLamp, SEED_VARIANTS, type ArtStyle, type BuildingArtKey, type GeneratedTexture } from './art';
 import { TrafficLayer } from './traffic';
 import { WeatherLayer } from './weather';
 import { depthOf, HALF_H, HALF_W, isoToScreen, screenToTile, TILE_H, TILE_W } from './iso';
-import type { Building, GameState } from '../sim/state';
+import type { Building, Facing, GameState } from '../sim/state';
 import { TileKind } from '../sim/world/grid';
 import { DISTRICT_ARCHETYPES } from '../sim/data/districts';
 import { BUILDING_DEFINITIONS } from '../sim/data/buildings';
@@ -32,6 +32,7 @@ export interface GhostPlacement {
   defId: string;
   x: number;
   y: number;
+  facing: Facing;
   tiles: { x: number; y: number; ok: boolean }[];
   ok: boolean;
 }
@@ -61,7 +62,10 @@ interface BuildingVisual {
 export const MIN_ZOOM = 0.28;
 export const MAX_ZOOM = 2.6;
 
-const NIGHT_TINT = { r: 0x66, g: 0x5e, b: 0x9a };
+const NIGHT_TINT = { r: 0x6a, g: 0x62, b: 0xa2 };
+/** Sky colour behind the city, blended between night and day. */
+const SKY_NIGHT = { r: 0x07, g: 0x06, b: 0x0b };
+const SKY_DAY = { r: 0x1c, g: 0x1e, b: 0x30 };
 
 export class CityRenderer {
   readonly app = new Application();
@@ -211,6 +215,12 @@ export class CityRenderer {
           ns.blendMode = 'add';
           this.groundCull.push(this.cullEntry(ns, x, y, nightTex));
         }
+        if (kind === TileKind.Road && roadLamp(variant, x, y) === 'lamp') {
+          const lampTex = this.art.lampPost();
+          const lamp = this.placeSprite(this.buildingLayer, lampTex, x, y);
+          lamp.zIndex = depthOf(x, y, 1, 1) - 1;
+          this.groundCull.push(this.cullEntry(lamp, x, y, lampTex));
+        }
       }
     }
     for (const id in state.buildings) this.addBuilding(state, state.buildings[id]!);
@@ -354,6 +364,10 @@ export class CityRenderer {
     const tint = (r << 16) | (g << 8) | b;
     this.groundLayer.tint = tint;
     this.buildingLayer.tint = tint;
+    const sr = Math.round(SKY_NIGHT.r + (SKY_DAY.r - SKY_NIGHT.r) * d);
+    const sg = Math.round(SKY_NIGHT.g + (SKY_DAY.g - SKY_NIGHT.g) * d);
+    const sb = Math.round(SKY_NIGHT.b + (SKY_DAY.b - SKY_NIGHT.b) * d);
+    this.app.renderer.background.color = (sr << 16) | (sg << 8) | sb;
     const flicker = this.settings.effects && !this.settings.reducedMotion ? 0.94 + 0.06 * Math.sin(this.time * 2.7) : 1;
     const wet = this.weatherKind === 'rain' || this.weatherKind === 'storm' ? 1 + 0.15 * this.weatherIntensity : 1; // neon reflects on wet streets
     this.lightLayer.alpha = Math.min(1, (1 - d) * flicker * wet);
@@ -395,7 +409,7 @@ export class CityRenderer {
     this.ghostContainer.addChild(g);
     const def = BUILDING_DEFINITIONS[ghost.defId];
     if (def) {
-      const key: BuildingArtKey = { art: def.art, style: 'player', w: def.footprint.w, h: def.footprint.h, floors: def.floors, seed: 0, construction: false };
+      const key: BuildingArtKey = { art: def.art, style: 'player', w: def.footprint.w, h: def.footprint.h, floors: def.floors, seed: 0, facing: ghost.facing, construction: false };
       const tex = this.art.building(key, false);
       const sprite = this.placeSprite(this.ghostContainer, tex, ghost.x, ghost.y);
       sprite.alpha = ghost.ok ? 0.75 : 0.4;
@@ -655,7 +669,7 @@ export class CityRenderer {
 export function artKeyFor(state: GameState, b: Building): BuildingArtKey {
   if (b.owner === 'city') {
     const style = (b.cityStyle ?? DISTRICT_ARCHETYPES[state.districts[b.districtId]!.archetype].style) as ArtStyle;
-    return { art: 'city', style, w: b.w, h: b.h, floors: bucketFloors(b.floors), seed: b.variant % 4, construction: false };
+    return { art: 'city', style, w: b.w, h: b.h, floors: bucketFloors(b.floors), seed: b.variant % SEED_VARIANTS, facing: b.facing, construction: false };
   }
   const def = BUILDING_DEFINITIONS[b.defId];
   return {
@@ -664,7 +678,8 @@ export function artKeyFor(state: GameState, b: Building): BuildingArtKey {
     w: b.w,
     h: b.h,
     floors: b.floors,
-    seed: b.variant % 4,
+    seed: b.variant % SEED_VARIANTS,
+    facing: b.facing,
     construction: b.status === 'construction',
   };
 }

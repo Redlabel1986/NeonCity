@@ -24,6 +24,8 @@ export interface GeneratedCity {
 export const DEFAULT_CITY_SIZE = 96;
 const ROAD_SPACING = 7;
 const WATER_WIDTH = 4;
+/** Extra share of lots left as plazas or green so blocks do not fill up completely. */
+const OPEN_SPACE = 0.06;
 
 /** Park tile variants (stored in grid.variant for park tiles). */
 export const ParkVariant = { Green: 0, Plaza: 1, Courtyard: 2 } as const;
@@ -179,12 +181,12 @@ function fillBlocks(
         }
         if (kept) continue;
       }
-      if (roll < arch.greenery) {
+      if (roll < arch.greenery + OPEN_SPACE) {
         grid.kind[grid.index(x, y)] = TileKind.Park;
-        grid.variant[grid.index(x, y)] = rng.chance(0.7) ? ParkVariant.Green : ParkVariant.Plaza;
+        grid.variant[grid.index(x, y)] = rng.chance(arch.greenery > 0.05 ? 0.7 : 0.35) ? ParkVariant.Green : ParkVariant.Plaza;
         continue;
       }
-      if (roll < arch.greenery + arch.vacancy) {
+      if (roll < arch.greenery + OPEN_SPACE + arch.vacancy) {
         // Leave as an empty lot, but only when a road is reachable; otherwise courtyard.
         if (!grid.footprintTouchesRoad(x, y, 1, 1)) {
           grid.kind[grid.index(x, y)] = TileKind.Park;
@@ -203,6 +205,7 @@ function fillBlocks(
         const b: Building = {
           id,
           defId: 'city',
+          facing: grid.pickFacing(x, y, fw, fh) ?? 0,
           cityStyle: arch.style,
           label: rng.pick(labels),
           owner: 'city',

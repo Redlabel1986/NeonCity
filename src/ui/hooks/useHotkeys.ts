@@ -52,6 +52,10 @@ export function useHotkeys(): void {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
       const key = e.key.toLowerCase();
       const bindings = store.settings.keybindings;
+      if (store.placementDefId && (key === 'q' || key === 'e')) {
+        store.rotatePlacement(key === 'e' ? 1 : -1);
+        return;
+      }
       if (key === '0') {
         store.setSpeed(0);
         return;

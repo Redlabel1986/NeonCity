@@ -10,6 +10,7 @@ const STATIC_KEYS: [string, string][] = [
   ['Ziehen', 'Karte verschieben'],
   ['Mausrad', 'Zoomen'],
   ['Rechte Maustaste', 'Platzierung abbrechen / Auswahl aufheben'],
+  ['Q / E', 'Gebäude bei der Platzierung drehen (Eingang zur Straße)'],
   ['W A S D, Pfeile', 'Karte verschieben'],
   ['+ / −', 'Zoomen'],
   ['Pos1', 'Kamera zu deinem Wohnbezirk'],

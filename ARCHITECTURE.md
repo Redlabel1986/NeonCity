@@ -48,12 +48,16 @@ Forschung (`techFactors`) und Krisen (`crisisFactors`) liefern Multiplikatoren, 
 `ui/loop.ts` rechnet Wandzeit mit `requestAnimationFrame` in Ticks um (2 Spielminuten pro Sekunde bei 1×; 3× und 8× als Stufen; maximal 240 Ticks pro Frame). Die Engine ist zustandsvoll, aber frei von DOM-Abhängigkeiten und per JSON übertragbar; die Verlagerung in einen Web Worker (Phase 3, bei tausenden NPCs) erfordert nur einen Message-Adapter um `apply`/`run`/`drainEvents`.
 
 ### Rendering liest, schreibt nie
-`CityRenderer` erhält den Zustand (`loadWorld`, `syncBuildings`) und baut Sprites. Pro Kachel ein Bodensprite, pro Gebäude ein Tag-Sprite (tiefensortiert, `zIndex = x+w+y+h`) und ein additives Nacht-Sprite. Tag/Nacht: Tint der Tag-Ebenen plus Alpha der Licht-Ebene aus `daylightFactor(minuteOfDay)`.
+`CityRenderer` erhält den Zustand (`loadWorld`, `syncBuildings`) und baut Sprites. Pro Kachel ein Bodensprite, pro Gebäude ein Tag-Sprite (tiefensortiert, `zIndex = x+w+y+h`) und ein additives Nacht-Sprite; Laternenmasten und Fahrzeuge liegen als tiefensortierte Sprites in derselben Gebäudeebene. Tag/Nacht: Tint der Tag-Ebenen, Himmelsfarbe und Alpha der Licht-Ebene aus `daylightFactor(minuteOfDay)`.
 
 Culling: eigene AABB-Liste in Weltkoordinaten; nur bei Kamerabewegung neu ausgewertet. Sichtbare Kacheln/Gebäude werden ein- bzw. ausgeblendet.
 
 ### Prozedurale Grafik
-`render/art.ts` zeichnet alle Kacheln und Gebäude mit Pixi-Graphics und rendert sie einmalig in Texturen (`ArtCache`). Schlüssel: Art, Stil, Grundfläche, Etagen (ab 5 auf gerade Zahlen gebündelt), Variante (0–3), Baustelle, Tag/Nacht. Dadurch bleibt die Texturzahl bei wenigen hundert. Keine Fremd-Assets, kein Copyright-Risiko.
+`render/art.ts` zeichnet alle Kacheln und Gebäude mit Pixi-Graphics und rendert sie einmalig in Texturen (`ArtCache`). Schlüssel: Art, Stil, Grundfläche, Etagen (ab 5 auf gerade Zahlen gebündelt), Variante (0–7), Ausrichtung, Baustelle, Tag/Nacht. Dadurch bleibt die Texturzahl bei wenigen hundert. Keine Fremd-Assets, kein Copyright-Risiko.
+
+Gebäude werden um `BUILDING_INSET` (0,14 Felder) in ihre Grundfläche eingerückt; die Gebäudekacheln darunter zeigen Pflaster. Die Fassade (Erdgeschoss, Leuchtkasten, Hängeschild, Logo) liegt auf der Wand, die `Building.facing` bestimmt: 0 = +x-Kante (rechte Wand), 1 = +y-Kante (linke Wand); 2 und 3 zeigen von der Kamera weg, dann trägt das Gebäude sein Schild auf dem Dach. `grid.edgeTouchesRoad` und `grid.pickFacing` prüfen bzw. wählen die Straßenseite; `checkPlacement` nimmt die Ausrichtung optional entgegen.
+
+`render/traffic.ts` baut Fahrzeuge als isometrische Körper für die x-Achse (vorwärts/rückwärts) und spiegelt sie für die y-Achse; Spurversatz hält sie rechts, Richtungswechsel tauschen Textur und Lichtsprite.
 
 ### Persistenz
 - Format: `{ magic: 'NEON_DYNASTY_SAVE', version, savedAt, name, state }` als JSON.
