@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.16.2 – Cheat „McNoodle69“ (2026-10-17)
+
+### Hinzugefügt
+
+- Cheat: Eine Ramen-Bar mit dem Namen „McNoodle69“ macht immer genau +10.000 ¢ Tagesgewinn. Die Differenz wird beim Tagesabschluss als Verkauf „Geheimrezept“ gebucht (sichtbar in Finanzen, Betriebshistorie und Protokoll). Unit-Test in `cheat.test.ts`.
+
 ## 0.16.1 – Klare Nacht-Optik (2026-10-17)
 
 ### Geändert

@@ -337,6 +337,15 @@ function chooseDish(biz: GastronomyState, rng: Rng): GastronomyState['menu'][num
 }
 
 /** Day close for businesses: upkeep, wages, spoilage, hygiene, reputation, history, reorders. */
+/** Cheat: a ramen bar named like this always closes its day with exactly this profit. */
+export const CHEAT_RAMEN_NAME = 'McNoodle69';
+export const CHEAT_RAMEN_DAILY_PROFIT = 10000;
+
+/** True when the building is a ramen bar carrying the cheat name (case-insensitive, trimmed). */
+export function isCheatRamenBar(b: Building): boolean {
+  return b.defId === 'ramen_bar' && b.label.trim().toLowerCase() === CHEAT_RAMEN_NAME.toLowerCase();
+}
+
 export function closeBusinessDay(ctx: SimContext, day: number): void {
   const { state, events, rng } = ctx;
   for (const id in state.buildings) {
@@ -396,6 +405,15 @@ export function closeBusinessDay(ctx: SimContext, day: number): void {
     autoReorder(ctx, b);
 
     const costs = wages + def.upkeepPerDay + biz.todayPurchases + fines;
+    if (isCheatRamenBar(b)) {
+      // Cheat: top the day up so that revenue - costs is exactly the cheat profit, booked as a visible transaction.
+      const bonus = Math.round((CHEAT_RAMEN_DAILY_PROFIT - (biz.todayRevenue - costs)) * 100) / 100;
+      if (bonus !== 0) {
+        book(state, events, bonus, { category: 'sales', description: `Geheimrezept: ${b.label}`, buildingId: b.id });
+        biz.todayRevenue += bonus;
+      }
+      events.emit({ type: 'log', tick: state.tick, level: 'success', message: `${b.label}: Das Geheimrezept wirkt, Tagesgewinn ${CHEAT_RAMEN_DAILY_PROFIT.toLocaleString('de-DE')} ¢.`, buildingId: String(b.id) });
+    }
     biz.history.push({
       day,
       guests: biz.todayGuests,

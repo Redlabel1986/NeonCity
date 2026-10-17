@@ -100,7 +100,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
         return json(res, result.status, result.body);
       }
       if (url.pathname === '/api/status') {
-        const body: StatusResponse = { tick: host.tick, speed: host.sim.world.speed, players: host.sim.playerIds.length, online: sockets.size, cityName: host.sim.world.meta.cityName, version: '0.16.1' };
+        const body: StatusResponse = { tick: host.tick, speed: host.sim.world.speed, players: host.sim.playerIds.length, online: sockets.size, cityName: host.sim.world.meta.cityName, version: '0.16.2' };
         return json(res, 200, body);
       }
       if (url.pathname === '/api/register' && req.method === 'POST') {
