@@ -93,7 +93,7 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     try {
       if (req.method === 'OPTIONS') return json(res, 204, {});
       if (url.pathname === '/api/status') {
-        const body: StatusResponse = { tick: host.tick, speed: host.sim.world.speed, players: host.sim.playerIds.length, online: sockets.size, cityName: host.sim.world.meta.cityName, version: '0.12.0' };
+        const body: StatusResponse = { tick: host.tick, speed: host.sim.world.speed, players: host.sim.playerIds.length, online: sockets.size, cityName: host.sim.world.meta.cityName, version: '0.13.0' };
         return json(res, 200, body);
       }
       if (url.pathname === '/api/register' && req.method === 'POST') {
