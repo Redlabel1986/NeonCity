@@ -98,8 +98,9 @@ test('a game started on the phone continues on the PC through the cloud save', a
   await pc.screenshot({ path: 'tests/e2e/output/cloud-account.png' });
   // The phone's token is stale now: its next cloud action fails and asks for a new login.
   // (Loading from the cloud closed the saves sheet on the phone; open it again.)
-  await phone.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('button', { name: 'Mehr' }).tap();
-  await phone.getByTestId('mobile-sheet').getByRole('button', { name: 'Spielstände' }).tap();
+  const moreSheet = phone.getByTestId('mobile-sheet').getByRole('button', { name: 'Spielstände' });
+  if (!(await moreSheet.isVisible())) await phone.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('button', { name: 'Mehr' }).tap();
+  await moreSheet.tap();
   await cloudBox.getByRole('button', { name: 'Jetzt in die Cloud speichern' }).tap();
   await expect(cloudBox.getByRole('alert')).toContainText('neu anmelden', { timeout: 15000 });
   await cloudBox.getByRole('button', { name: 'Abmelden' }).tap();
