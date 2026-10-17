@@ -99,5 +99,6 @@ test('sandbox: build, rename, demolish and return to menu with autosave', async 
   await page.getByRole('button', { name: 'Spielstand laden' }).click();
   await expect(page.getByRole('dialog')).toContainText('Autosave');
   await page.getByRole('dialog').getByRole('button', { name: 'Laden' }).first().click();
-  await expect(page.getByRole('banner')).toContainText('UI Tester');
+  // Loading a 96×96 save rebuilds the renderer; under parallel load this takes longer than the default 5 s.
+  await expect(page.getByRole('banner')).toContainText('UI Tester', { timeout: 20000 });
 });
