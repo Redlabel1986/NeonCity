@@ -4,6 +4,7 @@ import { useGameStore } from '../store/gameStore';
 import { deleteSave, listSaves, type SaveSummary } from '../../persistence/saveService';
 import { credits, relativeTime } from '../format';
 import { tickToDate } from '../../sim/core/clock';
+import { CloudSaves } from '../components/CloudSaves';
 
 export function SavesDialog({ onClose, mode }: { onClose: () => void; mode: 'menu' | 'game' }) {
   const [saves, setSaves] = useState<SaveSummary[] | null>(null);
@@ -29,6 +30,9 @@ export function SavesDialog({ onClose, mode }: { onClose: () => void; mode: 'men
 
   return (
     <Dialog title="Spielstände" onClose={onClose}>
+      <div className="mb-4">
+        <CloudSaves mode={mode} onLoaded={onClose} />
+      </div>
       {mode === 'game' && (
         <form
           className="mb-4 flex gap-2"

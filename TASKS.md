@@ -1,5 +1,11 @@
 # Aufgaben
 
+## Erledigt (Phase 15 – Cloud-Spielstand)
+
+- [x] Cloud-Dienst mit Konten, Token, validierten Spielständen; Datei- und Vercel-Blob-Speicher
+- [x] UI im Hauptmenü und Spielstände-Dialog, automatische Synchronisierung
+- [x] Tests (Unit, Server, E2E Handy → PC → Handy), DEPLOY-Anleitung für Vercel Blob
+
 ## Erledigt (Phase 14 – Mobil)
 
 - [x] Telefon-Layout mit Bottom-Navigation, Sheets, kompakter Kopfleiste
@@ -127,6 +133,7 @@
 - [ ] Online: Chat, Rangliste, Admin-Befehle (Geschwindigkeit, Spieler entfernen), Übernahme fremder Spielerbetriebe, Passwort ändern
 - [ ] Casino: Teilen und Versicherung beim Blackjack, Tischlimits je Bezirk, ein eigenes Casino als Betrieb (Hausvorteil als Einnahme)
 - [ ] Mobil: Sheets per Wischgeste schließen, Querformat-Layout für Tablets, Service Worker für Offline-Start
+- [ ] Cloud: mehrere Slots je Konto, Konfliktwarnung bei älterem Stand, Passwort ändern, Konto löschen
 - [ ] Online: Verbindungsabbruch automatisch wieder aufnehmen (derzeit Hinweis und manuelles Neuanmelden)
 - [ ] Fahrzeuge mit Abbiegeanimation und Wartezeit an Kreuzungen (derzeit Richtungswechsel ohne Übergang)
 - [ ] Interne Fabriklieferungen mit Verrechnungspreis statt Nullbuchung (derzeit bewusst ohne Geldfluss)
@@ -154,4 +161,4 @@
 
 ## Stand
 
-Alle acht Phasen des Entwicklungsplans plus Phase 9 (Konzern und Karriere), Phase 10 (Grafik und Ausrichtung), Phase 11 (Innenansicht), Phase 12 (Online-Welt), Phase 13 (Casino) und Phase 14 (Mobil) sind umgesetzt. Offene Punkte oben sind Erweiterungen über den Plan hinaus; als nächste Phase bietet sich die öffentliche Polizeibehörde an.
+Alle acht Phasen des Entwicklungsplans plus Phase 9 (Konzern und Karriere), Phase 10 (Grafik und Ausrichtung), Phase 11 (Innenansicht), Phase 12 (Online-Welt), Phase 13 (Casino), Phase 14 (Mobil) und Phase 15 (Cloud-Spielstand) sind umgesetzt. Offene Punkte oben sind Erweiterungen über den Plan hinaus; als nächste Phase bietet sich die öffentliche Polizeibehörde an.

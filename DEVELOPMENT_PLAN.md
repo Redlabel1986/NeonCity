@@ -203,6 +203,17 @@ Umfang: das Spiel auf Telefonen spielbar und ansehnlich machen: Touch-Steuerung 
 | Pinch-Zoom ohne versehentliche Auswahl | `mobile.spec.ts` |
 | Desktop-Layout unverändert (alle bisherigen E2E-Tests) | gesamte E2E-Suite |
 
+## Phase 15 – Cloud-Spielstand ✅ abgeschlossen (über den Plan hinaus)
+
+Umfang: ein Spielstand pro Konto, damit das Spiel vom Handy am PC weitergeht und zurück; ohne dauerhaften Server lauffähig (Vercel-Funktion mit Blob-Speicher) und ebenso auf dem Node-Spielserver.
+
+| Kriterium | Nachweis |
+|---|---|
+| Konto anlegen/anmelden, Token-Prüfung, fremdes Secret und abgelaufene Token abgelehnt | `cloud.test.ts` |
+| Nur gültige Spielstände werden gespeichert; zu große Uploads abgelehnt; Metadaten (Tick, Spieler, Konto, Gerät) stimmen | `cloud.test.ts` |
+| Dateispeicher überlebt Neustart; HTTP-Endpunkte des Spielservers | `cloud.test.ts` |
+| Handy speichert in die Cloud, PC lädt und spielt denselben Tick weiter, PC speichert, Handy lädt den neueren Stand | `cloud.spec.ts` |
+
 ## Gesamtstand
 
-Alle acht Phasen sind abgeschlossen, mit Version 0.8.1 auditiert und mit Phase 9 bis 14 erweitert. Stand der Prüfung: 118 Unit-Tests (Vitest) und 19 E2E-Tests (Playwright) laufen fehlerfrei; Typecheck strict und Lint sind sauber bis auf zwei dokumentierte Hinweise.
+Alle acht Phasen sind abgeschlossen, mit Version 0.8.1 auditiert und mit Phase 9 bis 15 erweitert. Stand der Prüfung: 122 Unit-Tests (Vitest) und 20 E2E-Tests (Playwright) laufen fehlerfrei; Typecheck strict und Lint sind sauber bis auf zwei dokumentierte Hinweise.

@@ -16,6 +16,8 @@ import { getDatabase } from '../../persistence/db';
 import { tickToDate, formatDate } from '../../sim/core/clock';
 import { audio } from '../audio';
 import { OnlineClient } from '../../net/client';
+import { cloudDownload, cloudSession, cloudUpload, type CloudSession } from '../../net/cloud';
+import { serialize, deserialize } from '../../persistence/serializer';
 import type { OnlinePlayer } from '../../net/protocol';
 
 export function applyAudioSettings(settings: Settings): void {
@@ -100,6 +102,8 @@ export interface Settings {
   showMinimap: boolean;
   /** Fly into the building and show its interior while managing it. */
   interiorView: boolean;
+  /** Upload the save to the cloud account automatically. */
+  cloudSync: boolean;
 }
 
 /** Connection to the shared online world (null = local single-player game). */
@@ -151,10 +155,21 @@ export interface GameStore {
   settings: Settings;
   busy: string | null;
   online: OnlineState | null;
+  /** Cloud-save account of this device (null = not logged in). */
+  cloud: CloudSession | null;
+  /** Real time of the last successful cloud upload (drives UI refresh). */
+  cloudSavedAt: number;
 
   newGame: (options: NewGameOptions) => void;
   loadFromState: (state: WorldState, name: string, playerId?: string) => void;
   connectOnline: (auth: { url: string; token: string; playerId: string; name: string }) => Promise<void>;
+  setCloud: (session: CloudSession | null) => void;
+  /** Uploads the current world to the cloud account; throws on failure. */
+  cloudUploadNow: () => Promise<void>;
+  /** Downloads the cloud save and starts it. */
+  cloudLoad: () => Promise<void>;
+  /** Automatic upload after local autosaves (throttled, errors become a toast). */
+  cloudAutoUpload: () => Promise<void>;
   disconnectOnline: () => void;
   quitToMenu: () => Promise<void>;
   dispatch: (command: Command) => boolean;
@@ -214,6 +229,7 @@ function loadSettings(): Settings {
     autosave: true,
     showMinimap: true,
     interiorView: true,
+    cloudSync: true,
   };
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
@@ -251,6 +267,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   settings: loadSettings(),
   busy: null,
   online: null,
+  cloud: cloudSession(),
+  cloudSavedAt: 0,
 
   newGame: (options) => {
     const world = createNewGame(options);
@@ -314,6 +332,47 @@ export const useGameStore = create<GameStore>((set, get) => ({
     get().notify('success', `Online in ${session.sim?.world.meta.cityName ?? 'Nova Eclipse'}: ${client.players.filter((p) => p.online).length} Spieler verbunden.`);
   },
 
+  setCloud: (session) => set({ cloud: session }),
+
+  cloudUploadNow: async () => {
+    const sim = session.sim;
+    const cloud = get().cloud;
+    if (!sim || !cloud) throw new Error('Nicht bei der Cloud angemeldet.');
+    if (get().online) throw new Error('Online-Welten speichert der Server; Cloud-Spielstände gelten für das Einzelspiel.');
+    const meta = await cloudUpload(cloud, serialize(sim.world, get().saveName), get().saveName);
+    set({ cloudSavedAt: meta.savedAt });
+    get().notify('success', `In die Cloud gespeichert (Tag ${tickToDate(meta.tick).day + 1}).`);
+  },
+
+  cloudLoad: async () => {
+    const cloud = get().cloud;
+    if (!cloud) throw new Error('Nicht bei der Cloud angemeldet.');
+    set({ busy: 'Lade aus der Cloud…' });
+    try {
+      const record = await cloudDownload(cloud);
+      const parsed = deserialize(record.data);
+      if (get().online) get().disconnectOnline();
+      get().loadFromState(parsed.state, parsed.name);
+      set({ cloudSavedAt: record.meta.savedAt });
+      get().notify('success', `Cloud-Spielstand geladen: Tag ${tickToDate(parsed.state.tick).day + 1}, zuletzt gespeichert auf ${record.meta.device}.`);
+    } finally {
+      set({ busy: null });
+    }
+  },
+
+  cloudAutoUpload: async () => {
+    const sim = session.sim;
+    const cloud = get().cloud;
+    if (!sim || !cloud || !get().settings.cloudSync || get().online) return;
+    if (Date.now() - get().cloudSavedAt < 20000) return;
+    try {
+      const meta = await cloudUpload(cloud, serialize(sim.world, get().saveName), get().saveName);
+      set({ cloudSavedAt: meta.savedAt });
+    } catch (err) {
+      get().notify('warning', `Cloud-Upload fehlgeschlagen: ${(err as Error).message}`);
+    }
+  },
+
   disconnectOnline: () => {
     session.online?.close();
     session.online = null;
@@ -324,6 +383,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const sim = session.sim;
     if (get().online) get().disconnectOnline();
     else if (sim && get().settings.autosave) {
+      await get().cloudAutoUpload();
       try {
         await saveToSlot(sim.world, AUTOSAVE_SLOT, get().saveName);
       } catch (err) {
@@ -606,6 +666,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     } catch (err) {
       console.error('autosave failed', err);
     }
+    void get().cloudAutoUpload();
   },
 
   loadSlot: async (id) => {

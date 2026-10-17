@@ -1,7 +1,7 @@
 {
   "name": "neon-dynasty",
   "private": true,
-  "version": "0.14.0",
+  "version": "0.15.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -17,6 +17,7 @@
     "build:server": "esbuild server/main.ts --bundle --platform=node --format=esm --target=node20 --outfile=dist-server/index.js --banner:js=\"import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);\""
   },
   "dependencies": {
+    "@vercel/blob": "^2.8.2",
     "dexie": "^4.4.6",
     "pixi.js": "^8.22.0",
     "react": "^19.2.8",

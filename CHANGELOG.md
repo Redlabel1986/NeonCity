@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.15.0 – Cloud-Spielstand: Handy ↔ PC (2026-10-17)
+
+### Hinzugefügt
+
+- Cloud-Spielstand pro Konto: Im Hauptmenü und im Spielstände-Dialog gibt es „Cloud-Spielstand (Handy ↔ PC)“. Konto anlegen oder anmelden (Name und Passwort, Token 90 Tage gültig), „Jetzt in die Cloud speichern“, „Weiter aus der Cloud“ bzw. „Cloud-Spielstand laden“. Die Cloud zeigt Spieler, Spieltag, Konto, Gerät (Handy/PC, Browser) und Zeitpunkt des letzten Uploads.
+- Automatische Synchronisierung (abschaltbar): Nach jedem Autosave (Tagesabschluss, Tab im Hintergrund) und beim Wechsel ins Hauptmenü wird der Spielstand hochgeladen, höchstens alle 20 Sekunden.
+- Zwei Server-Varianten mit gleichem Protokoll (`/api/cloud/register|login|meta|save`): der Node-Spielserver (Dateien unter `data/cloud/`, Secret in `data/cloud-secret.txt`) und eine Vercel-Funktion `api/cloud/[action].ts` mit privatem Vercel-Blob-Speicher (Umgebungsvariablen `CLOUD_SECRET`, `BLOB_READ_WRITE_TOKEN`). Passwörter als salted scrypt-Hashes, Konten über ein Schlüssel-Hash ohne Namensliste, Uploads werden vollständig validiert (max. 8 MB).
+- Tests: Dienst (Konten, Token, Validierung, Dateien), Server-Endpunkte und ein E2E-Test, der auf dem Handy speichert, am PC weiterspielt und wieder auf dem Handy lädt.
+
+### Hinweise
+
+- Cloud-Spielstände gelten für das Einzelspiel; in der Online-Welt speichert der Server.
+- Der lokale Spielstand im Browser bleibt bestehen; Laden aus der Cloud ersetzt das laufende Spiel (vorher automatisch lokal gesichert, wenn Autosave aktiv ist).
+
 ## 0.14.0 – Mobil spielbar (2026-10-17)
 
 ### Hinzugefügt

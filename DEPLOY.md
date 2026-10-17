@@ -69,6 +69,15 @@ Webhosting 4000 ist ein Shared-Hosting-Paket mit Plesk, kein eigener Server. Was
 - **Client auf dem Webspace, Online-Welt woanders:** vor dem Build `VITE_ONLINE_SERVER=https://spiel.example.de` setzen, dann trägt das Hauptmenü diese Server-Adresse vor. Der Server lässt Anfragen von fremden Ursprüngen zu.
 - **Online-Welt direkt auf Webhosting 4000:** nur mit Einschränkungen. Plesk startet Node-Anwendungen über Phusion Passenger erst bei einer Anfrage und beendet sie nach einer Leerlaufzeit wieder; die Weltuhr steht dann still, bis jemand die Seite öffnet (die Welt lädt aus dem Autospeicher, es gehen höchstens 30 Sekunden verloren). WebSockets funktionieren unter Plesk nur im reinen nginx-Modus ohne Proxy-Modus, was im Shared Hosting meist nicht einstellbar ist. Wer es versuchen will: `npm run build && npm run build:server` lokal, das Projekt mit `dist/`, `dist-server/` und `package.json` hochladen, in Plesk unter „Node.js“ als Anwendungsstamm das Projektverzeichnis und als Startdatei `dist-server/index.js` eintragen, Umgebungsvariable `NEON_DATA` auf ein beschreibbares Verzeichnis (z. B. `/var/www/vhosts/…/neon-data`) setzen; den Port vergibt Passenger über `PORT`. Ein Cron-Job, der jede Minute `/api/status` aufruft, hält die Anwendung meist am Leben. Für eine Welt, die wirklich rund um die Uhr läuft, ist ein kleiner netcup-VPS (siehe unten) die verlässliche Lösung; Client und Server passen zusammen auf die kleinste Stufe.
 
+## Cloud-Spielstände (Handy ↔ PC)
+
+Die Einzelspieler-Version speichert im Browser. Damit ein Spiel vom Handy am PC weitergeht, gibt es den Cloud-Spielstand pro Konto. Er braucht einen der beiden Endpunkte:
+
+- **Vercel:** die Funktion `api/cloud/[action].ts` wird mit dem Projekt ausgeliefert. Einrichtung: im Vercel-Projekt unter **Storage → Create Database → Blob** einen Store anlegen und dabei **Private** wählen (die Zugriffsart lässt sich später nicht ändern), den Store mit dem Projekt verbinden (setzt `BLOB_READ_WRITE_TOKEN`), unter **Settings → Environment Variables** `CLOUD_SECRET` mit einer langen Zufallszeichenfolge (mindestens 16 Zeichen, z. B. `openssl rand -hex 32`) anlegen und einmal neu deployen. Ohne diese beiden Variablen antwortet `/api/cloud/*` mit einem Hinweis, und das Spiel zeigt die Meldung im Cloud-Bereich.
+- **Node-Spielserver:** stellt dieselben Endpunkte bereit, Daten unter `data/cloud/`, Secret in `data/cloud-secret.txt` (oder `CLOUD_SECRET`). Ein Client auf einem anderen Host nutzt ihn über `VITE_ONLINE_SERVER`.
+
+Gespeichert wird genau ein Spielstand je Konto (der zuletzt hochgeladene). Passwörter liegen nur als salted scrypt-Hashes vor, Konten unter einem Schlüssel-Hash ohne Namensliste.
+
 ## Client allein (Vercel / Netlify / Pages)
 
 ### Vercel in drei Schritten

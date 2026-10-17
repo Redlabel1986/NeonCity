@@ -4,6 +4,7 @@ import { DIFFICULTIES, BACKGROUNDS, type DifficultyId, type BackgroundId } from 
 import { SavesDialog } from '../dialogs/SavesDialog';
 import { credits } from '../format';
 import { OnlineSection } from './OnlineSection';
+import { CloudSaves } from '../components/CloudSaves';
 
 const SEED_WORDS = ['nova', 'eclipse', 'chrome', 'ghost', 'rust', 'neon', 'skyline', 'undercity', 'amber', 'cyan', 'dynasty', 'night'];
 
@@ -66,10 +67,13 @@ export function MainMenu() {
               Aus Datei importieren
             </button>
           </div>
+          <div className="mt-6">
+            <CloudSaves mode="menu" />
+          </div>
           <div className="hidden lg:block">
             <OnlineSection background={background} />
           </div>
-          <p className="mt-10 hidden text-xs text-muted lg:block">Version 0.14.0 – Online-Welt, Casino, Mobil.</p>
+          <p className="mt-10 hidden text-xs text-muted lg:block">Version 0.15.0 – Cloud-Spielstand, Mobil, Online-Welt.</p>
         </section>
 
         <form
@@ -151,7 +155,7 @@ export function MainMenu() {
         </form>
         <div className="lg:hidden">
           <OnlineSection background={background} />
-          <p className="mt-6 text-xs text-muted">Version 0.14.0 – Online-Welt, Casino, Mobil.</p>
+          <p className="mt-6 text-xs text-muted">Version 0.15.0 – Cloud-Spielstand, Mobil, Online-Welt.</p>
         </div>
       </main>
       {showSaves && <SavesDialog onClose={() => setShowSaves(false)} mode="menu" />}

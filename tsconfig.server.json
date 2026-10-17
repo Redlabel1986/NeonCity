@@ -18,5 +18,5 @@
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["server", "src/sim", "src/persistence/serializer.ts", "src/persistence/migrations.ts", "src/net/protocol.ts"]
+  "include": ["server", "api", "src/sim", "src/persistence/serializer.ts", "src/persistence/migrations.ts", "src/net/protocol.ts", "src/net/cloudProtocol.ts"]
 }

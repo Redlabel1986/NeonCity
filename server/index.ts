@@ -11,6 +11,7 @@ import { existsSync, readFileSync, statSync } from 'node:fs';
 import { extname, join, normalize, resolve } from 'node:path';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { Accounts } from './accounts';
+import { CloudService, FileCloudStore, handleCloudRequest, loadOrCreateSecret } from './cloud';
 import { WorldHost } from './world';
 import { BACKGROUNDS, type BackgroundId, type DifficultyId } from '../src/sim/data/difficulty';
 import type { AuthResponse, ClientMessage, LoginRequest, OnlinePlayer, RegisterRequest, ServerMessage, StatusResponse } from '../src/net/protocol';
@@ -37,16 +38,16 @@ export interface RunningServer {
 const MIME: Record<string, string> = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.woff2': 'font/woff2' };
 
 function json(res: ServerResponse, status: number, body: unknown): void {
-  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type, Authorization', 'Access-Control-Allow-Methods': 'GET, POST, OPTIONS' });
+  res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type, Authorization', 'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS' });
   res.end(JSON.stringify(body));
 }
 
-function readBody(req: IncomingMessage): Promise<unknown> {
+function readBody(req: IncomingMessage, limit = 64 * 1024): Promise<unknown> {
   return new Promise((resolvePromise, reject) => {
     let data = '';
     req.on('data', (chunk: Buffer) => {
       data += chunk.toString('utf8');
-      if (data.length > 64 * 1024) {
+      if (data.length > limit) {
         reject(new Error('Anfrage zu groß.'));
         req.destroy();
       }
@@ -65,6 +66,7 @@ function readBody(req: IncomingMessage): Promise<unknown> {
 export async function startServer(options: ServerOptions): Promise<RunningServer> {
   const log = options.log ?? ((line: string) => console.log(line));
   const accounts = new Accounts(join(options.dataDir, 'accounts.json'));
+  const cloud = new CloudService(new FileCloudStore(join(options.dataDir, 'cloud')), process.env.CLOUD_SECRET ?? loadOrCreateSecret(join(options.dataDir, 'cloud-secret.txt')));
   const host = new WorldHost({ file: join(options.dataDir, 'world.json'), seed: options.seed, citySize: options.citySize, difficulty: options.difficulty, speed: options.speed, autosaveSeconds: options.autosaveSeconds });
   log(`${host.loadedFromDisk ? 'Welt geladen' : 'Neue Welt erzeugt'}: Tag ${Math.floor((host.tick + 7 * 60) / 1440) + 1}, ${host.sim.playerIds.length} Spieler, Geschwindigkeit ${options.speed}×`);
   // Players registered before a crash are re-added to a fresh world.
@@ -91,8 +93,14 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
     const url = new URL(req.url ?? '/', 'http://localhost');
     try {
       if (req.method === 'OPTIONS') return json(res, 204, {});
+      if (url.pathname.startsWith('/api/cloud/')) {
+        const action = url.pathname.slice('/api/cloud/'.length);
+        const body = req.method === 'POST' || req.method === 'PUT' ? await readBody(req, 10 * 1024 * 1024) : null;
+        const result = await handleCloudRequest(cloud, action, req.method ?? 'GET', req.headers.authorization, body);
+        return json(res, result.status, result.body);
+      }
       if (url.pathname === '/api/status') {
-        const body: StatusResponse = { tick: host.tick, speed: host.sim.world.speed, players: host.sim.playerIds.length, online: sockets.size, cityName: host.sim.world.meta.cityName, version: '0.14.0' };
+        const body: StatusResponse = { tick: host.tick, speed: host.sim.world.speed, players: host.sim.playerIds.length, online: sockets.size, cityName: host.sim.world.meta.cityName, version: '0.15.0' };
         return json(res, 200, body);
       }
       if (url.pathname === '/api/register' && req.method === 'POST') {
