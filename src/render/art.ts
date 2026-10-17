@@ -165,7 +165,7 @@ export class ArtCache {
     return this.generate(`g:${kind}:${variant}:${style}`, (c) => drawGround(c, kind, variant, style));
   }
 
-  /** Additive night layer for ground tiles (street lights, lot markers). Returns null when the tile emits nothing. */
+  /** Night overlay for ground tiles (lamp heads, lot markers); solid shapes, drawn depth sorted above the day sprite. Returns null when the tile emits nothing. */
   groundNight(kind: number, variant: number, x: number, y: number): GeneratedTexture | null {
     if (kind === TileKind.Road) {
       const lamp = roadLamp(variant, x, y);
@@ -308,18 +308,15 @@ function drawStreetLight(c: Container, intersection: boolean): void {
   const g = new Graphics();
   c.addChild(g);
   if (intersection) {
-    const color = 0x19e6ff;
-    for (let i = 2; i >= 1; i--) g.ellipse(0, HALF_H, 9 * i, 4.5 * i).fill({ color, alpha: 0.06 });
-    g.ellipse(0, HALF_H, 4, 2).fill({ color, alpha: 0.3 });
+    // Crossing beacon: a small solid cyan lens in the middle of the junction.
+    g.circle(0, HALF_H, 2.2).fill(0x19e6ff);
+    g.circle(0, HALF_H, 1).fill(0xeaffff);
     return;
   }
-  const color = 0xffc860;
   const hx = LAMP_POS.x + 3;
   const hy = LAMP_POS.y - 17;
-  g.ellipse(LAMP_POS.x + 4, LAMP_POS.y + 1, 16, 8).fill({ color, alpha: 0.08 });
-  g.ellipse(LAMP_POS.x + 4, LAMP_POS.y + 1, 8, 4).fill({ color, alpha: 0.14 });
-  g.circle(hx, hy, 5).fill({ color, alpha: 0.25 });
-  g.circle(hx, hy, 1.6).fill({ color: 0xfff0c0, alpha: 1 });
+  g.circle(hx, hy, 2.6).fill(0xffc860);
+  g.circle(hx, hy, 1.3).fill(0xfff6e0);
 }
 
 function drawLampPost(c: Container): void {
@@ -335,16 +332,15 @@ function drawLampPost(c: Container): void {
 function drawLotMarkerNight(c: Container): void {
   const g = new Graphics();
   c.addChild(g);
-  g.circle(0, 13, 6).fill({ color: 0x9b30ff, alpha: 0.12 });
-  g.circle(0, 13, 2.5).fill({ color: 0xc08aff, alpha: 0.6 });
+  g.circle(0, 13, 2.5).fill(0x9b30ff);
+  g.circle(0, 13, 1.2).fill(0xe0c8ff);
 }
 
 function drawPlazaNight(c: Container): void {
   const g = new Graphics();
   c.addChild(g);
-  g.ellipse(0, HALF_H, 14, 7).fill({ color: 0xffe0a0, alpha: 0.07 });
-  g.circle(10, 16, 1.2).fill({ color: 0xfff0c0, alpha: 0.8 });
-  g.circle(-14, 10, 1.2).fill({ color: 0xfff0c0, alpha: 0.8 });
+  g.circle(10, 16, 1.4).fill(0xfff0c0);
+  g.circle(-14, 10, 1.4).fill(0xfff0c0);
 }
 
 // ======================================================================
@@ -519,7 +515,7 @@ function windowPattern(style: ArtStyle, seed: number): WindowPattern {
   }
 }
 
-/** Draws window grids on both visible walls. `night` draws only lit windows (for the additive layer). */
+/** Draws window grids on both visible walls. `night` draws only lit windows (solid, for the night overlay). */
 function drawWindows(g: Graphics, ws: { left: Wall; right: Wall }, pal: Palette, key: BuildingArtKey, night: boolean, facade: Wall | null): void {
   const floors = key.floors;
   const pat = windowPattern(key.style, key.seed);
@@ -541,23 +537,16 @@ function drawWindows(g: Graphics, ws: { left: Wall; right: Wall }, pal: Palette,
         const lit = r < pal.litRatio;
         if (night && !lit) continue;
         const color = night ? pal.lit[Math.floor(r * 977) % pal.lit.length]! : glass;
-        const nightAlpha = 0.26 + ((r * 7919) % 1) * 0.3;
-        wallQuad(g, wall, t, t + ww, yOff, yOff + winH).fill({ color, alpha: night ? nightAlpha : 1 });
-        if (night) {
-          if ((r * 131) % 1 < 0.3) wallQuad(g, wall, t - 0.04, t + ww + 0.04, yOff - 1.5, yOff + winH + 1.5).fill({ color, alpha: 0.1 });
-        } else {
+        // Lit panes vary in brightness but stay solid: no translucent glow around them.
+        const brightness = 0.55 + ((r * 7919) % 1) * 0.45;
+        wallQuad(g, wall, t, t + ww, yOff, yOff + winH).fill(night ? mix(0x1a1626, color, brightness) : color);
+        if (!night) {
           wallLine(g, wall, t, t + ww, yOff + winH, { width: 0.8, color: 0xffffff, alpha: 0.22 });
           if ((r * 53) % 1 < 0.18) wallQuad(g, wall, t, t + ww, yOff, yOff + winH * 0.45).fill({ color: 0xffd8a0, alpha: 0.22 });
         }
       }
     }
   }
-}
-
-/** Warm light pool on the pavement in front of a wall point. */
-function drawLightPool(g: Graphics, wall: Wall, t: number, color: number, alpha: number): void {
-  const m = wp(wall.base, wall.dir, t, 0);
-  g.ellipse(m[0] + 5 * wall.out, m[1] + 4, 13, 6).fill({ color, alpha });
 }
 
 /** Ground floor treatment on the facade: lobby, shop with awning or industrial gate. */
@@ -576,9 +565,8 @@ function drawShopfront(g: Graphics, f: Wall, pal: Palette, key: BuildingArtKey, 
       wallLine(g, f, t0 - 0.04, t1 + 0.04, FLOOR_H - 0.5, { width: 2, color: pal.trim, alpha: 0.6 });
       return;
     }
-    wallQuad(g, f, t0, t1, 1.5, FLOOR_H - 1.5).fill({ color: 0x9fd8ff, alpha: 0.35 });
-    wallQuad(g, f, door0, door1, 1.5, FLOOR_H - 2.5).fill({ color: 0xffffff, alpha: 0.4 });
-    drawLightPool(g, f, (door0 + door1) / 2, 0xbfe8ff, 0.1);
+    wallQuad(g, f, t0, t1, 1.5, FLOOR_H - 1.5).fill(mix(0x101820, 0x9fd8ff, 0.75));
+    wallQuad(g, f, door0, door1, 1.5, FLOOR_H - 2.5).fill(0xeaf6ff);
     return;
   }
   if (style === 'docks') {
@@ -591,9 +579,8 @@ function drawShopfront(g: Graphics, f: Wall, pal: Palette, key: BuildingArtKey, 
       return;
     }
     const m = wp(f.base, f.dir, (t0 + t1) / 2, FLOOR_H);
-    g.circle(m[0], m[1], 7).fill({ color: 0xff8a1f, alpha: 0.2 });
-    g.circle(m[0], m[1], 1.6).fill({ color: 0xffd0a0, alpha: 0.9 });
-    drawLightPool(g, f, (t0 + t1) / 2, 0xff8a1f, 0.08);
+    g.circle(m[0], m[1], 2.4).fill(0xff8a1f);
+    g.circle(m[0], m[1], 1.2).fill(0xffe0c0);
     return;
   }
   // Shop: door, display window and (for market/old) a coloured awning.
@@ -611,9 +598,8 @@ function drawShopfront(g: Graphics, f: Wall, pal: Palette, key: BuildingArtKey, 
     if (awning) drawAwning(g, f, door0 - 0.03, win1 + 0.03, FLOOR_H + 1, aColor, true);
     return;
   }
-  wallQuad(g, f, win0, win1, 2.5, FLOOR_H - 2).fill({ color: pal.lit[0]!, alpha: 0.55 });
-  wallQuad(g, f, door0, door1, 1, FLOOR_H - 2).fill({ color: pal.lit[0]!, alpha: 0.35 });
-  drawLightPool(g, f, (win0 + win1) / 2, pal.lit[0]!, 0.12);
+  wallQuad(g, f, win0, win1, 2.5, FLOOR_H - 2).fill(mix(0x15131c, pal.lit[0]!, 0.85));
+  wallQuad(g, f, door0, door1, 1, FLOOR_H - 2).fill(mix(0x15131c, pal.lit[0]!, 0.6));
 }
 
 /** Striped fabric awning sticking out of a wall. */
@@ -629,10 +615,10 @@ function drawAwning(g: Graphics, f: Wall, t0: number, t1: number, y: number, col
       const s1 = t0 + ((t1 - t0) * (i + 1)) / stripes;
       const q0 = wp(f.base, f.dir, s0, y);
       const q1 = wp(f.base, f.dir, s1, y);
-      g.poly([q0[0], q0[1], q1[0], q1[1], q1[0] + ox, q1[1] + 5, q0[0] + ox, q0[1] + 5]).fill({ color: 0xffffff, alpha: 0.3 });
+      g.poly([q0[0], q0[1], q1[0], q1[1], q1[0] + ox, q1[1] + 5, q0[0] + ox, q0[1] + 5]).fill(mix(color, 0xffffff, 0.35));
     }
   }
-  g.poly([a0[0], a0[1], a1[0], a1[1], a1[0] + ox, a1[1] + 5, a0[0] + ox, a0[1] + 5]).stroke({ width: 0.8, color: 0xffffff, alpha: 0.3 });
+  g.poly([a0[0], a0[1], a1[0], a1[1], a1[0] + ox, a1[1] + 5, a0[0] + ox, a0[1] + 5]).stroke({ width: 0.8, color: mix(color, 0xffffff, 0.4) });
 }
 
 interface SignPlan {
@@ -706,30 +692,25 @@ function drawVerticalSign(g: Graphics, wall: Wall, floors: number, color: number
       g.moveTo(cx + 1, cy + 6).lineTo(cx + 3.5, cy + 1).lineTo(cx + 6, cy + 6).stroke({ width: 1.3, color: fill, alpha });
     }
   };
-  const alphaMul = flicker ? 0.6 : 1;
+  const tube = flicker ? mix(color, 0x15131c, 0.4) : color; // a flickering sign is simply dimmer
   const bracketX = wall.out > 0 ? x + sw / 2 : x + sw / 2;
   if (!night) {
     g.moveTo(anchor[0], y0 + 2).lineTo(bracketX, y0 + 2).stroke({ width: 1, color: 0x8a8aa0 });
     g.moveTo(anchor[0], y0 + sh - 2).lineTo(bracketX, y0 + sh - 2).stroke({ width: 1, color: 0x8a8aa0 });
-    g.rect(x, y0, sw, sh).fill(0x15131c).stroke({ width: 1, color, alpha: 0.85 * alphaMul });
-    for (let i = 0; i < cells; i++) glyph(x, y0 + 1 + (i * (sh - 2)) / cells, i, color, 0.95 * alphaMul);
+    g.rect(x, y0, sw, sh).fill(0x15131c).stroke({ width: 1, color: tube });
+    for (let i = 0; i < cells; i++) glyph(x, y0 + 1 + (i * (sh - 2)) / cells, i, tube, 1);
     return;
   }
-  g.rect(x - 3, y0 - 3, sw + 6, sh + 6).fill({ color, alpha: 0.11 * alphaMul });
-  g.rect(x - 1, y0 - 1, sw + 2, sh + 2).fill({ color, alpha: 0.12 * alphaMul });
-  g.rect(x, y0, sw, sh).stroke({ width: 1.4, color, alpha: 0.9 * alphaMul });
-  for (let i = 0; i < cells; i++) {
-    glyph(x, y0 + 1 + (i * (sh - 2)) / cells, i, color, 0.55 * alphaMul);
-    glyph(x, y0 + 1 + (i * (sh - 2)) / cells, i, 0xffffff, 0.85 * alphaMul);
-  }
+  g.rect(x, y0, sw, sh).fill(mix(0x15131c, tube, 0.2)).stroke({ width: 1.4, color: tube });
+  for (let i = 0; i < cells; i++) glyph(x, y0 + 1 + (i * (sh - 2)) / cells, i, mix(tube, 0xffffff, 0.6), 1);
 }
 
-function neonText(text: string, color: number, night: boolean, fontSize: number, alpha = 1): Text {
+function neonText(text: string, color: number, night: boolean, fontSize: number, dim = 1): Text {
+  // Lit letters are bright, solid and tinted by the sign colour; `dim` < 1 darkens a flickering sign.
+  const fill = night ? mix(mix(color, 0xffffff, 0.6), 0x15131c, 1 - dim) : mix(color, 0x15131c, 1 - dim);
   return new Text({
     text,
-    style: night
-      ? { fontFamily: 'Arial, Helvetica, sans-serif', fontSize, fontWeight: '900', fill: 0xffffff, letterSpacing: 0.8, dropShadow: { color, blur: 5, distance: 0, alpha: 0.95 * alpha } }
-      : { fontFamily: 'Arial, Helvetica, sans-serif', fontSize, fontWeight: '900', fill: color, letterSpacing: 0.8 },
+    style: { fontFamily: 'Arial, Helvetica, sans-serif', fontSize, fontWeight: '900', fill, letterSpacing: 0.8 },
   });
 }
 
@@ -742,21 +723,20 @@ function drawBoardSign(c: Container, g: Graphics, f: Wall, text: string, color: 
   if (t1 - t0 < 0.3) return;
   const yBot = FLOOR_H + 1.5;
   const yTop = FLOOR_H + 9;
-  const alphaMul = flicker ? 0.65 : 1;
+  const dim = flicker ? 0.65 : 1;
+  const tube = mix(color, 0x15131c, 1 - dim);
   if (!night) {
-    wallQuad(g, f, t0, t1, yBot, yTop).fill(0x15131c).stroke({ width: 1, color, alpha: 0.8 * alphaMul });
+    wallQuad(g, f, t0, t1, yBot, yTop).fill(0x15131c).stroke({ width: 1, color: tube });
   } else {
-    wallQuad(g, f, t0 - 0.05, t1 + 0.05, yBot - 2.5, yTop + 2.5).fill({ color, alpha: 0.14 * alphaMul });
-    wallQuad(g, f, t0, t1, yBot, yTop).fill({ color, alpha: 0.12 * alphaMul }).stroke({ width: 1.3, color, alpha: 0.9 * alphaMul });
+    wallQuad(g, f, t0, t1, yBot, yTop).fill(mix(0x15131c, tube, 0.2)).stroke({ width: 1.3, color: tube });
   }
-  const label = neonText(text, color, night, 7, alphaMul);
+  const label = neonText(text, color, night, 7, dim);
   const start = wp(f.base, f.dir, t0 + 0.04, yTop - 1);
   const avail = (t1 - t0 - 0.08) * Math.hypot(HALF_W, HALF_H);
   const scale = Math.min(1, avail / Math.max(1, label.width));
   label.scale.set(scale);
   label.position.set(start[0], start[1]);
   label.skew.y = f.skew;
-  if (night) label.alpha = alphaMul;
   c.addChild(label);
 }
 
@@ -776,11 +756,9 @@ function drawLogo(g: Graphics, wall: Wall, key: BuildingArtKey, color: number, n
     inner(color);
     return;
   }
-  g.circle(m[0], m[1], radius * 2.2).fill({ color, alpha: 0.12 });
-  g.circle(m[0], m[1], radius + 1).fill({ color, alpha: 0.12 });
-  g.circle(m[0], m[1], radius).stroke({ width: 1.8, color, alpha: 0.9 });
-  g.circle(m[0], m[1], radius).stroke({ width: 0.8, color: 0xffffff, alpha: 0.7 });
-  inner(0xffffff);
+  g.circle(m[0], m[1], radius + 1.5).fill(mix(0x15131c, color, 0.25));
+  g.circle(m[0], m[1], radius).stroke({ width: 1.8, color });
+  inner(mix(color, 0xffffff, 0.7));
 }
 
 /** Large LED wall with colour bands. */
@@ -793,14 +771,13 @@ function drawScreen(g: Graphics, wall: Wall, key: BuildingArtKey, night: boolean
   const bands = [0x19e6ff, 0xff2bd6, 0xffb020, 0x8cff3a];
   const offset = Math.floor(hash32(key.seed, 80, key.floors, 1) * bands.length);
   const n = 4;
-  if (!night) wallQuad(g, wall, t0 - 0.03, t1 + 0.03, yBot - 1, yTop + 1).fill(0x101018);
-  else wallQuad(g, wall, t0 - 0.08, t1 + 0.08, yBot - 3, yTop + 3).fill({ color: bands[offset]!, alpha: 0.1 });
+  wallQuad(g, wall, t0 - 0.03, t1 + 0.03, yBot - 1, yTop + 1).fill(0x101018);
   for (let i = 0; i < n; i++) {
     const a = yBot + ((yTop - yBot) * i) / n;
     const b = yBot + ((yTop - yBot) * (i + 1)) / n;
     const color = bands[(i + offset) % bands.length]!;
-    wallQuad(g, wall, t0, t1, a, b).fill({ color, alpha: night ? 0.42 : 0.32 });
-    if (night) wallQuad(g, wall, t0 + (t1 - t0) * 0.2, t0 + (t1 - t0) * 0.6, a + 1, b - 1).fill({ color: 0xffffff, alpha: 0.08 });
+    wallQuad(g, wall, t0, t1, a, b).fill(mix(0x101018, color, night ? 0.85 : 0.4));
+    if (night) wallQuad(g, wall, t0 + (t1 - t0) * 0.2, t0 + (t1 - t0) * 0.6, a + 1, b - 1).fill(mix(color, 0xffffff, 0.25));
   }
 }
 
@@ -820,25 +797,23 @@ function drawBillboard(c: Container, g: Graphics, box: Box, key: BuildingArtKey,
     g.moveTo(cx + 6, cy - 3).lineTo(cx + 6, cy + 5).stroke({ width: 1.5, color: 0x6a6a80 });
     g.poly(pts).fill(0x1c1c28).stroke({ width: 1, color: own ? color : 0x8a8aa0, alpha: 0.7 });
     if (!own) {
-      g.poly([cx - bw / 2 + 2, cy - bh / 2 - 4, cx + 1, cy - bh / 2 - 6, cx + 1, cy + bh / 2 - 8, cx - bw / 2 + 2, cy + bh / 2 - 8]).fill({ color, alpha: 0.7 });
-      g.poly([cx + 2, cy - bh / 2 - 6.5, cx + bw / 2 - 2, cy - bh / 2 - 9, cx + bw / 2 - 2, cy + bh / 2 - 13, cx + 2, cy + bh / 2 - 8.5]).fill({ color: color2, alpha: 0.5 });
+      g.poly([cx - bw / 2 + 2, cy - bh / 2 - 4, cx + 1, cy - bh / 2 - 6, cx + 1, cy + bh / 2 - 8, cx - bw / 2 + 2, cy + bh / 2 - 8]).fill(mix(0x1c1c28, color, 0.7));
+      g.poly([cx + 2, cy - bh / 2 - 6.5, cx + bw / 2 - 2, cy - bh / 2 - 9, cx + bw / 2 - 2, cy + bh / 2 - 13, cx + 2, cy + bh / 2 - 8.5]).fill(mix(0x1c1c28, color2, 0.5));
     }
   } else {
-    g.poly(pts).fill({ color, alpha: own ? 0.25 : 0.55 }).stroke({ width: 1.2, color, alpha: 0.9 });
-    if (!own) g.poly([cx + 2, cy - bh / 2 - 6.5, cx + bw / 2 - 2, cy - bh / 2 - 9, cx + bw / 2 - 2, cy + bh / 2 - 13, cx + 2, cy + bh / 2 - 8.5]).fill({ color: color2, alpha: 0.6 });
-    g.poly([cx - bw / 2 - 4, cy - bh / 2 - 10, cx + bw / 2 + 4, cy - bh / 2 - 17, cx + bw / 2 + 4, cy + bh / 2 - 7, cx - bw / 2 - 4, cy + bh / 2 - 2]).fill({ color, alpha: 0.12 });
+    g.poly(pts).fill(mix(0x1c1c28, color, own ? 0.3 : 0.65)).stroke({ width: 1.2, color });
+    if (!own) g.poly([cx + 2, cy - bh / 2 - 6.5, cx + bw / 2 - 2, cy - bh / 2 - 9, cx + bw / 2 - 2, cy + bh / 2 - 13, cx + 2, cy + bh / 2 - 8.5]).fill(mix(0x1c1c28, color2, 0.75));
   }
   const words = SIGN_WORDS[key.style].short;
   const text = own
     ? neonText(own.text, color, night, 7)
     : new Text({
         text: words[Math.floor(hash32(key.seed, 90, key.floors, 2) * words.length)]!,
-        style: { fontFamily: 'Arial, Helvetica, sans-serif', fontSize: 6, fontWeight: '900', fill: 0xffffff, letterSpacing: 0.5, ...(night ? { dropShadow: { color, blur: 4, distance: 0, alpha: 0.9 } } : {}) },
+        style: { fontFamily: 'Arial, Helvetica, sans-serif', fontSize: 6, fontWeight: '900', fill: night ? 0xffffff : 0xd8d8e4, letterSpacing: 0.5 },
       });
   text.scale.set(Math.min(1, (bw - 4) / Math.max(1, text.width)));
   text.position.set(cx - bw / 2 + 2, cy - bh / 2 - 4);
   text.skew.y = -SKEW;
-  text.alpha = night ? 1 : 0.85;
   c.addChild(text);
 }
 
@@ -854,11 +829,11 @@ function drawRoofDetails(g: Graphics, box: Box, pal: Palette, key: BuildingArtKe
   if (night) {
     if (key.floors >= 10 || (antenna && r(1) < 0.4)) {
       const ax = cx + spanX * 0.4;
-      g.circle(ax, cy - 16 - (key.style === 'corporate' ? 10 : 0), 5).fill({ color: 0xff2b4a, alpha: 0.35 });
-      g.circle(ax, cy - 16 - (key.style === 'corporate' ? 10 : 0), 1.8).fill({ color: 0xff6a7a, alpha: 0.9 });
+      g.circle(ax, cy - 16 - (key.style === 'corporate' ? 10 : 0), 2.2).fill(0xff2b4a);
+      g.circle(ax, cy - 16 - (key.style === 'corporate' ? 10 : 0), 1).fill(0xffc0c8);
     }
     if ((key.style === 'corporate' || key.style === 'skyline') && key.floors >= 10 && r(2) < 0.5) {
-      g.circle(cx, cy + 1, 7).stroke({ width: 1, color: 0xffb020, alpha: 0.5 });
+      g.ellipse(cx, cy + 1, 9, 4.5).stroke({ width: 1, color: 0xffb020 });
     }
     return;
   }
@@ -915,9 +890,8 @@ function drawNeonStrip(g: Graphics, wall: Wall, color: number, floor: number, ni
   const a = wp(wall.base, wall.dir, fromT * wall.len, yOff);
   const b = wp(wall.base, wall.dir, toT * wall.len, yOff);
   if (night) {
-    g.moveTo(a[0], a[1]).lineTo(b[0], b[1]).stroke({ width: 6, color, alpha: 0.14 });
-    g.moveTo(a[0], a[1]).lineTo(b[0], b[1]).stroke({ width: 2.5, color, alpha: 0.4 });
-    g.moveTo(a[0], a[1]).lineTo(b[0], b[1]).stroke({ width: 1, color: 0xffffff, alpha: 0.7 });
+    g.moveTo(a[0], a[1]).lineTo(b[0], b[1]).stroke({ width: 2.5, color });
+    g.moveTo(a[0], a[1]).lineTo(b[0], b[1]).stroke({ width: 1, color: mix(color, 0xffffff, 0.6) });
   } else {
     g.moveTo(a[0], a[1]).lineTo(b[0], b[1]).stroke({ width: 1.6, color, alpha: 0.8 });
   }
@@ -925,8 +899,7 @@ function drawNeonStrip(g: Graphics, wall: Wall, color: number, floor: number, ni
 
 function drawRoofLine(g: Graphics, box: Box, color: number): void {
   const { p1, p2, p3 } = corners(box.w, box.h, box.inset);
-  g.moveTo(p3[0], p3[1] - box.H).lineTo(p2[0], p2[1] - box.H).lineTo(p1[0], p1[1] - box.H).stroke({ width: 3, color, alpha: 0.18 });
-  g.moveTo(p3[0], p3[1] - box.H).lineTo(p2[0], p2[1] - box.H).lineTo(p1[0], p1[1] - box.H).stroke({ width: 1.2, color, alpha: 0.7 });
+  g.moveTo(p3[0], p3[1] - box.H).lineTo(p2[0], p2[1] - box.H).lineTo(p1[0], p1[1] - box.H).stroke({ width: 1.2, color });
 }
 
 interface OwnSign {
@@ -997,7 +970,7 @@ function drawRamenBar(c: Container, g: Graphics, key: BuildingArtKey, night: boo
   const box: Box = { w: 1, h: 1, H: 2 * FLOOR_H + 4, inset };
   const ws = walls(1, 1, inset);
   const facade = facadeOf(ws, key.facing);
-  const { p1, p2, p3 } = corners(1, 1, inset);
+  const { p3 } = corners(1, 1, inset);
   const f = facade ?? ws.right;
   const lw = f.len;
   const door: [number, number] = [lw * 0.12, lw * 0.3];
@@ -1018,25 +991,23 @@ function drawRamenBar(c: Container, g: Graphics, key: BuildingArtKey, night: boo
       drawBillboard(c, g, box, key, false, { text: 'RAMEN', color: 0xffb020 });
     }
     // Steam vent
-    g.circle(p3[0] + 8, p3[1] - box.H - 4, 3).fill({ color: 0xaaaaaa, alpha: 0.18 });
-    g.circle(p3[0] + 10, p3[1] - box.H - 8, 2.2).fill({ color: 0xaaaaaa, alpha: 0.12 });
+    g.circle(p3[0] + 8, p3[1] - box.H - 4, 2.4).fill(0x8c8c9a);
+    g.circle(p3[0] + 10, p3[1] - box.H - 8, 1.6).fill(0xa0a0ae);
     return;
   }
   drawWindows(g, ws, pal, { ...key, floors: 2 }, true, facade);
   if (facade) {
-    wallQuad(g, facade, win[0], win[1], 3, FLOOR_H - 1).fill({ color: 0xffb020, alpha: 0.75 });
-    wallQuad(g, facade, door[0], door[1], 1, FLOOR_H - 1).fill({ color: 0xffd27a, alpha: 0.5 });
+    wallQuad(g, facade, win[0], win[1], 3, FLOOR_H - 1).fill(mix(0x3c2628, 0xffb020, 0.85));
+    wallQuad(g, facade, door[0], door[1], 1, FLOOR_H - 1).fill(mix(0x2a1a1c, 0xffd27a, 0.6));
     for (const t of [0.4, 0.7]) {
       const l = wp(facade.base, facade.dir, lw * t, FLOOR_H + 9);
-      g.circle(l[0], l[1], 7).fill({ color: 0xff4a2a, alpha: 0.18 });
-      g.circle(l[0], l[1], 2.4).fill({ color: 0xffa070, alpha: 0.95 });
+      g.circle(l[0], l[1], 2.6).fill(0xff4a2a);
+      g.circle(l[0], l[1], 1.3).fill(0xffd0a0);
     }
     wallSign(c, facade, 'RAMEN', 0xff2bd6, true, box.H - 2, 9);
-    drawLightPool(g, facade, lw * 0.5, 0xffb020, 0.12);
   } else {
     drawBillboard(c, g, box, key, true, { text: 'RAMEN', color: 0xffb020 });
   }
-  g.poly([p2[0], p2[1] + 2, p1[0] + 10, p1[1] - 3, p1[0] + 10, p1[1] + 8, p2[0], p2[1] + 12]).fill({ color: 0xffb020, alpha: 0.06 });
 }
 
 /** Small single-storey shop with a sign (kiosk, diner). */
@@ -1063,10 +1034,9 @@ function drawShop(c: Container, g: Graphics, key: BuildingArtKey, night: boolean
     return;
   }
   if (facade) {
-    wallQuad(g, facade, win[0], win[1], 3, FLOOR_H - 1).fill({ color: 0xd9f6ff, alpha: 0.6 });
+    wallQuad(g, facade, win[0], win[1], 3, FLOOR_H - 1).fill(mix(0x1c2a30, 0xd9f6ff, 0.8));
     drawNeonStrip(g, facade, neon, 0, true, 0.05, 0.95);
     wallSign(c, facade, label, neon, true, box.H - 2, 8);
-    drawLightPool(g, facade, lw * 0.6, neon, 0.08);
   } else {
     drawBillboard(c, g, box, key, true, { text: label, color: neon });
   }
@@ -1092,16 +1062,15 @@ function drawFoodStand(g: Graphics, night: boolean): void {
     g.moveTo(cx - 14, cy + 2 - H).lineTo(cx - 14, ay + 4).stroke({ width: 1, color: 0x8a8a9a });
     g.moveTo(cx + 16, cy + 3 - H).lineTo(cx + 16, ay + 6).stroke({ width: 1, color: 0x8a8a9a });
     // Grill smoke
-    g.circle(cx + 4, ay - 8, 3).fill({ color: 0xcccccc, alpha: 0.15 });
+    g.circle(cx + 4, ay - 8, 2.2).fill(0x9a9aa6);
     return;
   }
   // Night glow: hanging bulbs along the awning and a warm pool of light
-  g.ellipse(cx + 2, cy + 8, 22, 11).fill({ color: 0xffb020, alpha: 0.14 });
   for (let i = 0; i < 4; i++) {
     const bx = cx - 14 + i * 9;
     const by = cy - H - 2 + i * 1.5;
-    g.circle(bx, by, 4).fill({ color: 0xffb020, alpha: 0.25 });
-    g.circle(bx, by, 1.4).fill({ color: 0xfff0c0, alpha: 1 });
+    g.circle(bx, by, 1.8).fill(0xffb020);
+    g.circle(bx, by, 0.9).fill(0xfff6e0);
   }
 }
 
@@ -1152,8 +1121,6 @@ function drawConstructionNight(g: Graphics, key: BuildingArtKey): void {
   const { p1 } = corners(key.w, key.h);
   const cx = p1[0] + 6;
   const cy = p1[1] - 2;
-  g.circle(cx, cy - H - 22, 5).fill({ color: 0xff2b4a, alpha: 0.4 });
-  g.circle(cx, cy - H - 22, 1.5).fill({ color: 0xff8090, alpha: 1 });
-  const { p3, p2 } = corners(key.w, key.h);
-  g.circle((p3[0] + p2[0]) / 2, (p3[1] + p2[1]) / 2 - 6, 10).fill({ color: 0xffb020, alpha: 0.12 });
+  g.circle(cx, cy - H - 22, 2.2).fill(0xff2b4a);
+  g.circle(cx, cy - H - 22, 1).fill(0xffc0c8);
 }

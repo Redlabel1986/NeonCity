@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.16.1 – Klare Nacht-Optik (2026-10-17)
+
+### Geändert
+
+- Keine halbtransparenten Lichter mehr: Leuchthöfe um Logos und Schilder, Lichtpfützen vor Läden und Laternen, Fensterglühen, Scheinwerferkegel und Rücklicht-Halos der Autos sind entfernt. Fenster, Schilder, Logos, LED-Wände, Laternenköpfe und Fahrzeuglichter sind jetzt deckende Formen; flackernde Schilder sind dunkler statt durchsichtig.
+- Nachtlichter liegen tiefensortiert direkt über ihrem eigenen Gebäude statt in einer additiven Ebene über der ganzen Stadt. Logos und Schilder schweben damit nicht mehr vor Türmen, die näher stehen.
+- Tag/Nacht-Tint wirkt pro Tag-Sprite (Gebäude, Laternen, Fahrzeuge), Nacht-Overlays blenden nur über ihr Alpha ein.
+- Neuer Sichttest `look.spec.ts` (Handy-Ansicht bei Nacht und Tag, Straßenszene) mit Screenshots in `tests/e2e/output/`.
+
 ## 0.16.0 – Die Stadt läuft weiter, wenn du weg bist (2026-10-17)
 
 ### Hinzugefügt

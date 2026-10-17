@@ -226,4 +226,4 @@ Umfang: Das Einzelspiel läuft weiter, während der Spieler weg ist: Nachholen d
 
 ## Gesamtstand
 
-Alle acht Phasen sind abgeschlossen, mit Version 0.8.1 auditiert und mit Phase 9 bis 16 erweitert. Stand der Prüfung: 124 Unit-Tests (Vitest) und 21 E2E-Tests (Playwright) laufen fehlerfrei; Typecheck strict und Lint sind sauber bis auf zwei dokumentierte Hinweise.
+Alle acht Phasen sind abgeschlossen, mit Version 0.8.1 auditiert und mit Phase 9 bis 16 erweitert. Stand der Prüfung: 124 Unit-Tests (Vitest) und 22 E2E-Tests (Playwright) laufen fehlerfrei; Typecheck strict und Lint sind sauber bis auf zwei dokumentierte Hinweise.

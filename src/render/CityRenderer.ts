@@ -77,7 +77,12 @@ export class CityRenderer {
   private readonly world = new Container();
   private readonly groundLayer = new Container();
   private readonly buildingLayer = new Container();
-  private readonly lightLayer = new Container();
+  /** Day sprites that take the daylight tint (buildings, lamp posts). */
+  private readonly shaded = new Set<Sprite>();
+  /** Night overlays (lit windows, signs, lamp heads) that fade in with darkness; drawn depth sorted in the building layer. */
+  private readonly lit = new Set<Sprite>();
+  private lastTint = 0xffffff;
+  private lastNightAlpha = -1;
   private readonly overlayLayer = new Container();
   private readonly labelLayer = new Container();
   private readonly hoverGfx = new Graphics();
@@ -140,12 +145,12 @@ export class CityRenderer {
     this.app.canvas.style.display = 'block';
     this.app.canvas.style.touchAction = 'none';
     this.art = new ArtCache(this.app.renderer);
-    this.traffic.init(this.app.renderer, this.buildingLayer, this.lightLayer);
+    this.traffic.init(this.app.renderer, this.buildingLayer);
     this.traffic.setEnabled(this.settings.traffic);
 
     this.buildingLayer.sortableChildren = true;
     this.overlayLayer.addChild(this.selectionGfx, this.ghostContainer, this.hoverGfx);
-    this.world.addChild(this.groundLayer, this.buildingLayer, this.lightLayer, this.overlayLayer, this.labelLayer);
+    this.world.addChild(this.groundLayer, this.buildingLayer, this.overlayLayer, this.labelLayer);
     this.app.stage.addChild(this.world);
     this.weather.init(this.app.renderer);
     this.weather.resize(this.app.screen.width, this.app.screen.height);
@@ -186,7 +191,7 @@ export class CityRenderer {
   }
 
   debugTraffic(): unknown {
-    return { sample: this.traffic.debugSample(), world: { x: this.world.position.x, y: this.world.position.y, s: this.world.scale.x }, layerTint: this.buildingLayer.tint, children: this.buildingLayer.children.length };
+    return { sample: this.traffic.debugSample(), world: { x: this.world.position.x, y: this.world.position.y, s: this.world.scale.x }, layerTint: this.lastTint, children: this.buildingLayer.children.length };
   }
 
   /** 0..1 how busy the streets are right now (set by the game loop from the simulation). */
@@ -225,15 +230,12 @@ export class CityRenderer {
         const sprite = this.placeSprite(this.groundLayer, tex, x, y);
         this.groundCull.push(this.cullEntry(sprite, x, y, tex));
         const nightTex = this.settings.effects || kind === TileKind.Road ? this.art.groundNight(kind, variant, x, y) : null;
-        if (nightTex) {
-          const ns = this.placeSprite(this.lightLayer, nightTex, x, y);
-          ns.blendMode = 'add';
-          this.groundCull.push(this.cullEntry(ns, x, y, nightTex));
-        }
+        if (nightTex) this.groundCull.push(this.placeNight(nightTex, x, y, depthOf(x, y, 1, 1) - 0.5));
         if (kind === TileKind.Road && roadLamp(variant, x, y) === 'lamp') {
           const lampTex = this.art.lampPost();
           const lamp = this.placeSprite(this.buildingLayer, lampTex, x, y);
           lamp.zIndex = depthOf(x, y, 1, 1) - 1;
+          this.shade(lamp);
           this.groundCull.push(this.cullEntry(lamp, x, y, lampTex));
         }
       }
@@ -286,11 +288,7 @@ export class CityRenderer {
         const sprite = this.placeSprite(this.groundLayer, tex, tx, ty);
         this.groundCull.push(this.cullEntry(sprite, tx, ty, tex));
         const nightTex = this.art.groundNight(kind, state.grid.variant[i]!, tx, ty);
-        if (nightTex) {
-          const ns = this.placeSprite(this.lightLayer, nightTex, tx, ty);
-          ns.blendMode = 'add';
-          this.groundCull.push(this.cullEntry(ns, tx, ty, nightTex));
-        }
+        if (nightTex) this.groundCull.push(this.placeNight(nightTex, tx, ty, depthOf(tx, ty, 1, 1) - 0.5));
       }
     }
     this.cullDirty = true;
@@ -299,8 +297,9 @@ export class CityRenderer {
   private clearWorld(): void {
     this.traffic.clear();
     this.groundLayer.removeChildren().forEach((c) => c.destroy());
-    this.lightLayer.removeChildren().forEach((c) => c.destroy());
     this.buildingLayer.removeChildren().forEach((c) => c.destroy());
+    this.shaded.clear();
+    this.lit.clear();
     this.labelLayer.removeChildren().forEach((c) => c.destroy());
     this.buildings.clear();
     this.groundCull = [];
@@ -313,19 +312,41 @@ export class CityRenderer {
     const dayTex = this.art.building(key, false);
     const day = this.placeSprite(this.buildingLayer, dayTex, b.x, b.y);
     day.zIndex = depthOf(b.x, b.y, b.w, b.h);
+    this.shade(day);
     const cull: Cullable[] = [this.cullEntry(day, b.x, b.y, dayTex)];
-    let night: Sprite | null = null;
     const nightTex = this.art.building(key, true);
-    night = this.placeSprite(this.lightLayer, nightTex, b.x, b.y);
-    night.blendMode = 'add';
-    cull.push(this.cullEntry(night, b.x, b.y, nightTex));
-    this.buildings.set(b.id, { day, night, status: b.status, cull });
+    const nightEntry = this.placeNight(nightTex, b.x, b.y, day.zIndex + 0.5);
+    cull.push(nightEntry);
+    this.buildings.set(b.id, { day, night: nightEntry.sprite, status: b.status, cull });
   }
 
   private removeBuildingVisual(id: number, visual: BuildingVisual): void {
+    this.shaded.delete(visual.day);
     visual.day.destroy();
-    visual.night?.destroy();
+    if (visual.night) {
+      this.lit.delete(visual.night);
+      visual.night.destroy();
+    }
     this.buildings.delete(id);
+  }
+
+  /** Registers a day sprite for the daylight tint. */
+  private shade(sprite: Sprite): void {
+    sprite.tint = this.lastTint;
+    this.shaded.add(sprite);
+  }
+
+  /**
+   * Places a night overlay in the building layer just above its day sprite
+   * (`zIndex`), so lights never float in front of buildings that stand closer.
+   * Overlays are solid artwork and blend normally; only their alpha follows the daylight.
+   */
+  private placeNight(tex: GeneratedTexture, x: number, y: number, zIndex: number): Cullable {
+    const sprite = this.placeSprite(this.buildingLayer, tex, x, y);
+    sprite.zIndex = zIndex;
+    sprite.alpha = Math.max(0, this.lastNightAlpha);
+    this.lit.add(sprite);
+    return this.cullEntry(sprite, x, y, tex);
   }
 
   private placeSprite(layer: Container, tex: GeneratedTexture, x: number, y: number): Sprite {
@@ -378,15 +399,27 @@ export class CityRenderer {
     const b = Math.round(NIGHT_TINT.b + (255 - NIGHT_TINT.b) * d);
     const tint = (r << 16) | (g << 8) | b;
     this.groundLayer.tint = tint;
-    this.buildingLayer.tint = tint;
+    if (tint !== this.lastTint) {
+      // Day sprites are tinted one by one so the night overlays in the same (depth sorted) layer stay bright.
+      this.lastTint = tint;
+      for (const s of this.shaded) s.tint = tint;
+      this.traffic.setTint(tint);
+    }
     const sr = Math.round(SKY_NIGHT.r + (SKY_DAY.r - SKY_NIGHT.r) * d);
     const sg = Math.round(SKY_NIGHT.g + (SKY_DAY.g - SKY_NIGHT.g) * d);
     const sb = Math.round(SKY_NIGHT.b + (SKY_DAY.b - SKY_NIGHT.b) * d);
     this.app.renderer.background.color = (sr << 16) | (sg << 8) | sb;
-    const flicker = this.settings.effects && !this.settings.reducedMotion ? 0.94 + 0.06 * Math.sin(this.time * 2.7) : 1;
-    const wet = this.weatherKind === 'rain' || this.weatherKind === 'storm' ? 1 + 0.15 * this.weatherIntensity : 1; // neon reflects on wet streets
-    this.lightLayer.alpha = Math.min(1, (1 - d) * flicker * wet);
-    this.lightLayer.visible = this.lightLayer.alpha > 0.01;
+    const nightAlpha = Math.round(Math.min(1, Math.max(0, 1 - d)) * 100) / 100;
+    if (nightAlpha !== this.lastNightAlpha) {
+      this.lastNightAlpha = nightAlpha;
+      for (const s of this.lit) s.alpha = nightAlpha;
+      this.cullDirty = true; // visibility of the overlays depends on the alpha
+    }
+  }
+
+  /** Current alpha of the night overlays (0 by day, 1 at night). */
+  get nightAlpha(): number {
+    return Math.max(0, this.lastNightAlpha);
   }
 
   // -------------------------------------------------------------- overlays
@@ -588,8 +621,9 @@ export class CityRenderer {
     const vy0 = -this.world.position.y / s - 64;
     const vx1 = (this.app.screen.width - this.world.position.x) / s + 64;
     const vy1 = (this.app.screen.height - this.world.position.y) / s + 64;
+    const dark = this.lastNightAlpha > 0.01;
     const test = (c: Cullable): void => {
-      c.sprite.visible = c.x1 >= vx0 && c.x0 <= vx1 && c.y1 >= vy0 && c.y0 <= vy1;
+      c.sprite.visible = c.x1 >= vx0 && c.x0 <= vx1 && c.y1 >= vy0 && c.y0 <= vy1 && (dark || !this.lit.has(c.sprite));
     };
     for (const c of this.groundCull) test(c);
     for (const v of this.buildings.values()) for (const c of v.cull) test(c);

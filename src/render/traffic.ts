@@ -18,6 +18,8 @@ type Heading = 'px' | 'nx' | 'py' | 'ny';
 interface Mover {
   sprite: Sprite;
   light: Sprite | null;
+  /** Own colour; the sprite tint is this colour multiplied by the daylight tint. */
+  color: number;
   kind: 'walker' | 'car';
   x: number; // tile space (continuous)
   y: number;
@@ -43,7 +45,8 @@ const LANE = 0.19;
 
 export class TrafficLayer {
   private container: Container = new Container();
-  private lights: Container = new Container();
+  /** Daylight tint applied on top of each mover's own colour. */
+  private tint = 0xffffff;
   private movers: Mover[] = [];
   private walkerTex: Texture | null = null;
   private walkerAnchor = { x: 0.5, y: 1 };
@@ -54,9 +57,8 @@ export class TrafficLayer {
   private time = 0;
   private enabled = true;
 
-  init(renderer: Renderer, objects: Container, lights: Container): void {
+  init(renderer: Renderer, objects: Container): void {
     this.container = objects;
-    this.lights = lights;
     const w = new Graphics();
     w.ellipse(0, 0, 2.4, 1.2).fill({ color: 0x000000, alpha: 0.45 });
     w.rect(-1.2, -3.5, 1, 3.5).fill(0x2a2a36);
@@ -108,6 +110,13 @@ export class TrafficLayer {
         if (state.grid.kindAt(x, y) === TileKind.Road) this.roads.push({ x, y });
       }
     }
+  }
+
+  /** Sets the daylight tint (multiplied with each mover's own colour). */
+  setTint(tint: number): void {
+    if (tint === this.tint) return;
+    this.tint = tint;
+    for (const m of this.movers) m.sprite.tint = multiplyColor(m.color, tint);
   }
 
   clear(): void {
@@ -186,7 +195,9 @@ export class TrafficLayer {
       m.sprite.zIndex = (m.x + m.y) * 4 + 2;
       if (m.light) {
         m.light.position.set(sx, sy);
+        m.light.zIndex = m.sprite.zIndex + 0.5; // right above its own body, below anything in front
         m.light.alpha = night;
+        m.light.visible = night > 0.01;
       }
       remaining.push(m);
     }
@@ -216,27 +227,31 @@ export class TrafficLayer {
     const heading = headingOf(next.x - at.x, next.y - at.y);
     let sprite: Sprite;
     let light: Sprite | null = null;
+    let color: number;
     if (kind === 'walker') {
       sprite = new Sprite(this.walkerTex!);
       sprite.anchor.set(this.walkerAnchor.x, this.walkerAnchor.y);
-      sprite.tint = WALKER_COLORS[Math.floor(rand() * WALKER_COLORS.length)]!;
+      color = WALKER_COLORS[Math.floor(rand() * WALKER_COLORS.length)]!;
     } else {
       const art = heading === 'px' || heading === 'py' ? this.carForward! : this.carBackward!;
       const mirror = heading === 'py' || heading === 'ny';
       sprite = new Sprite(art.body);
       sprite.anchor.set(art.anchor.x, art.anchor.y);
       sprite.scale.set(mirror ? -1 : 1, 1);
-      sprite.tint = CAR_COLORS[Math.floor(rand() * CAR_COLORS.length)]!;
+      color = CAR_COLORS[Math.floor(rand() * CAR_COLORS.length)]!;
       light = new Sprite(art.night);
       light.anchor.set(art.nightAnchor.x, art.nightAnchor.y);
       light.scale.set(mirror ? -1 : 1, 1);
-      light.blendMode = 'add';
-      this.lights.addChild(light);
+      light.alpha = 0;
+      light.visible = false;
+      this.container.addChild(light);
     }
+    sprite.tint = multiplyColor(color, this.tint);
     this.container.addChild(sprite);
     this.movers.push({
       sprite,
       light,
+      color,
       kind,
       x: at.x,
       y: at.y,
@@ -329,24 +344,20 @@ function buildCar(renderer: Renderer, forward: boolean): CarArt {
   const anchor = { x: -bounds.minX / bounds.width, y: -bounds.minY / bounds.height };
   g.destroy();
 
+  // Night overlay: solid lenses only (no beams or halos), drawn depth sorted right above the body.
   const n = new Graphics();
   if (forward) {
-    const beam = P(l + 0.42, 0, 2);
-    n.ellipse(beam[0], beam[1], 15, 7).fill({ color: 0xffe8b0, alpha: 0.22 });
-    n.ellipse(beam[0] - 4, beam[1] - 1, 8, 4).fill({ color: 0xffe8b0, alpha: 0.3 });
     for (const s of [-w * 0.55, w * 0.55]) {
       const p = P(l, s, H * 0.45);
-      n.circle(p[0], p[1], 2.6).fill({ color: 0xfff6d0, alpha: 0.5 });
-      n.circle(p[0], p[1], 1.2).fill({ color: 0xffffff, alpha: 1 });
+      n.circle(p[0], p[1], 1.7).fill(0xffe8b0);
+      n.circle(p[0], p[1], 0.9).fill(0xffffff);
     }
   } else {
     for (const s of [-w * 0.55, w * 0.55]) {
       const p = P(l, s, H * 0.45);
-      n.circle(p[0], p[1], 3).fill({ color: 0xff3a3a, alpha: 0.45 });
-      n.circle(p[0], p[1], 1.2).fill({ color: 0xffb0b0, alpha: 1 });
+      n.circle(p[0], p[1], 1.6).fill(0xff2a2a);
+      n.circle(p[0], p[1], 0.8).fill(0xffc0c0);
     }
-    const beam = P(-l - 0.38, 0, 2);
-    n.ellipse(beam[0], beam[1], 13, 6).fill({ color: 0xffe8b0, alpha: 0.16 });
   }
   const nb = n.getLocalBounds();
   const night = renderer.generateTexture({ target: n, resolution: 2 });
@@ -367,3 +378,11 @@ function mulberry(seed: number): () => number {
 }
 
 export { HALF_W };
+
+/** Component-wise product of two 0xRRGGBB colours. */
+function multiplyColor(a: number, b: number): number {
+  const r = Math.round((((a >> 16) & 255) * ((b >> 16) & 255)) / 255);
+  const g = Math.round((((a >> 8) & 255) * ((b >> 8) & 255)) / 255);
+  const bl = Math.round(((a & 255) * (b & 255)) / 255);
+  return (r << 16) | (g << 8) | bl;
+}

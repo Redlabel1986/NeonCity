@@ -73,7 +73,7 @@ export function MainMenu() {
           <div className="hidden lg:block">
             <OnlineSection background={background} />
           </div>
-          <p className="mt-10 hidden text-xs text-muted lg:block">Version 0.16.0 – Weiterlaufen, Cloud-Spielstand, Mobil.</p>
+          <p className="mt-10 hidden text-xs text-muted lg:block">Version 0.16.1 – Weiterlaufen, Cloud-Spielstand, Mobil.</p>
         </section>
 
         <form
@@ -155,7 +155,7 @@ export function MainMenu() {
         </form>
         <div className="lg:hidden">
           <OnlineSection background={background} />
-          <p className="mt-6 text-xs text-muted">Version 0.16.0 – Weiterlaufen, Cloud-Spielstand, Mobil.</p>
+          <p className="mt-6 text-xs text-muted">Version 0.16.1 – Weiterlaufen, Cloud-Spielstand, Mobil.</p>
         </div>
       </main>
       {showSaves && <SavesDialog onClose={() => setShowSaves(false)} mode="menu" />}
