@@ -36,7 +36,11 @@ test('panels, dialogs and selection of city buildings work', async ({ page }) =>
   // Select a city building by clicking on its tile.
   await page.evaluate(() => {
     const sim = window.__neon.session.sim!;
-    const b = Object.values(sim.state.buildings).find((x) => (x as { owner: string; w: number }).owner === 'city' && (x as { w: number }).w === 1) as { x: number; y: number };
+    // A 1x1 city building well inside the map, so the camera clamp cannot shift the focused tile.
+    const b = Object.values(sim.state.buildings).find((v) => {
+      const c = v as { owner: string; w: number; x: number; y: number };
+      return c.owner === 'city' && c.w === 1 && c.x > 10 && c.y > 10 && c.x < 80 && c.y < 80;
+    }) as { x: number; y: number };
     window.__neon.session.renderer!.focusTile(b.x, b.y, 2);
   });
   await page.waitForTimeout(200);
