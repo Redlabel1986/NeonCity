@@ -27,7 +27,12 @@ function getService(): CloudService | { error: string } {
 
 const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type, Authorization', 'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS' };
 
-export default async function handler(request: Request): Promise<Response> {
+/**
+ * Vercel runs Web-standard handlers (Request → Response) only through the
+ * named HTTP-method exports below; a default export is called with the Node
+ * (req, res) signature and would never answer. Keep both in sync.
+ */
+export async function handler(request: Request): Promise<Response> {
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
   try {
     const url = new URL(request.url);
@@ -51,3 +56,9 @@ export default async function handler(request: Request): Promise<Response> {
     return Response.json({ error: `Cloud-Server-Fehler: ${message}` }, { status: 500, headers: CORS });
   }
 }
+
+export const GET = handler;
+export const POST = handler;
+export const PUT = handler;
+export const DELETE = handler;
+export const OPTIONS = handler;

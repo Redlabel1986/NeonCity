@@ -2028,6 +2028,16 @@ async function handler(request) {
     return Response.json({ error: `Cloud-Server-Fehler: ${message}` }, { status: 500, headers: CORS });
   }
 }
+var GET = handler;
+var POST = handler;
+var PUT = handler;
+var DELETE = handler;
+var OPTIONS = handler;
 export {
-  handler as default
+  DELETE,
+  GET,
+  OPTIONS,
+  POST,
+  PUT,
+  handler
 };
