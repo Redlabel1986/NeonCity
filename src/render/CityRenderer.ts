@@ -10,6 +10,8 @@ import { Application, Container, Graphics, Sprite, Text } from 'pixi.js';
 import { ArtCache, roadLamp, SEED_VARIANTS, type ArtStyle, type BuildingArtKey, type GeneratedTexture } from './art';
 import { TrafficLayer } from './traffic';
 import { WeatherLayer } from './weather';
+import { InteriorRenderer } from './interior/InteriorRenderer';
+import type { DashboardTab } from './interior/layouts';
 import { depthOf, HALF_H, HALF_W, isoToScreen, screenToTile, TILE_H, TILE_W } from './iso';
 import type { Building, Facing, GameState } from '../sim/state';
 import { TileKind } from '../sim/world/grid';
@@ -20,6 +22,8 @@ export interface RendererCallbacks {
   onTileClick: (x: number, y: number, button: number) => void;
   onTileHover: (tile: { x: number; y: number } | null) => void;
   onCameraChange?: () => void;
+  /** A zone inside the interior view was clicked. */
+  onInteriorTab?: (tab: DashboardTab) => void;
 }
 
 export interface RenderSettings {
@@ -84,6 +88,8 @@ export class CityRenderer {
   private settings: RenderSettings = { effects: true, reducedMotion: false, traffic: true };
   private readonly traffic = new TrafficLayer();
   private readonly weather = new WeatherLayer();
+  /** Interior view layer (screen space, above world and weather). */
+  readonly interior = new InteriorRenderer({ onTab: (tab) => this.callbacks.onInteriorTab?.(tab) });
   private weatherKind: 'clear' | 'rain' | 'fog' | 'storm' = 'clear';
   private weatherIntensity = 0;
   private trafficDensity = 0.5;
@@ -97,6 +103,7 @@ export class CityRenderer {
   private daylight = 1;
   private destroyed = false;
   private labels: Text[] = [];
+  private flight: { x0: number; y0: number; s0: number; x1: number; y1: number; s1: number; t: number; duration: number } | null = null;
 
   // input
   private pointerDown: { x: number; y: number; wx: number; wy: number; button: number; dragging: boolean } | null = null;
@@ -141,6 +148,9 @@ export class CityRenderer {
     this.weather.resize(this.app.screen.width, this.app.screen.height);
     this.weather.setEnabled(this.settings.effects, this.settings.reducedMotion);
     this.app.stage.addChild(this.weather.container);
+    this.interior.attach(this.app.canvas);
+    this.interior.setReducedMotion(this.settings.reducedMotion);
+    this.app.stage.addChild(this.interior.container);
 
     this.bindInput();
     this.app.ticker.add((ticker) => this.frame(ticker.deltaMS / 1000));
@@ -154,6 +164,7 @@ export class CityRenderer {
     Object.assign(this.settings, settings);
     this.traffic.setEnabled(this.settings.traffic);
     this.weather.setEnabled(this.settings.effects, this.settings.reducedMotion);
+    this.interior.setReducedMotion(this.settings.reducedMotion);
   }
 
   setWeather(kind: 'clear' | 'rain' | 'fog' | 'storm', intensity: number): void {
@@ -186,6 +197,7 @@ export class CityRenderer {
     if (!this.app.renderer) return;
     this.unbindInput();
     this.art?.destroy();
+    this.interior.destroy();
     this.app.destroy(true, { children: true });
   }
 
@@ -429,7 +441,37 @@ export class CityRenderer {
     this.callbacks.onCameraChange?.();
   }
 
+  /** Animates the camera so that tile (x, y) ends up centred at `zoom`. */
+  flyTo(x: number, y: number, zoom: number, duration = 0.6): void {
+    const target = clamp(zoom, MIN_ZOOM, MAX_ZOOM);
+    const { sx, sy } = isoToScreen(x + 0.5, y + 0.5);
+    const x1 = this.app.screen.width / 2 - sx * target;
+    const y1 = this.app.screen.height / 2 - sy * target;
+    if (this.settings.reducedMotion || duration <= 0) {
+      this.focusTile(x, y, target);
+      return;
+    }
+    this.flight = { x0: this.world.position.x, y0: this.world.position.y, s0: this.world.scale.x, x1, y1, s1: target, t: 0, duration };
+  }
+
+  private stepFlight(dt: number): void {
+    const f = this.flight;
+    if (!f) return;
+    f.t = Math.min(f.duration, f.t + dt);
+    const k = f.t / f.duration;
+    const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+    this.world.scale.set(f.s0 + (f.s1 - f.s0) * e);
+    this.world.position.set(f.x0 + (f.x1 - f.x0) * e, f.y0 + (f.y1 - f.y0) * e);
+    this.cullDirty = true;
+    this.callbacks.onCameraChange?.();
+    if (f.t >= f.duration) {
+      this.flight = null;
+      this.clampCamera();
+    }
+  }
+
   panBy(dx: number, dy: number): void {
+    this.flight = null;
     this.world.position.x += dx;
     this.world.position.y += dy;
     this.clampCamera();
@@ -497,7 +539,10 @@ export class CityRenderer {
     if (this.destroyed) return;
     this.time += dt;
     this.handleKeys(dt);
+    this.stepFlight(dt);
     this.applyLighting();
+    this.interior.setDaylight(this.daylight);
+    this.interior.frame(dt);
     this.weather.update(dt, Math.random);
     if (this.cullDirty) {
       this.cull();
@@ -551,6 +596,7 @@ export class CityRenderer {
 
   private readonly onPointerDown = (e: PointerEvent): void => {
     if (!this.host) return;
+    if (this.interior.active) return; // the map stays put behind the interior
     this.app.canvas.setPointerCapture?.(e.pointerId);
     this.pointerDown = { x: e.clientX, y: e.clientY, wx: this.world.position.x, wy: this.world.position.y, button: e.button, dragging: false };
   };
@@ -559,6 +605,14 @@ export class CityRenderer {
     const rect = this.app.canvas.getBoundingClientRect();
     const px = e.clientX - rect.left;
     const py = e.clientY - rect.top;
+    if (this.interior.active) {
+      this.interior.pointerMove(px, py);
+      if (this.lastHover) {
+        this.lastHover = null;
+        this.callbacks.onTileHover(null);
+      }
+      return;
+    }
     if (this.pointerDown) {
       const dx = e.clientX - this.pointerDown.x;
       const dy = e.clientY - this.pointerDown.y;
@@ -583,6 +637,11 @@ export class CityRenderer {
   private readonly onPointerUp = (e: PointerEvent): void => {
     const down = this.pointerDown;
     this.pointerDown = null;
+    if (this.interior.active) {
+      const rect = this.app.canvas.getBoundingClientRect();
+      if (e.button === 0) this.interior.click(e.clientX - rect.left, e.clientY - rect.top);
+      return;
+    }
     if (!down || down.dragging) return;
     const rect = this.app.canvas.getBoundingClientRect();
     const tile = this.screenToTile(e.clientX - rect.left, e.clientY - rect.top);
@@ -594,12 +653,14 @@ export class CityRenderer {
   };
 
   private readonly onPointerLeave = (): void => {
+    this.interior.pointerLeave();
     this.lastHover = null;
     this.callbacks.onTileHover(null);
   };
 
   private readonly onWheel = (e: WheelEvent): void => {
     e.preventDefault();
+    if (this.interior.active) return;
     const rect = this.app.canvas.getBoundingClientRect();
     const factor = Math.exp(-e.deltaY * 0.0012);
     this.zoomBy(factor, e.clientX - rect.left, e.clientY - rect.top);
@@ -626,7 +687,7 @@ export class CityRenderer {
   private readonly onBlur = (): void => this.keys.clear();
 
   private handleKeys(dt: number): void {
-    if (this.keys.size === 0) return;
+    if (this.keys.size === 0 || this.interior.active) return;
     const speed = 700 * dt;
     let dx = 0;
     let dy = 0;

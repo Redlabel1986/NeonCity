@@ -174,6 +174,19 @@ const migrateV9toV10: Migration = (raw) => {
   return raw;
 };
 
+/** v10 → v11: hourly guest / customer counters for the interior view. */
+const migrateV10toV11: Migration = (raw) => {
+  const buildings = (raw.buildings ?? {}) as Record<string, { business?: Record<string, unknown> }>;
+  for (const b of Object.values(buildings)) {
+    const biz = b.business;
+    if (!biz) continue;
+    if (biz.kind === 'gastronomy' && typeof biz.hourGuests !== 'number') biz.hourGuests = 0;
+    if (biz.kind === 'retail' && typeof biz.hourCustomers !== 'number') biz.hourCustomers = 0;
+  }
+  raw.version = 11;
+  return raw;
+};
+
 export const MIGRATIONS: Record<number, Migration> = {
   1: migrateV1toV2,
   2: migrateV2toV3,
@@ -184,4 +197,5 @@ export const MIGRATIONS: Record<number, Migration> = {
   7: migrateV7toV8,
   8: migrateV8toV9,
   9: migrateV9toV10,
+  10: migrateV10toV11,
 };

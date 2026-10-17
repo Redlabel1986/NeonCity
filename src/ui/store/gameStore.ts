@@ -7,6 +7,7 @@ import { create } from 'zustand';
 import { createNewGame, Simulation, type Command, type NewGameOptions, type Speed } from '../../sim/engine';
 import type { Facing, GameState } from '../../sim/state';
 import { checkPlacement, type PlacementCheck } from '../../sim/systems/construction';
+import type { DashboardTab } from '../../render/interior/layouts';
 import type { LogLevel } from '../../sim/core/events';
 import { session, pendingGroundRefresh } from '../session';
 import { startLoop, stopLoop } from '../loop';
@@ -92,6 +93,8 @@ export interface Settings {
   uiScale: number;
   autosave: boolean;
   showMinimap: boolean;
+  /** Fly into the building and show its interior while managing it. */
+  interiorView: boolean;
 }
 
 export interface Toast {
@@ -114,6 +117,12 @@ export interface GameStore {
   dockTabRequest: 'log' | 'tasks' | 'warnings' | 'decisions' | null;
   selectedBuildingId: number | null;
   dashboardBuildingId: number | null;
+  /** Active dashboard tab (shared with the interior view's clickable zones). */
+  dashboardTab: DashboardTab;
+  /** Building whose interior is shown; null = city map. */
+  interiorBuildingId: number | null;
+  /** Camera zoom to return to when leaving the interior. */
+  interiorReturnZoom: number;
   selectedTile: { x: number; y: number } | null;
   hoverTile: { x: number; y: number } | null;
   placementDefId: string | null;
@@ -148,6 +157,9 @@ export interface GameStore {
   bumpStructure: () => void;
   focusBuilding: (id: number) => void;
   openDashboard: (id: number) => void;
+  setDashboardTab: (tab: DashboardTab) => void;
+  enterInterior: (id: number) => void;
+  leaveInterior: () => void;
 
   saveManual: (name: string) => Promise<void>;
   quickSave: () => Promise<void>;
@@ -174,6 +186,7 @@ function loadSettings(): Settings {
     uiScale: 1,
     autosave: true,
     showMinimap: true,
+    interiorView: true,
   };
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
@@ -197,6 +210,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
   dockTabRequest: null,
   selectedBuildingId: null,
   dashboardBuildingId: null,
+  dashboardTab: 'overview',
+  interiorBuildingId: null,
+  interiorReturnZoom: 1,
   selectedTile: null,
   hoverTile: null,
   placementDefId: null,
@@ -222,6 +238,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
       dialog: null,
       selectedBuildingId: null,
       dashboardBuildingId: null,
+      interiorBuildingId: null,
       selectedTile: null,
       placementDefId: null,
       placementCheck: null,
@@ -242,7 +259,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
     stopLoop();
     session.sim = null;
-    set({ screen: 'menu', panel: null, dialog: null, selectedBuildingId: null, placementDefId: null, placementCheck: null, toasts: [] });
+    set({ screen: 'menu', panel: null, dialog: null, selectedBuildingId: null, interiorBuildingId: null, placementDefId: null, placementCheck: null, toasts: [] });
   },
 
   dispatch: (command) => {
@@ -282,6 +299,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const next = current === panel ? null : panel;
     set({ panel: next });
     if (next !== 'build' && get().placementDefId) get().cancelPlacement();
+    if (next !== 'dashboard' && get().interiorBuildingId !== null) get().leaveInterior();
   },
 
   setDialog: (dialog) => set({ dialog }),
@@ -397,8 +415,30 @@ export const useGameStore = create<GameStore>((set, get) => ({
   bumpStructure: () => set((s) => ({ structureVersion: s.structureVersion + 1, tick: s.tick + 1 })),
 
   openDashboard: (id) => {
-    set({ dashboardBuildingId: id, panel: 'dashboard' });
+    set({ dashboardBuildingId: id, panel: 'dashboard', dashboardTab: 'overview' });
     get().selectBuilding(id);
+    const b = session.sim?.state.buildings[id];
+    if (get().settings.interiorView && b?.business && b.status === 'operational') get().enterInterior(id);
+  },
+
+  setDashboardTab: (tab) => set({ dashboardTab: tab }),
+
+  enterInterior: (id) => {
+    const sim = session.sim;
+    const r = session.renderer;
+    const b = sim?.state.buildings[id];
+    if (!b) return;
+    const returnZoom = get().interiorBuildingId === null ? (r?.zoom ?? 1) : get().interiorReturnZoom;
+    set({ interiorBuildingId: id, interiorReturnZoom: returnZoom });
+    r?.flyTo(b.x + (b.w - 1) / 2, b.y + (b.h - 1) / 2, 2.6, 0.55);
+  },
+
+  leaveInterior: () => {
+    const id = get().interiorBuildingId;
+    if (id === null) return;
+    const b = session.sim?.state.buildings[id];
+    set({ interiorBuildingId: null });
+    if (b) session.renderer?.flyTo(b.x + (b.w - 1) / 2, b.y + (b.h - 1) / 2, Math.min(get().interiorReturnZoom, 1.6), 0.45);
   },
 
   focusBuilding: (id) => {

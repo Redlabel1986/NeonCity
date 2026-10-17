@@ -36,6 +36,7 @@ export function createRetailState(model: RetailModel, rng: Rng, day: number, tic
     upgrades: {},
     upgradeInProgress: null,
     nextEntityId: 1,
+    hourCustomers: 0,
     todayCustomers: 0,
     todayLostNoStock: 0,
     todayRevenue: 0,
@@ -107,6 +108,7 @@ export function stepRetailHour(ctx: SimContext, hour: number): void {
     const model = BUILDING_DEFINITIONS[b.defId]?.business;
     if (!model || model.kind !== 'retail') continue;
     const biz = b.business;
+    biz.hourCustomers = 0;
     if (!isRetailOpen(model, hour)) continue;
     const demand = explainRetailDemand(state, b)!;
     const fx = upgradeEffects(biz.upgrades);
@@ -155,6 +157,7 @@ export function stepRetailHour(ctx: SimContext, hour: number): void {
       satisfactionSum += clamp(40 + 25 * value + (clerks.skill - 50) * 0.2 + fx.satisfaction + rng.gaussian() * 4, 0, 100);
     }
     biz.todayLostNoStock += lost;
+    biz.hourCustomers = served;
     if (served > 0) {
       biz.todayCustomers += served;
       biz.lifetimeCustomers += served;

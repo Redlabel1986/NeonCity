@@ -13,7 +13,7 @@ src/
     state.ts      Vollständiger serialisierbarer Spielzustand
     engine.ts     Simulation: step(), apply(command), createNewGame()
   persistence/    Serializer (Validierung, Reparatur), Migrationen, Dexie-DB, Save-Service
-  render/         PixiJS: Isometrie, prozedurale Texturen (ArtCache), CityRenderer (Kamera, Culling, Licht), Straßenleben (traffic), Wetter (weather)
+  render/         PixiJS: Isometrie, prozedurale Texturen (ArtCache), CityRenderer (Kamera, Culling, Licht), Straßenleben (traffic), Wetter (weather), Innenansicht (interior/layouts als reine Szenenbeschreibung, interior/InteriorRenderer als Ebene der Stadt-App)
   ui/             React + Zustand: Store, Game-Loop, Screens, Panels, Dialoge, Hotkeys (belegbar), Audio (Web Audio, prozedural)
 tests/unit/       Vitest (Simulation und Persistenz)
 tests/e2e/        Playwright (vollständige Spielflüsse im Browser)
@@ -56,6 +56,8 @@ Culling: eigene AABB-Liste in Weltkoordinaten; nur bei Kamerabewegung neu ausgew
 `render/art.ts` zeichnet alle Kacheln und Gebäude mit Pixi-Graphics und rendert sie einmalig in Texturen (`ArtCache`). Schlüssel: Art, Stil, Grundfläche, Etagen (ab 5 auf gerade Zahlen gebündelt), Variante (0–7), Ausrichtung, Baustelle, Tag/Nacht. Dadurch bleibt die Texturzahl bei wenigen hundert. Keine Fremd-Assets, kein Copyright-Risiko.
 
 Gebäude werden um `BUILDING_INSET` (0,14 Felder) in ihre Grundfläche eingerückt; die Gebäudekacheln darunter zeigen Pflaster. Die Fassade (Erdgeschoss, Leuchtkasten, Hängeschild, Logo) liegt auf der Wand, die `Building.facing` bestimmt: 0 = +x-Kante (rechte Wand), 1 = +y-Kante (linke Wand); 2 und 3 zeigen von der Kamera weg, dann trägt das Gebäude sein Schild auf dem Dach. `grid.edgeTouchesRoad` und `grid.pickFacing` prüfen bzw. wählen die Straßenseite; `checkPlacement` nimmt die Ausrichtung optional entgegen.
+
+`render/interior/layouts.ts` beschreibt den Innenraum eines Betriebs als Daten (Zonen mit Dashboard-Reiter, Einrichtung mit Füllstand, Figuren je Mitarbeiter und Gast) und ist ohne Pixi testbar; `InteriorRenderer` zeichnet die Szene als Ebene in derselben Pixi-Anwendung wie die Stadt (`CityRenderer.interior`). Eine zweite Pixi-Anwendung ist bewusst vermieden: Pixi 8 teilt interne Pools zwischen Anwendungen, und das Zerstören der zweiten beschädigte die erste. Während die Innenansicht aktiv ist, leitet der CityRenderer Zeigereingaben an sie weiter und friert Kamera und Tasten der Karte ein; `flyTo` animiert den Flug hinein und zurück.
 
 `render/traffic.ts` baut Fahrzeuge als isometrische Körper für die x-Achse (vorwärts/rückwärts) und spiegelt sie für die y-Achse; Spurversatz hält sie rechts, Richtungswechsel tauschen Textur und Lichtsprite.
 

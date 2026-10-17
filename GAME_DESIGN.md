@@ -20,7 +20,7 @@ Zehn Hintergründe (Straßenkind, Ex-Konzernangestellter, Gastronom, Immobiliene
 
 ## Bau und Immobilien
 
-Grundstück kaufen, bauen, Bauzeit abwarten, Rückgängig bei laufender Baustelle, Abriss. Jedes Gebäude hat eine Ausrichtung: Eingang und Beschriftung liegen auf einer Grundstückskante, die an eine Straße grenzen muss. Beim Platzieren wird automatisch eine Straßenseite gewählt; `Q`/`E` dreht das Gebäude, eine Kante ohne Straße wird abgelehnt. Räume sind als Ausbauten je Branche umgesetzt (Gastraum, Küche, Lager, Lobby, Zimmer, Werkstatt, Regale, Maschinenpark, Filter); Vermietung und Renovierung über die Immobilienverwaltung. Ein sichtbarer Innenraum-Modus ist nicht umgesetzt (TASKS.md).
+Grundstück kaufen, bauen, Bauzeit abwarten, Rückgängig bei laufender Baustelle, Abriss. Jedes Gebäude hat eine Ausrichtung: Eingang und Beschriftung liegen auf einer Grundstückskante, die an eine Straße grenzen muss. Beim Platzieren wird automatisch eine Straßenseite gewählt; `Q`/`E` dreht das Gebäude, eine Kante ohne Straße wird abgelehnt. Räume sind als Ausbauten je Branche umgesetzt (Gastraum, Küche, Lager, Lobby, Zimmer, Werkstatt, Regale, Maschinenpark, Filter); Vermietung und Renovierung über die Immobilienverwaltung. Beim Verwalten eines Betriebs fliegt die Kamera ins Gebäude und zeigt den Innenraum: Zonen je Branche, Einrichtung aus den Ausbauten, Personal an den Stationen, Gäste und Kunden aus der laufenden Stunde, Lagerfüllstände; Zonen öffnen per Klick den passenden Reiter des Dashboards.
 
 **Stand:** Alle elf Gebäudetypen baubar. Bau benötigt Credits, Zeit, Straßenanschluss an der Eingangskante und Energie; Baukosten und -zeit werden von Gesetzen und Forschung beeinflusst.
 
@@ -86,7 +86,7 @@ Das Endgame entsteht aus dem Zusammenspiel: Fabriken sichern Lieferketten gegen 
 
 ## Interface
 
-Futuristisches Betriebssystem auf schwarzem Grund: Stadt im Zentrum, schmale Kopfleiste (Credits, Tagesergebnis, Uhrzeit, Datum, Geschwindigkeit, Ruf, Fahndung), linke Navigation (Stadt, Bauen, Unternehmen, Immobilien, Personal, Finanzen, Forschung, Fraktionen, Politik, Unterwelt, Statistik; gesperrte Punkte tragen ihre Phase), rechter Inspektor für die Auswahl, unteres Dock (Ereignisse, Aufgaben, Warnungen, Bauwerkzeuge), Übersichtskarte.
+Futuristisches Betriebssystem auf schwarzem Grund: Stadt im Zentrum, schmale Kopfleiste (Credits, Tagesergebnis, Uhrzeit, Datum, Geschwindigkeit, Ruf, Fahndung), linke Navigation (Stadt, Bauen, Unternehmen, Immobilien, Personal, Finanzen, Forschung, Fraktionen, Politik, Unterwelt, Statistik; gesperrte Punkte tragen ihre Phase), rechter Inspektor für die Auswahl, unteres Dock (Ereignisse, Aufgaben, Warnungen, Bauwerkzeuge), Übersichtskarte. Beim Verwalten eines Betriebs liegt die Innenansicht in der Mitte zwischen Dashboard und Inspektor; `Esc` oder „Zur Stadt“ kehrt zur Karte zurück.
 
 Neon wird nur für Beleuchtung, Daten und Interaktion eingesetzt; Textflächen bleiben ruhig und kontrastreich.
 

@@ -39,6 +39,7 @@ export function useHotkeys(): void {
       if (e.key === 'Escape') {
         if (store.placementDefId) store.cancelPlacement();
         else if (store.dialog) store.setDialog(null);
+        else if (store.interiorBuildingId !== null) store.setPanel('dashboard');
         else if (store.panel) store.setPanel(store.panel);
         else store.selectBuilding(null);
         return;

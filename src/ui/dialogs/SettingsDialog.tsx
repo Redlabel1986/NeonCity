@@ -70,6 +70,7 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
           <Toggle label="Passanten und Fahrzeuge" hint="Straßenleben auf der Karte." checked={settings.traffic} onChange={(v) => update({ traffic: v })} />
           <Toggle label="Reduzierte Bewegung" hint="Keine Pulsanimationen, kein Flackern, kein Regen und keine Blitze." checked={settings.reducedMotion} onChange={(v) => update({ reducedMotion: v })} />
           <Toggle label="Hoher Kontrast" hint="Kräftigere Rahmen, hellerer Text, keine Transparenz." checked={settings.highContrast} onChange={(v) => update({ highContrast: v })} />
+          <Toggle label="Innenansicht beim Verwalten" hint="Beim Öffnen eines Dashboards ins Gebäude hineinfliegen und den Innenraum mit Personal, Gästen und Lager zeigen." checked={settings.interiorView} onChange={(v) => update({ interiorView: v })} />
           <Toggle label="Übersichtskarte anzeigen" hint="Kleine Karte unten rechts mit Heatmaps." checked={settings.showMinimap} onChange={(v) => update({ showMinimap: v })} />
           <Toggle label="Automatisch speichern" hint="Jeden Spieltag, beim Verlassen und beim Wechsel ins Hauptmenü." checked={settings.autosave} onChange={(v) => update({ autosave: v })} />
           <label className="block">

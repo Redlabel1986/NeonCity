@@ -1,5 +1,12 @@
 # Aufgaben
 
+## Erledigt (Phase 11 – Innenansicht)
+
+- [x] Innenraumszenen für alle sieben Branchen aus dem Simulationszustand (`render/interior/layouts.ts`)
+- [x] Innenraum-Renderer als Ebene der Stadt-App, Kameraflug hinein und zurück, klickbare Zonen, Tooltips
+- [x] Stundenzähler für Gäste und Kunden, Spielstand v11
+- [x] Einstellung, Hilfe, Tests, Screenshots
+
 ## Erledigt (Phase 10 – Grafik und Ausrichtung)
 
 - [x] Gebäude mit Gehweg-Abstand, Pflaster unter Gebäuden, offenere Blöcke im Generator
@@ -95,7 +102,8 @@
 
 - [ ] Web Worker für die Simulation, sobald NPC-Zahlen oder Branchen die Last spürbar erhöhen (Engine ist vorbereitet)
 - [ ] Bürger per Klick auf Passanten inspizieren
-- [ ] Innenraum-Modus (Räume und Einrichtung sichtbar) und Gebäudetransparenz
+- [ ] Innenansicht: Figuren mit Wegen zwischen Stationen und echten Tagesabläufen (derzeit Stationen mit kleinem Umherlaufen); Gebäudetransparenz auf der Karte
+- [ ] Innenansicht für Immobilien (Mieter, Zustand) und Konkurrenzlokale
 - [ ] Ausrichtung bestehender Gebäude nachträglich ändern (derzeit nur beim Platzieren)
 - [ ] Fahrzeuge mit Abbiegeanimation und Wartezeit an Kreuzungen (derzeit Richtungswechsel ohne Übergang)
 - [ ] Interne Fabriklieferungen mit Verrechnungspreis statt Nullbuchung (derzeit bewusst ohne Geldfluss)
@@ -124,4 +132,4 @@
 
 ## Stand
 
-Alle acht Phasen des Entwicklungsplans plus Phase 9 (Konzern und Karriere) und Phase 10 (Grafik und Ausrichtung) sind umgesetzt. Offene Punkte oben sind Erweiterungen über den Plan hinaus; als nächste Phase bietet sich die öffentliche Polizeibehörde oder der Innenraum-Modus an.
+Alle acht Phasen des Entwicklungsplans plus Phase 9 (Konzern und Karriere), Phase 10 (Grafik und Ausrichtung) und Phase 11 (Innenansicht) sind umgesetzt. Offene Punkte oben sind Erweiterungen über den Plan hinaus; als nächste Phase bietet sich die öffentliche Polizeibehörde an.

@@ -16,7 +16,7 @@ import { HotelOverview, RetailOverview, TransportOverview, StockTab, SecurityOve
 import { LabOverview, IndustryOverview } from './IndustryDashboards';
 import type { HotelState, RetailState, TransportState, StaffedBusiness, SecurityState, ResearchLabState, IndustryState } from '../../sim/state';
 
-type Tab = 'overview' | 'menu' | 'supply' | 'staff' | 'upgrades';
+import type { DashboardTab as Tab } from '../../render/interior/layouts';
 
 const TABS_BY_KIND: Record<string, { id: Tab; label: string }[]> = {
   gastronomy: [
@@ -61,7 +61,8 @@ const TABS_BY_KIND: Record<string, { id: Tab; label: string }[]> = {
 };
 
 export function BusinessDashboard({ building }: { building: Building }) {
-  const [tab, setTab] = useState<Tab>('overview');
+  const tab = useGameStore((s) => s.dashboardTab);
+  const setTab = useGameStore((s) => s.setDashboardTab);
   const biz = building.business;
   if (!biz) return <p className="text-sm text-muted">Dieses Gebäude hat keinen Betrieb.</p>;
   if (building.status !== 'operational') return <p className="text-sm text-muted">Der Betrieb ist noch im Bau.</p>;

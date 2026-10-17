@@ -18,6 +18,7 @@ export function CityCanvas() {
       onTileClick: (x, y, button) => useGameStore.getState().handleTileClick(x, y, button),
       onTileHover: (tile) => useGameStore.getState().setHover(tile),
       onCameraChange: () => cameraListeners.forEach((l) => l()),
+      onInteriorTab: (tab) => useGameStore.getState().setDashboardTab(tab),
     });
     let cancelled = false;
     void renderer.init(host, { effects: store.settings.effects, reducedMotion: store.settings.reducedMotion, traffic: store.settings.traffic }).then(() => {

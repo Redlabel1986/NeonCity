@@ -1,5 +1,6 @@
 import { useGameStore, useSimState } from '../store/gameStore';
 import { CityCanvas } from '../components/CityCanvas';
+import { InteriorCanvas } from '../components/InteriorCanvas';
 import { TopBar } from '../components/TopBar';
 import { LeftRail } from '../components/LeftRail';
 import { PanelHost } from '../panels/PanelHost';
@@ -20,6 +21,7 @@ export function GameScreen() {
   const showMinimap = useGameStore((s) => s.settings.showMinimap);
   const busy = useGameStore((s) => s.busy);
   const quitToMenu = useGameStore((s) => s.quitToMenu);
+  const interiorBuildingId = useGameStore((s) => s.interiorBuildingId);
   const simState = useSimState();
   const bankrupt = simState?.corporate.bankrupt ?? false;
   const [intro, setIntro] = useState<boolean>(() => {
@@ -48,7 +50,7 @@ export function GameScreen() {
         <div className="flex min-h-0 flex-1">
           <LeftRail />
           <PanelHost />
-          <div className="flex-1" />
+          <div className="relative flex-1">{interiorBuildingId !== null && <InteriorCanvas key={interiorBuildingId} buildingId={interiorBuildingId} />}</div>
           <div className="flex w-80 shrink-0 flex-col items-end justify-end">
             <Inspector />
             {showMinimap && <Minimap />}

@@ -2,7 +2,7 @@
 
 Browserbasierte Cyberpunk-Aufbau-, Wirtschafts- und Lebenssimulation. Nova Eclipse, 2187.
 
-**Entwicklungsstand: alle acht Phasen abgeschlossen, Audit 0.8.1, Phase 9 Konzern und Karriere, Phase 10 Grafik und Gebäudeausrichtung (0.10.0).**
+**Entwicklungsstand: alle acht Phasen abgeschlossen, Audit 0.8.1, Phase 9 Konzern und Karriere, Phase 10 Grafik und Gebäudeausrichtung, Phase 11 Innenansicht (0.11.0).**
 Die Stadt wird prozedural aus einem Seed erzeugt und von bis zu 2.400 simulierten Bürgern bevölkert. Du führst Lokale, Hotels, Taxiflotten, Läden, Sicherheitsfirmen, Labore und Fabriken, kaufst Immobilien, übernimmst Konkurrenten oder gründest eine kriminelle Organisation. Zwölf Fraktionen reagieren auf dich, der Stadtrat beschließt Gesetze, Forschung und Lieferketten senken Kosten, Kredite und Investoren hebeln das Wachstum, Krisen treffen die ganze Stadt. Jeder Credit entsteht aus einer Transaktion.
 
 ## Starten
@@ -30,7 +30,7 @@ npm run test:e2e   # Playwright: Spielstart, Bau, Betrieb, Speichern/Laden (ben�
 1. Name, Seed, Hintergrund und Schwierigkeit wählen, Stadt betreten.
 2. `B` öffnet das Baumenü. Ramenbar oder Streetfood-Stand wählen und auf ein freies Grundstück an einer Straße setzen. `Q`/`E` dreht das Gebäude, damit der Eingang zur Straße zeigt. Grundstückspreis hängt vom Bezirk ab.
 3. Zeit laufen lassen (`1`, `2`, `3`, Leertaste für Pause). Die Baustelle braucht 6 bis 18 Stunden; `Strg+Z` nimmt sie kostenlos zurück.
-4. Nach der Eröffnung „Dashboard öffnen“: Speisekarte und Preise, Einkauf bei vier Lieferanten, Personal einstellen und bezahlen, Ausbau starten. Tagesabrechnung um Mitternacht.
+4. Nach der Eröffnung „Dashboard öffnen“: Die Kamera fliegt ins Gebäude und zeigt den Innenraum mit Küche, Lager, Theke, Personal und Gästen; Zonen anklicken öffnet den passenden Reiter. Speisekarte und Preise, Einkauf bei vier Lieferanten, Personal einstellen und bezahlen, Ausbau starten. Tagesabrechnung um Mitternacht. `Esc` führt zurück zur Stadt.
 5. Weitere Branchen im Baumenü (Hotel, Taxidepot, Nachtkiosk, Sicherheitszentrale), Immobilien per Klick auf Stadtgebäude im Inspektor kaufen (`I` für die Übersicht).
 6. `X` öffnet die Unterwelt: Organisation gründen, Operationen fahren, Schwarzgeld waschen, Fahndung im Auge behalten.
 7. `K` Fraktionen und `O` Politik: Beziehungen pflegen, Anträge stellen, Initiativen finanzieren. Entscheidungen erscheinen in der Kopfleiste und im Dock.

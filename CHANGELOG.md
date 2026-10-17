@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.11.0 – Innenansicht (2026-10-17)
+
+### Hinzugefügt
+
+- Innenansicht beim Verwalten: Beim Öffnen eines Dashboards fliegt die Kamera in das Gebäude, dann blendet der Innenraum als isometrischer Raum über der Karte ein. Der Raum wird aus dem echten Zustand gebaut: Zonen je Branche (Küche, Lager, Theke, Gastraum; Rezeption, Zimmerflur, Lobby; Flotte, Werkstatt, Disposition; Regale, Kasse; Einsatzzentrale, Ermittlung; Forschung, Technik; Produktion, Rohstofflager), Einrichtung aus den Ausbauten (Kochstationen, Kühlzellen, Regale mit Füllstand, Zimmertüren mit Belegung, Fahrzeuge mit Zustand und Hebebühne, Ladestationen, Maschinen je Linie, Paletten, Laborbänke, Monitore je Streifenbezirk, Ermittlungstafel), Personal als Figuren an ihren Stationen (mit Moral-Hinweis), Gäste an Tischen und Theke, Kunden in den Gängen, Hotelgäste in der Lobby; Fenster zeigen Tageslicht oder Nacht, Verschmutzung folgt Hygiene und Sauberkeit.
+- Zonen sind anklickbar und öffnen den passenden Dashboard-Reiter; Einrichtung und Figuren zeigen beim Überfahren Details. „Zur Stadt (Esc)“ oder das Schließen des Dashboards fliegt zurück.
+- Simulation: Gastronomie und Einzelhandel führen die Gäste bzw. Kunden der laufenden Stunde (`hourGuests`, `hourCustomers`), damit die Innenansicht die tatsächliche Auslastung zeigt. Spielstandformat Version 11 mit Migration.
+- Einstellung „Innenansicht beim Verwalten“ (abschaltbar); reduzierte Bewegung unterdrückt Kameraflug, Einblendung und Figurenbewegung.
+- 3 neue Unit-Tests (Szenen aller Branchen, Gästeanzeige aus der Simulation, Migration) und ein Phase-11-E2E-Test mit Screenshots aller sieben Innenräume.
+
+### Technik
+
+- Die Innenansicht ist eine Ebene in derselben Pixi-Anwendung wie die Stadt (`CityRenderer.interior`); eine zweite Pixi-Anwendung teilte sich interne Pools und beschädigte beim Zerstören den Stadt-Renderer. Während die Innenansicht aktiv ist, werden Zeigereingaben an sie weitergereicht, Kamera und Tasten der Karte ruhen.
+- `CityRenderer.flyTo` animiert Kamerafahrten (ease-in-out).
+
 ## 0.10.0 – Grafik und Gebäudeausrichtung (2026-10-17)
 
 ### Hinzugefügt

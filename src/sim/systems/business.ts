@@ -67,6 +67,7 @@ export function createBusinessState(model: GastronomyModel, rng: Rng, day: numbe
     upgrades: {},
     upgradeInProgress: null,
     nextEntityId: 1,
+    hourGuests: 0,
     todayGuests: 0,
     todayRevenue: 0,
     todayCogs: 0,
@@ -217,6 +218,7 @@ export function stepBusinessHour(ctx: SimContext, hour: number, day: number): vo
     if (!model) continue;
     stepDeliveries(ctx, b, day);
     if (model.kind !== 'gastronomy' || b.business.kind !== 'gastronomy') continue;
+    b.business.hourGuests = 0;
     if (!isOpen(model, hour)) continue;
     const curfew = state.politics?.laws?.curfew ?? 0;
     if (curfew === 1 && hour >= 1 && hour < 6) continue; // closed 01:00-06:00
@@ -238,6 +240,7 @@ export function stepBusinessHour(ctx: SimContext, hour: number, day: number): vo
       continue;
     }
     const outcome = serveGuests(ctx, b, biz, model, attempts, cap, hour);
+    biz.hourGuests = outcome.served;
     if (citizenVisits > 0) {
       const servedCitizens = Math.min(citizenVisits, outcome.served);
       applyVisitOutcome(state, b.id, citizenVisits, servedCitizens, outcome.avgSatisfaction, outcome.avgPrice);

@@ -82,6 +82,8 @@ export interface GastronomyState {
   upgrades: Record<string, number>;
   upgradeInProgress: { id: string; level: number; readyTick: number } | null;
   nextEntityId: number;
+  /** Guests served in the current hour (interior view, display only). */
+  hourGuests: number;
   todayGuests: number;
   todayRevenue: number;
   /** Cost of goods sold today (ingredient value of served dishes). */
@@ -175,6 +177,8 @@ export interface RetailState extends StaffedBusiness {
   preferredSupplierId: string;
   reorderTargets: Record<string, number>;
   reputation: number;
+  /** Customers served in the current hour (interior view, display only). */
+  hourCustomers: number;
   todayCustomers: number;
   todayLostNoStock: number;
   todayRevenue: number;

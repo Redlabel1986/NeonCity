@@ -157,6 +157,17 @@ Umfang: offenere Stadt (Gehweg um jedes Gebäude, freie Plätze), variierte und 
 | Spielstand v10 mit Migration aus dem Straßennetz | `phase10.test.ts` |
 | Sichtprüfung Tag/Nacht, Makro/Meso (Screenshots in `tests/e2e/output/`) | `visual.spec.ts` |
 
+## Phase 11 – Innenansicht ✅ abgeschlossen (über den Plan hinaus)
+
+Umfang: Beim Verwalten eines Betriebs ins Gebäude fliegen und den Innenraum mit Zonen, Einrichtung, Personal, Gästen und Lager aus dem Simulationszustand zeigen; Zonen schalten die Dashboard-Reiter.
+
+| Kriterium | Nachweis |
+|---|---|
+| Jede Branche hat eine Szene mit einer Zone je Dashboard-Reiter, alle Mitarbeiter erscheinen als Figuren, Objekte liegen im Raum | `phase11.test.ts` |
+| Gäste in der Szene entsprechen den in der laufenden Stunde bedienten Gästen, nie mehr als Plätze | `phase11.test.ts` |
+| Spielstand v11 mit Migration der Stundenzähler | `phase11.test.ts` |
+| Dashboard öffnen fliegt auf Zoom 2,6 und zeigt die Innenansicht; Zonenklick wechselt den Reiter; Verlassen fliegt zurück; sieben Branchen mit Screenshots | `phase11.spec.ts` |
+
 ## Gesamtstand
 
-Alle acht Phasen sind abgeschlossen, mit Version 0.8.1 auditiert und mit Phase 9 und 10 erweitert. Stand der Prüfung: 105 Unit-Tests (Vitest) und 15 E2E-Tests (Playwright) laufen fehlerfrei; Typecheck strict und Lint sind sauber bis auf zwei dokumentierte Hinweise.
+Alle acht Phasen sind abgeschlossen, mit Version 0.8.1 auditiert und mit Phase 9, 10 und 11 erweitert. Stand der Prüfung: 108 Unit-Tests (Vitest) und 16 E2E-Tests (Playwright) laufen fehlerfrei; Typecheck strict und Lint sind sauber bis auf zwei dokumentierte Hinweise.
