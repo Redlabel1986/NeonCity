@@ -18,6 +18,10 @@ Corporate Heights, Neon Market, Rust Docks, Ghost Quarter, Old City, Chrome Dist
 
 Alle Spieler eines Servers teilen sich Nova Eclipse zur selben Zeit: dieselben Grundstücke, Bürger, Konkurrenten, Fraktionen, Gesetze und Krisen. Jeder hat eigene Credits, Betriebe, Immobilien, Ruf, Organisation und Beziehungen. Wer ein Grundstück zuerst bebaut, hat es; fremde Betriebe sind sichtbar und im Inspektor als „Gebäude von …“ ausgewiesen, aber nicht steuerbar. Die Zeit läuft für alle gleich (Standard 1×, ein Spieltag in zwölf Minuten) und auch ohne Verbundene weiter; der Server speichert automatisch. Konten bestehen aus Name und Passwort; beim Registrieren wählt man seinen Hintergrund.
 
+## Weiterlaufen
+
+Die Stadt steht nicht still, wenn der Browser zu ist: Beim nächsten Laden (auch aus der Cloud) und nach einem Hintergrund-Tab wird die vergangene reale Zeit mit der echten Simulation nachgerechnet, gedeckelt auf 1 bis 90 Spieltage (Standard 30, abschaltbar). Ein Bericht zeigt Tage, Einnahmen, Ausgaben, Ergebnis und wichtige Ereignisse. Pausierte Spiele bleiben pausiert. In der Online-Welt übernimmt das der Server.
+
 ## Casino
 
 Das Royal Nova Casino im Neon Market steht jedem Spieler offen (`J`): Slots, Roulette und Blackjack um die eigenen Credits, Einsätze von 10 bis 5.000 ¢. Das Haus hat einen Vorteil (Slots 12,5 %, Roulette 2,7 %, Blackjack je nach Spielweise wenige Prozent), die Ergebnisse kommen aus dem Zufallsgenerator der Simulation und sind online für alle gleich. Gewinne und Verluste erscheinen als Buchungen in den Finanzen.

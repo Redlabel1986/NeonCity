@@ -17,6 +17,7 @@ import { tickToDate, formatDate } from '../../sim/core/clock';
 import { audio } from '../audio';
 import { OnlineClient } from '../../net/client';
 import { cloudDownload, cloudSession, cloudUpload, type CloudSession } from '../../net/cloud';
+import { collectEvents, emptyReport, ticksForElapsed, type CatchUpReport } from '../../sim/catchup';
 import { serialize, deserialize } from '../../persistence/serializer';
 import type { OnlinePlayer } from '../../net/protocol';
 
@@ -44,7 +45,7 @@ export type Panel =
   | 'casino'
   | 'dashboard';
 
-export type Dialog = 'saves' | 'settings' | 'help' | 'career' | null;
+export type Dialog = 'saves' | 'settings' | 'help' | 'career' | 'catchup' | null;
 
 export interface KeyBindings {
   pause: string;
@@ -104,6 +105,8 @@ export interface Settings {
   interiorView: boolean;
   /** Upload the save to the cloud account automatically. */
   cloudSync: boolean;
+  /** Offline progress: simulate the real time that passed, up to this many game days (0 = off). */
+  offlineProgressDays: number;
 }
 
 /** Connection to the shared online world (null = local single-player game). */
@@ -159,11 +162,17 @@ export interface GameStore {
   cloud: CloudSession | null;
   /** Real time of the last successful cloud upload (drives UI refresh). */
   cloudSavedAt: number;
+  /** Progress of a running catch-up simulation. */
+  catchUp: { done: number; total: number } | null;
+  /** Report of the last catch-up, shown in the 'catchup' dialog. */
+  catchUpReport: CatchUpReport | null;
 
   newGame: (options: NewGameOptions) => void;
   loadFromState: (state: WorldState, name: string, playerId?: string) => void;
   connectOnline: (auth: { url: string; token: string; playerId: string; name: string }) => Promise<void>;
   setCloud: (session: CloudSession | null) => void;
+  /** Simulates the real time since `since` (ms) at the game's speed, capped by the setting; shows the report. */
+  catchUpFrom: (since: number) => Promise<void>;
   /** Uploads the current world to the cloud account; throws on failure. */
   cloudUploadNow: () => Promise<void>;
   /** Downloads the cloud save and starts it. */
@@ -230,6 +239,7 @@ function loadSettings(): Settings {
     showMinimap: true,
     interiorView: true,
     cloudSync: true,
+    offlineProgressDays: 30,
   };
   try {
     const raw = localStorage.getItem(SETTINGS_KEY);
@@ -269,6 +279,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   online: null,
   cloud: cloudSession(),
   cloudSavedAt: 0,
+  catchUp: null,
+  catchUpReport: null,
 
   newGame: (options) => {
     const world = createNewGame(options);
@@ -334,6 +346,39 @@ export const useGameStore = create<GameStore>((set, get) => ({
 
   setCloud: (session) => set({ cloud: session }),
 
+  catchUpFrom: async (since) => {
+    const sim = session.sim;
+    if (!sim || get().online || session.catchingUp) return;
+    const elapsedMs = Date.now() - since;
+    const { ticks, capped } = ticksForElapsed(elapsedMs, sim.world.speed, get().settings.offlineProgressDays);
+    if (ticks < 30) return; // less than a quarter game hour: not worth a report
+    session.catchingUp = true;
+    const report = emptyReport(elapsedMs, sim.world.tick, sim.state.ledger.balance, capped);
+    set({ catchUp: { done: 0, total: ticks }, busy: 'Die Stadt lief weiter … 0 %' });
+    try {
+      // Keep the UI responsive: simulate in slices and yield between them.
+      const slice = 240;
+      let done = 0;
+      while (done < ticks) {
+        const n = Math.min(slice, ticks - done);
+        sim.run(n);
+        collectEvents(report, sim.drainEvents());
+        done += n;
+        set({ catchUp: { done, total: ticks }, busy: `Die Stadt lief weiter … ${Math.round((done / ticks) * 100)} %` });
+        await new Promise((resolve) => setTimeout(resolve, 0));
+      }
+      report.ticks = done;
+      report.endTick = sim.world.tick;
+      report.endBalance = sim.state.ledger.balance;
+      session.renderer?.syncBuildings(sim.state);
+      set({ catchUpReport: report, dialog: 'catchup' });
+      get().bumpStructure();
+    } finally {
+      session.catchingUp = false;
+      set({ catchUp: null, busy: null });
+    }
+  },
+
   cloudUploadNow: async () => {
     const sim = session.sim;
     const cloud = get().cloud;
@@ -353,8 +398,9 @@ export const useGameStore = create<GameStore>((set, get) => ({
       const parsed = deserialize(record.data);
       if (get().online) get().disconnectOnline();
       get().loadFromState(parsed.state, parsed.name);
-      set({ cloudSavedAt: record.meta.savedAt });
+      set({ cloudSavedAt: record.meta.savedAt, busy: null });
       get().notify('success', `Cloud-Spielstand geladen: Tag ${tickToDate(parsed.state.tick).day + 1}, zuletzt gespeichert auf ${record.meta.device}.`);
+      await get().catchUpFrom(record.meta.savedAt);
     } finally {
       set({ busy: null });
     }
@@ -676,10 +722,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
     set({ busy: 'Laden…' });
     try {
-      const { state, name, repaired } = await loadSave(id);
+      const { state, name, repaired, savedAt } = await loadSave(id);
       get().loadFromState(state, name);
       if (repaired.length > 0) get().notify('warning', `Spielstand repariert: ${repaired.join(', ')}.`);
       else get().notify('info', `Spielstand „${name}“ geladen.`);
+      set({ busy: null });
+      await get().catchUpFrom(savedAt);
     } catch (err) {
       get().notify('danger', `Laden fehlgeschlagen: ${(err as Error).message}`);
     } finally {
@@ -700,10 +748,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const text = await pickTextFile();
     if (text === null) return;
     try {
-      const { state, name, repaired } = importFromText(text);
+      const { state, name, repaired, savedAt } = importFromText(text);
       get().loadFromState(state, name);
       if (repaired.length > 0) get().notify('warning', `Importiert und repariert: ${repaired.join(', ')}.`);
       else get().notify('success', `Spielstand „${name}“ importiert.`);
+      await get().catchUpFrom(savedAt);
     } catch (err) {
       get().notify('danger', `Import fehlgeschlagen: ${(err as Error).message}`);
     }

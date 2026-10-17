@@ -73,6 +73,20 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
           <Toggle label="Hoher Kontrast" hint="Kräftigere Rahmen, hellerer Text, keine Transparenz." checked={settings.highContrast} onChange={(v) => update({ highContrast: v })} />
           <Toggle label="Innenansicht beim Verwalten" hint="Beim Öffnen eines Dashboards ins Gebäude hineinfliegen und den Innenraum mit Personal, Gästen und Lager zeigen." checked={settings.interiorView} onChange={(v) => update({ interiorView: v })} />
           <Toggle label="Übersichtskarte anzeigen" hint="Kleine Karte unten rechts mit Heatmaps." checked={settings.showMinimap} onChange={(v) => update({ showMinimap: v })} />
+          <label className="block">
+            <span className="flex justify-between">
+              <span>Weiterlaufen, wenn du weg bist</span>
+            </span>
+            <select className="input mt-1" value={settings.offlineProgressDays} onChange={(e) => update({ offlineProgressDays: Number(e.target.value) })} aria-label="Weiterlaufen, wenn du weg bist">
+              <option value={0}>Aus (Zeit steht still)</option>
+              <option value={1}>bis 1 Spieltag nachholen</option>
+              <option value={3}>bis 3 Spieltage nachholen</option>
+              <option value={7}>bis 7 Spieltage nachholen</option>
+              <option value={30}>bis 30 Spieltage nachholen</option>
+              <option value={90}>bis 90 Spieltage nachholen</option>
+            </select>
+            <span className="mt-1 block text-xs text-muted">Beim Laden eines Spielstands, beim Zurückkehren aus einem Hintergrund-Tab und nach dem Cloud-Laden wird die vergangene Zeit mit der echten Simulation nachgerechnet; ein Bericht zeigt Einnahmen und Ereignisse. Ein Spieltag entspricht 12 Minuten bei 1×.</span>
+          </label>
           <Toggle label="Automatisch speichern" hint="Jeden Spieltag, beim Verlassen und beim Wechsel ins Hauptmenü." checked={settings.autosave} onChange={(v) => update({ autosave: v })} />
           <label className="block">
             <span className="flex justify-between">

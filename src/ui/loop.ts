@@ -49,12 +49,18 @@ export function stopLoop(): void {
   document.removeEventListener('visibilitychange', onVisibility);
 }
 
+let hiddenAt = 0;
+
 function onVisibility(): void {
   if (document.hidden) {
+    hiddenAt = Date.now();
     if (!session.online) void useGameStore.getState().autosave();
   } else {
     lastTime = performance.now();
     accumulator = 0;
+    // Browsers throttle background tabs to a crawl; simulate the time the tab was hidden.
+    if (hiddenAt > 0 && Date.now() - hiddenAt > 60000) void useGameStore.getState().catchUpFrom(hiddenAt);
+    hiddenAt = 0;
   }
 }
 
@@ -65,6 +71,7 @@ function frame(now: number): void {
   if (!sim) return;
   const dt = Math.min(0.25, (now - lastTime) / 1000);
   lastTime = now;
+  if (session.catchingUp) return; // the catch-up owns the simulation and its events until it finishes
   const speed = sim.state.speed;
   let structural = false;
   let dayEnded = false;

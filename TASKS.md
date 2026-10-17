@@ -1,5 +1,11 @@
 # Aufgaben
 
+## Erledigt (Phase 16 – Weiterlaufen)
+
+- [x] Nachholen der vergangenen Zeit beim Laden, nach Hintergrund-Tab und nach Cloud-Laden, gedeckelt und einstellbar
+- [x] Bericht „Während du weg warst“ aus den Engine-Ereignissen
+- [x] Tests und Dokumentation
+
 ## Erledigt (Phase 15 – Cloud-Spielstand)
 
 - [x] Cloud-Dienst mit Konten, Token, validierten Spielständen; Datei- und Vercel-Blob-Speicher
@@ -134,6 +140,7 @@
 - [ ] Casino: Teilen und Versicherung beim Blackjack, Tischlimits je Bezirk, ein eigenes Casino als Betrieb (Hausvorteil als Einnahme)
 - [ ] Mobil: Sheets per Wischgeste schließen, Querformat-Layout für Tablets, Service Worker für Offline-Start
 - [ ] Cloud: mehrere Slots je Konto, Konfliktwarnung bei älterem Stand, Passwort ändern, Konto löschen
+- [ ] Weiterlaufen: Nachholen auch auf dem Node-Server beim Cloud-Upload (Welt serverseitig fortschreiben), Zusammenfassung per Push-Benachrichtigung
 - [ ] Online: Verbindungsabbruch automatisch wieder aufnehmen (derzeit Hinweis und manuelles Neuanmelden)
 - [ ] Fahrzeuge mit Abbiegeanimation und Wartezeit an Kreuzungen (derzeit Richtungswechsel ohne Übergang)
 - [ ] Interne Fabriklieferungen mit Verrechnungspreis statt Nullbuchung (derzeit bewusst ohne Geldfluss)
@@ -161,4 +168,4 @@
 
 ## Stand
 
-Alle acht Phasen des Entwicklungsplans plus Phase 9 (Konzern und Karriere), Phase 10 (Grafik und Ausrichtung), Phase 11 (Innenansicht), Phase 12 (Online-Welt), Phase 13 (Casino), Phase 14 (Mobil) und Phase 15 (Cloud-Spielstand) sind umgesetzt. Offene Punkte oben sind Erweiterungen über den Plan hinaus; als nächste Phase bietet sich die öffentliche Polizeibehörde an.
+Alle acht Phasen des Entwicklungsplans plus Phase 9 (Konzern und Karriere), Phase 10 (Grafik und Ausrichtung), Phase 11 (Innenansicht), Phase 12 (Online-Welt), Phase 13 (Casino), Phase 14 (Mobil), Phase 15 (Cloud-Spielstand) und Phase 16 (Weiterlaufen) sind umgesetzt. Offene Punkte oben sind Erweiterungen über den Plan hinaus; als nächste Phase bietet sich die öffentliche Polizeibehörde an.

@@ -214,6 +214,16 @@ Umfang: ein Spielstand pro Konto, damit das Spiel vom Handy am PC weitergeht und
 | Dateispeicher überlebt Neustart; HTTP-Endpunkte des Spielservers | `cloud.test.ts` |
 | Handy speichert in die Cloud, PC lädt und spielt denselben Tick weiter, PC speichert, Handy lädt den neueren Stand | `cloud.spec.ts` |
 
+## Phase 16 – Weiterlaufen ✅ abgeschlossen (über den Plan hinaus)
+
+Umfang: Das Einzelspiel läuft weiter, während der Spieler weg ist: Nachholen der vergangenen Zeit mit der echten Simulation plus Bericht.
+
+| Kriterium | Nachweis |
+|---|---|
+| Vergangene Zeit → Ticks bei Spielgeschwindigkeit, Deckelung, aus bei Pause oder abgeschalteter Einstellung | `catchup.test.ts` |
+| Bericht entspricht den Engine-Ereignissen: Tage, Einnahmen, Ausgaben, Gebäude, Ereignisse; Kontostand bewegt sich um das Ergebnis | `catchup.test.ts` |
+| Im Browser: zwei Stunden Abwesenheit werden auf einen Tag gedeckelt, Bericht erscheint, abgeschaltet passiert nichts | `catchup.spec.ts` |
+
 ## Gesamtstand
 
-Alle acht Phasen sind abgeschlossen, mit Version 0.8.1 auditiert und mit Phase 9 bis 15 erweitert. Stand der Prüfung: 122 Unit-Tests (Vitest) und 20 E2E-Tests (Playwright) laufen fehlerfrei; Typecheck strict und Lint sind sauber bis auf zwei dokumentierte Hinweise.
+Alle acht Phasen sind abgeschlossen, mit Version 0.8.1 auditiert und mit Phase 9 bis 16 erweitert. Stand der Prüfung: 124 Unit-Tests (Vitest) und 21 E2E-Tests (Playwright) laufen fehlerfrei; Typecheck strict und Lint sind sauber bis auf zwei dokumentierte Hinweise.

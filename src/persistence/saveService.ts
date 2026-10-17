@@ -53,11 +53,11 @@ export async function createManualSave(state: WorldState, name: string): Promise
   return saveToSlot(state, slot, name);
 }
 
-export async function loadSave(id: number): Promise<{ state: WorldState; name: string; repaired: string[] }> {
+export async function loadSave(id: number): Promise<{ state: WorldState; name: string; repaired: string[]; savedAt: number }> {
   const db = getDatabase();
   const record = await db.saves.get(id);
   if (!record) throw new SaveValidationError('Spielstand nicht gefunden.');
-  return parseWithRepair(record.data);
+  return { ...parseWithRepair(record.data), savedAt: record.updatedAt };
 }
 
 export async function deleteSave(id: number): Promise<void> {
@@ -68,19 +68,19 @@ export function exportToText(state: WorldState, name: string): string {
   return serialize(state, name);
 }
 
-export function importFromText(text: string): { state: WorldState; name: string; repaired: string[] } {
+export function importFromText(text: string): { state: WorldState; name: string; repaired: string[]; savedAt: number } {
   if (text.length > 64 * 1024 * 1024) throw new SaveValidationError('Die Datei ist zu groß.');
   return parseWithRepair(text);
 }
 
-function parseWithRepair(text: string): { state: WorldState; name: string; repaired: string[] } {
+function parseWithRepair(text: string): { state: WorldState; name: string; repaired: string[]; savedAt: number } {
   try {
     const result = deserialize(text);
-    return { state: result.state, name: result.name, repaired: [] };
+    return { state: result.state, name: result.name, repaired: [], savedAt: result.savedAt };
   } catch (err) {
     if (!(err instanceof SaveValidationError)) throw err;
     const repaired = tryRepair(text);
-    if (repaired) return { state: repaired.state, name: repaired.name, repaired: repaired.repaired };
+    if (repaired) return { state: repaired.state, name: repaired.name, repaired: repaired.repaired, savedAt: repaired.savedAt };
     throw err;
   }
 }

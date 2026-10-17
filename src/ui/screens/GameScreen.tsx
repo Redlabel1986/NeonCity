@@ -11,6 +11,7 @@ import { SavesDialog } from '../dialogs/SavesDialog';
 import { SettingsDialog } from '../dialogs/SettingsDialog';
 import { HelpDialog } from '../dialogs/HelpDialog';
 import { CareerDialog } from '../dialogs/CareerDialog';
+import { CatchUpDialog } from '../dialogs/CatchUpDialog';
 import { useHotkeys } from '../hooks/useHotkeys';
 import { useState } from 'react';
 import { WEATHER_LABELS } from '../../sim/systems/weather';
@@ -69,6 +70,7 @@ export function GameScreen() {
       {dialog === 'settings' && <SettingsDialog onClose={() => setDialog(null)} />}
       {dialog === 'help' && <HelpDialog onClose={() => setDialog(null)} />}
       {dialog === 'career' && <CareerDialog onClose={() => setDialog(null)} />}
+      {dialog === 'catchup' && <CatchUpDialog onClose={() => setDialog(null)} />}
       {intro && !bankrupt && (
         <div className="pointer-events-auto absolute left-1/2 top-16 z-30 w-[30rem] max-w-[calc(100vw-2rem)] -translate-x-1/2">
           <section className="panel p-4 text-sm" aria-label="Einstieg">

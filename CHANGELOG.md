@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.16.0 – Die Stadt läuft weiter, wenn du weg bist (2026-10-17)
+
+### Hinzugefügt
+
+- Weiterlaufen im Einzelspiel: Beim Laden eines Spielstands (Browser, Import, Cloud) und beim Zurückkehren aus einem Hintergrund-Tab (ab einer Minute) wird die vergangene reale Zeit mit der echten Simulation nachgerechnet, in Scheiben mit Fortschrittsanzeige, damit die Oberfläche bedienbar bleibt. Es wird nichts geschätzt: Es laufen dieselben Ticks, die das Spiel bei offenem Browser gelaufen wäre.
+- Bericht „Während du weg warst“: abgeschlossene Tage, Einnahmen, Ausgaben, Ergebnis, Kontostand vorher/nachher, fertiggestellte Gebäude und bis zu 15 wichtige Ereignisse (Warnungen, Gefahren, Erfolge).
+- Einstellung „Weiterlaufen, wenn du weg bist“: aus, bis 1, 3, 7, 30 (Standard) oder 90 Spieltage nachholen. Pausierte Spiele bleiben pausiert, die Geschwindigkeit des Spielstands gilt (1× = ein Spieltag je zwölf Minuten). In der Online-Welt läuft die Uhr ohnehin auf dem Server.
+- Tests: Umrechnung und Deckelung, Bericht aus den Engine-Ereignissen (Buchungen im Zeitfenster; der Kontostand bewegt sich um genau das gemeldete Ergebnis) und ein E2E-Test mit Deckelung und abgeschaltetem Nachholen.
+
+### Hinweis
+
+- Serverseitiges Weiterrechnen für Einzelspieler gibt es bewusst nicht: Auf Vercel laufen keine dauerhaften Prozesse, und da die Simulation deterministisch ist, liefert das Nachholen beim Zurückkommen dasselbe Ergebnis. Wer die Stadt rund um die Uhr laufen lassen will, nutzt die Online-Welt auf einem eigenen Server (DEPLOY.md).
+
 ## 0.15.0 – Cloud-Spielstand: Handy ↔ PC (2026-10-17)
 
 ### Hinzugefügt
