@@ -1,5 +1,11 @@
 # Aufgaben
 
+## Erledigt (Phase 14 – Mobil)
+
+- [x] Telefon-Layout mit Bottom-Navigation, Sheets, kompakter Kopfleiste
+- [x] Touch: Schwenken, Pinch-Zoom, Zwei-Schritt-Platzierung mit Drehen
+- [x] Manifest, Viewport, Tap-Ziele, Auflösungsgrenze; E2E im Telefonformat
+
 ## Erledigt (Phase 13 – Casino)
 
 - [x] Slots, Roulette, Blackjack als deterministische Kommandos mit Buchungen
@@ -120,11 +126,11 @@
 - [ ] Ausrichtung bestehender Gebäude nachträglich ändern (derzeit nur beim Platzieren)
 - [ ] Online: Chat, Rangliste, Admin-Befehle (Geschwindigkeit, Spieler entfernen), Übernahme fremder Spielerbetriebe, Passwort ändern
 - [ ] Casino: Teilen und Versicherung beim Blackjack, Tischlimits je Bezirk, ein eigenes Casino als Betrieb (Hausvorteil als Einnahme)
+- [ ] Mobil: Sheets per Wischgeste schließen, Querformat-Layout für Tablets, Service Worker für Offline-Start
 - [ ] Online: Verbindungsabbruch automatisch wieder aufnehmen (derzeit Hinweis und manuelles Neuanmelden)
 - [ ] Fahrzeuge mit Abbiegeanimation und Wartezeit an Kreuzungen (derzeit Richtungswechsel ohne Übergang)
 - [ ] Interne Fabriklieferungen mit Verrechnungspreis statt Nullbuchung (derzeit bewusst ohne Geldfluss)
 - [ ] Screenreader-Beschreibung der Kartenkacheln (Tastatur-Cursor über die Karte)
-- [ ] Pinch-Zoom auf Tablets
 - [ ] Shift-gedrückt halten für mehrfaches Platzieren
 - [ ] Screenshot-Regressionstests mit festen Referenzbildern
 - [ ] Service Worker für Offline-Start nach Neuladen
@@ -148,4 +154,4 @@
 
 ## Stand
 
-Alle acht Phasen des Entwicklungsplans plus Phase 9 (Konzern und Karriere), Phase 10 (Grafik und Ausrichtung), Phase 11 (Innenansicht), Phase 12 (Online-Welt) und Phase 13 (Casino) sind umgesetzt. Offene Punkte oben sind Erweiterungen über den Plan hinaus; als nächste Phase bietet sich die öffentliche Polizeibehörde an.
+Alle acht Phasen des Entwicklungsplans plus Phase 9 (Konzern und Karriere), Phase 10 (Grafik und Ausrichtung), Phase 11 (Innenansicht), Phase 12 (Online-Welt), Phase 13 (Casino) und Phase 14 (Mobil) sind umgesetzt. Offene Punkte oben sind Erweiterungen über den Plan hinaus; als nächste Phase bietet sich die öffentliche Polizeibehörde an.

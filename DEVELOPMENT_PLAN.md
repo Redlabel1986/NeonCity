@@ -192,6 +192,17 @@ Umfang: Royal Nova Casino mit Slots, Roulette und Blackjack um die eigenen Credi
 | Deterministisch je Seed; laufende Hand und Statistik überstehen Speichern/Laden; Migration v12→v13 | `phase13.test.ts` |
 | Im Browser: Slots, Roulette und Blackjack verändern das Konto passend zum Ergebnis, Finanzen zeigen die Kategorie Casino | `phase13.spec.ts` |
 
+## Phase 14 – Mobil ✅ abgeschlossen (über den Plan hinaus)
+
+Umfang: das Spiel auf Telefonen spielbar und ansehnlich machen: Touch-Steuerung und ein eigenes Layout für schmale Bildschirme.
+
+| Kriterium | Nachweis |
+|---|---|
+| Telefon-Layout mit Bottom-Navigation, Sheets für Panels, Inspektor und Dock, kompakte Kopfleiste | `mobile.spec.ts`, Screenshots `m-*.png` |
+| Zwei-Schritt-Platzierung per Tipp mit Vorschau, Drehen und Bestätigen; Tippen wählt Gebäude aus | `mobile.spec.ts` |
+| Pinch-Zoom ohne versehentliche Auswahl | `mobile.spec.ts` |
+| Desktop-Layout unverändert (alle bisherigen E2E-Tests) | gesamte E2E-Suite |
+
 ## Gesamtstand
 
-Alle acht Phasen sind abgeschlossen, mit Version 0.8.1 auditiert und mit Phase 9 bis 13 erweitert. Stand der Prüfung: 118 Unit-Tests (Vitest) und 18 E2E-Tests (Playwright) laufen fehlerfrei; Typecheck strict und Lint sind sauber bis auf zwei dokumentierte Hinweise.
+Alle acht Phasen sind abgeschlossen, mit Version 0.8.1 auditiert und mit Phase 9 bis 14 erweitert. Stand der Prüfung: 118 Unit-Tests (Vitest) und 19 E2E-Tests (Playwright) laufen fehlerfrei; Typecheck strict und Lint sind sauber bis auf zwei dokumentierte Hinweise.

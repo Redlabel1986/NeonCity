@@ -143,6 +143,10 @@ export interface GameStore {
   placementCheck: PlacementCheck | null;
   /** Requested entrance edge while placing; null = automatic (first road-side edge). */
   placementFacing: Facing | null;
+  /** Touch placement: tile chosen for preview, waiting for confirmation. */
+  placementPending: { x: number; y: number } | null;
+  /** Phone layout: which auxiliary sheet is open. */
+  mobileSheet: 'more' | 'dock' | null;
   toasts: Toast[];
   settings: Settings;
   busy: string | null;
@@ -157,6 +161,11 @@ export interface GameStore {
   setSpeed: (speed: Speed) => void;
   togglePause: () => void;
   setPanel: (panel: Panel | null) => void;
+  /** Closes the panel; with keepPlacement the running placement survives (mobile build flow). */
+  closePanel: (keepPlacement: boolean) => void;
+  setMobileSheet: (sheet: 'more' | 'dock' | null) => void;
+  /** Places the building at the tile chosen by touch. */
+  confirmPlacement: () => void;
   setDialog: (dialog: Dialog) => void;
   requestDockTab: (tab: 'log' | 'tasks' | 'warnings' | 'decisions' | null) => void;
   selectBuilding: (id: number | null) => void;
@@ -166,7 +175,8 @@ export interface GameStore {
   /** Rotates the pending placement by a quarter turn. */
   rotatePlacement: (delta: 1 | -1) => void;
   setHover: (tile: { x: number; y: number } | null) => void;
-  handleTileClick: (x: number, y: number, button: number) => void;
+  handleTileClick: (x: number, y: number, button: number, pointerType?: string) => void;
+  placeAt: (x: number, y: number) => void;
   notify: (level: LogLevel, message: string) => void;
   dismissToast: (id: number) => void;
   updateSettings: (patch: Partial<Settings>) => void;
@@ -235,6 +245,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
   placementDefId: null,
   placementCheck: null,
   placementFacing: null,
+  placementPending: null,
+  mobileSheet: null,
   toasts: [],
   settings: loadSettings(),
   busy: null,
@@ -374,6 +386,24 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (next !== 'dashboard' && get().interiorBuildingId !== null) get().leaveInterior();
   },
 
+  closePanel: (keepPlacement) => {
+    set({ panel: null });
+    if (!keepPlacement && get().placementDefId) get().cancelPlacement();
+    if (get().panel !== 'dashboard' && get().interiorBuildingId !== null) get().leaveInterior();
+  },
+
+  setMobileSheet: (sheet) => {
+    set({ mobileSheet: sheet });
+    if (sheet && get().panel) get().closePanel(false);
+  },
+
+  confirmPlacement: () => {
+    const pending = get().placementPending;
+    const defId = get().placementDefId;
+    if (!pending || !defId) return;
+    get().placeAt(pending.x, pending.y);
+  },
+
   setDialog: (dialog) => set({ dialog }),
   requestDockTab: (tab) => set({ dockTabRequest: tab }),
 
@@ -392,13 +422,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   startPlacement: (defId) => {
-    set({ placementDefId: defId, placementCheck: null, placementFacing: null, panel: 'build' });
+    set({ placementDefId: defId, placementCheck: null, placementFacing: null, placementPending: null, panel: 'build', mobileSheet: null });
     const hover = get().hoverTile;
     if (hover) get().setHover(hover);
   },
 
   cancelPlacement: () => {
-    set({ placementDefId: null, placementCheck: null, placementFacing: null });
+    set({ placementDefId: null, placementCheck: null, placementFacing: null, placementPending: null });
     session.renderer?.setGhost(null, null);
   },
 
@@ -417,6 +447,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     set({ hoverTile: tile });
     if (!r || !sim) return;
     const defId = get().placementDefId;
+    if (defId && !tile && get().placementPending) return; // keep the touch preview until confirmed or cancelled
     if (defId && tile) {
       const check = checkPlacement(sim.state, defId, tile.x, tile.y, get().placementFacing ?? undefined);
       set({ placementCheck: check });
@@ -431,7 +462,20 @@ export const useGameStore = create<GameStore>((set, get) => ({
     }
   },
 
-  handleTileClick: (x, y, button) => {
+  placeAt: (x, y) => {
+    const sim = session.sim;
+    const defId = get().placementDefId;
+    if (!sim || !defId) return;
+    const ok = get().dispatch({ type: 'placeBuilding', defId, x, y, facing: get().placementFacing ?? undefined });
+    if (ok) {
+      const placed = Object.values(sim.state.buildings).find((b) => b.owner === sim.state.playerId && b.x === x && b.y === y);
+      get().notify('success', `${placed?.label ?? 'Gebäude'} platziert.`);
+      get().cancelPlacement();
+      if (placed) get().selectBuilding(placed.id);
+    }
+  },
+
+  handleTileClick: (x, y, button, pointerType = 'mouse') => {
     const sim = session.sim;
     if (!sim) return;
     const defId = get().placementDefId;
@@ -445,14 +489,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
       return;
     }
     if (defId) {
-      const ok = get().dispatch({ type: 'placeBuilding', defId, x, y, facing: get().placementFacing ?? undefined });
-      if (ok) {
-        const placed = Object.values(sim.state.buildings).find((b) => b.owner === sim.state.playerId && b.x === x && b.y === y);
-        get().notify('success', `${placed?.label ?? 'Gebäude'} platziert.`);
-        // Keep placing while shift is held is a later refinement; for now leave placement mode.
-        get().cancelPlacement();
-        if (placed) get().selectBuilding(placed.id);
+      if (pointerType === 'touch') {
+        // Touch has no hover: first tap previews, the placement bar confirms.
+        get().setHover({ x, y });
+        set({ placementPending: { x, y } });
+        return;
       }
+      get().placeAt(x, y);
       return;
     }
     const occupant = sim.state.grid.occupantAt(x, y);

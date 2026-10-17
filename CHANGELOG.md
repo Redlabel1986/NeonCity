@@ -1,5 +1,20 @@
 # Changelog
 
+## 0.14.0 – Mobil spielbar (2026-10-17)
+
+### Hinzugefügt
+
+- Telefon-Layout (unter 768 px Breite): kompakte Kopfleiste (Konto, Tagesergebnis, Uhr, ein Geschwindigkeitsknopf zum Durchschalten, Krisen- und Fahndungshinweise), Bottom-Navigation (Stadt, Bauen, Betriebe, Finanzen, Mehr) und Sheets statt Seitenpanels: Panels als volle Sheets, Dashboard und Inspektor als halbe Sheets, damit Karte bzw. Innenansicht sichtbar bleiben; „Mehr“ bündelt die übrigen Panels, Ereignisse und Aufgaben, Spielstände, Einstellungen, Hilfe und Hauptmenü.
+- Touch-Steuerung: ein Finger schwenkt, zwei Finger zoomen (Pinch um den Fingermittelpunkt), Tippen wählt aus. Platzieren in zwei Schritten: erster Tipp zeigt die Vorschau samt Kosten und Eingangsseite, die Leiste darunter dreht („⟲ ⟳“) und bestätigt („Hier bauen“).
+- Web-App-Manifest und Viewport-Einstellungen für „Zum Startbildschirm hinzufügen“, sichere Bereiche (Notch) berücksichtigt, Mindestgröße der Bedienelemente 40 px, Eingabefelder ohne iOS-Zoom. Renderer-Auflösung auf Touch-Geräten auf 1,5× begrenzt.
+- Hauptmenü: auf kleinen Bildschirmen steht „Neues Spiel“ vor dem Online-Bereich.
+- E2E-Test im Telefonformat (390×844, Touch): Navigation, Sheets, Zwei-Schritt-Platzierung, Inspektor, Pinch-Zoom, Einstellungen, Casino.
+
+### Geändert
+
+- Toasts erscheinen auf Telefonen oben unter der Kopfleiste.
+- Der Testserver der E2E-Suite läuft auf Port 8790, damit ein lokal laufender Spielserver auf 8787 nicht stört.
+
 ## 0.13.0 – Royal Nova Casino (2026-10-17)
 
 ### Hinzugefügt

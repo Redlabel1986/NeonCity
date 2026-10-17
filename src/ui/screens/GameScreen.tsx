@@ -14,6 +14,8 @@ import { CareerDialog } from '../dialogs/CareerDialog';
 import { useHotkeys } from '../hooks/useHotkeys';
 import { useState } from 'react';
 import { WEATHER_LABELS } from '../../sim/systems/weather';
+import { useIsMobile } from '../hooks/useMediaQuery';
+import { MobileLayout } from '../components/mobile/MobileLayout';
 
 export function GameScreen() {
   const dialog = useGameStore((s) => s.dialog);
@@ -22,6 +24,7 @@ export function GameScreen() {
   const busy = useGameStore((s) => s.busy);
   const quitToMenu = useGameStore((s) => s.quitToMenu);
   const interiorBuildingId = useGameStore((s) => s.interiorBuildingId);
+  const isMobile = useIsMobile();
   const simState = useSimState();
   const bankrupt = simState?.corporate.bankrupt ?? false;
   const [intro, setIntro] = useState<boolean>(() => {
@@ -45,6 +48,9 @@ export function GameScreen() {
   return (
     <div className="relative h-full w-full overflow-hidden bg-ink">
       <CityCanvas />
+      {isMobile ? (
+        <MobileLayout />
+      ) : (
       <div className="pointer-events-none absolute inset-0 flex flex-col">
         <TopBar />
         <div className="flex min-h-0 flex-1">
@@ -58,6 +64,7 @@ export function GameScreen() {
         </div>
         <BottomDock />
       </div>
+      )}
       {dialog === 'saves' && <SavesDialog onClose={() => setDialog(null)} mode="game" />}
       {dialog === 'settings' && <SettingsDialog onClose={() => setDialog(null)} />}
       {dialog === 'help' && <HelpDialog onClose={() => setDialog(null)} />}

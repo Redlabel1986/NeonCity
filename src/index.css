@@ -41,6 +41,11 @@ body,
   box-sizing: border-box;
 }
 
+body {
+  touch-action: manipulation; /* no double-tap zoom on controls; the map handles its own gestures */
+  -webkit-tap-highlight-color: transparent;
+}
+
 button,
 input,
 select {
@@ -294,5 +299,61 @@ select {
   }
   .btn {
     transition: none;
+  }
+}
+
+
+/* ---------------------------------------------------------------- mobile */
+
+@media (max-width: 767px) {
+  .btn {
+    min-height: 2.5rem;
+  }
+  .input {
+    min-height: 2.5rem;
+    font-size: 16px; /* keeps iOS from zooming into inputs */
+  }
+}
+
+.mobile-nav {
+  padding-bottom: env(safe-area-inset-bottom);
+  min-height: 3.5rem;
+}
+
+.mobile-tab {
+  flex: 1 1 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem;
+  padding: 0.4rem 0.25rem;
+  font-size: 0.7rem;
+  color: var(--color-muted);
+  background: transparent;
+  border: 0;
+  border-top: 2px solid transparent;
+}
+.mobile-tab[aria-pressed='true'] {
+  color: var(--color-cyan);
+  border-top-color: var(--color-cyan);
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(12px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+.sheet-in {
+  animation: sheet-in 0.18s ease-out both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sheet-in {
+    animation: none;
   }
 }

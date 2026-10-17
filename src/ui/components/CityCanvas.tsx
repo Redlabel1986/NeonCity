@@ -15,7 +15,7 @@ export function CityCanvas() {
     if (!host) return;
     const store = useGameStore.getState();
     const renderer = new CityRenderer({
-      onTileClick: (x, y, button) => useGameStore.getState().handleTileClick(x, y, button),
+      onTileClick: (x, y, button, pointerType) => useGameStore.getState().handleTileClick(x, y, button, pointerType),
       onTileHover: (tile) => useGameStore.getState().setHover(tile),
       onCameraChange: () => cameraListeners.forEach((l) => l()),
       onInteriorTab: (tab) => useGameStore.getState().setDashboardTab(tab),

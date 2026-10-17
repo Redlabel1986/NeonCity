@@ -1,4 +1,4 @@
-import { useGameStore } from '../store/gameStore';
+import { useGameStore, type Panel } from '../store/gameStore';
 import { RAIL_ENTRIES } from '../navigation';
 import { BuildPanel } from './BuildPanel';
 import { BusinessPanel } from './BusinessPanel';
@@ -16,9 +16,16 @@ import { ResearchPanel } from './ResearchPanel';
 import { CasinoPanel } from './CasinoPanel';
 import { useSimState } from '../store/gameStore';
 
-export function PanelHost() {
+export interface PanelView {
+  panel: Panel;
+  title: string;
+  content: React.ReactNode;
+  wide: boolean;
+}
+
+/** Title and content of the open panel; shared by the desktop host and the phone sheet. */
+export function usePanelView(): PanelView | null {
   const panel = useGameStore((s) => s.panel);
-  const setPanel = useGameStore((s) => s.setPanel);
   const dashboardId = useGameStore((s) => s.dashboardBuildingId);
   const state = useSimState();
   if (!panel) return null;
@@ -70,6 +77,14 @@ export function PanelHost() {
     default:
       content = <LockedPanel panel={panel} phase={entry?.phase ?? 2} />;
   }
+  return { panel, title, content, wide };
+}
+
+export function PanelHost() {
+  const setPanel = useGameStore((s) => s.setPanel);
+  const view = usePanelView();
+  if (!view) return null;
+  const { panel, title, content, wide } = view;
   return (
     <section className={`panel pointer-events-auto flex ${wide ? 'w-[36rem]' : 'w-[26rem]'} max-w-[calc(100vw-10rem)] shrink-0 flex-col border-y-0`} aria-label={title}>
       <div className="flex items-center justify-between border-b border-line px-4 py-2">

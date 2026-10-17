@@ -19,7 +19,7 @@ import { DISTRICT_ARCHETYPES } from '../sim/data/districts';
 import { BUILDING_DEFINITIONS } from '../sim/data/buildings';
 
 export interface RendererCallbacks {
-  onTileClick: (x: number, y: number, button: number) => void;
+  onTileClick: (x: number, y: number, button: number, pointerType: string) => void;
   onTileHover: (tile: { x: number; y: number } | null) => void;
   onCameraChange?: () => void;
   /** A zone inside the interior view was clicked. */
@@ -106,7 +106,10 @@ export class CityRenderer {
   private flight: { x0: number; y0: number; s0: number; x1: number; y1: number; s1: number; t: number; duration: number } | null = null;
 
   // input
-  private pointerDown: { x: number; y: number; wx: number; wy: number; button: number; dragging: boolean } | null = null;
+  private pointerDown: { x: number; y: number; wx: number; wy: number; button: number; dragging: boolean; pointerType: string } | null = null;
+  /** Active touch points for pinch zoom. */
+  private readonly touches = new Map<number, { x: number; y: number }>();
+  private pinch: { distance: number; zoom: number } | null = null;
   private lastHover: { x: number; y: number } | null = null;
   private readonly keys = new Set<string>();
 
@@ -125,7 +128,7 @@ export class CityRenderer {
       resizeTo: host,
       backgroundColor: 0x07060b,
       antialias: true,
-      resolution: Math.min(2, window.devicePixelRatio || 1),
+      resolution: Math.min(window.matchMedia?.('(pointer: coarse)').matches ? 1.5 : 2, window.devicePixelRatio || 1),
       autoDensity: true,
       preference: 'webgl',
     });
@@ -597,8 +600,21 @@ export class CityRenderer {
   private readonly onPointerDown = (e: PointerEvent): void => {
     if (!this.host) return;
     if (this.interior.active) return; // the map stays put behind the interior
-    this.app.canvas.setPointerCapture?.(e.pointerId);
-    this.pointerDown = { x: e.clientX, y: e.clientY, wx: this.world.position.x, wy: this.world.position.y, button: e.button, dragging: false };
+    try {
+      this.app.canvas.setPointerCapture?.(e.pointerId);
+    } catch {
+      /* synthetic or already released pointer */
+    }
+    if (e.pointerType === 'touch') {
+      this.touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (this.touches.size === 2) {
+        const [a, b] = [...this.touches.values()];
+        this.pinch = { distance: Math.hypot(a!.x - b!.x, a!.y - b!.y), zoom: this.world.scale.x };
+        if (this.pointerDown) this.pointerDown.dragging = true;
+        return;
+      }
+    }
+    this.pointerDown = { x: e.clientX, y: e.clientY, wx: this.world.position.x, wy: this.world.position.y, button: e.button, dragging: false, pointerType: e.pointerType };
   };
 
   private readonly onPointerMove = (e: PointerEvent): void => {
@@ -613,6 +629,17 @@ export class CityRenderer {
       }
       return;
     }
+    if (e.pointerType === 'touch' && this.touches.has(e.pointerId)) {
+      this.touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (this.pinch && this.touches.size >= 2) {
+        const [a, b] = [...this.touches.values()];
+        const distance = Math.hypot(a!.x - b!.x, a!.y - b!.y);
+        const mid = { x: (a!.x + b!.x) / 2 - rect.left, y: (a!.y + b!.y) / 2 - rect.top };
+        const target = clamp((this.pinch.zoom * distance) / Math.max(1, this.pinch.distance), MIN_ZOOM, MAX_ZOOM);
+        this.zoomBy(target / this.world.scale.x, mid.x, mid.y);
+        return;
+      }
+    }
     if (this.pointerDown) {
       const dx = e.clientX - this.pointerDown.x;
       const dy = e.clientY - this.pointerDown.y;
@@ -625,6 +652,7 @@ export class CityRenderer {
         return;
       }
     }
+    if (e.pointerType === 'touch') return; // no hover on touch screens
     const tile = this.screenToTile(px, py);
     const inside = tile.x >= 0 && tile.y >= 0 && tile.x < this.citySize && tile.y < this.citySize;
     const next = inside ? tile : null;
@@ -635,6 +663,11 @@ export class CityRenderer {
   };
 
   private readonly onPointerUp = (e: PointerEvent): void => {
+    if (e.pointerType === 'touch') {
+      this.touches.delete(e.pointerId);
+      if (this.touches.size < 2) this.pinch = null;
+      if (this.touches.size > 0) return; // other finger still down
+    }
     const down = this.pointerDown;
     this.pointerDown = null;
     if (this.interior.active) {
@@ -646,13 +679,22 @@ export class CityRenderer {
     const rect = this.app.canvas.getBoundingClientRect();
     const tile = this.screenToTile(e.clientX - rect.left, e.clientY - rect.top);
     if (tile.x >= 0 && tile.y >= 0 && tile.x < this.citySize && tile.y < this.citySize) {
-      this.callbacks.onTileClick(tile.x, tile.y, down.button);
+      this.callbacks.onTileClick(tile.x, tile.y, down.button, down.pointerType);
     } else if (down.button === 0) {
-      this.callbacks.onTileClick(-1, -1, 0);
+      this.callbacks.onTileClick(-1, -1, 0, down.pointerType);
     }
   };
 
-  private readonly onPointerLeave = (): void => {
+  private readonly onPointerLeave = (e: Event): void => {
+    const type = (e as PointerEvent).pointerType;
+    if (type === 'touch') {
+      // Touch pointers always leave after lifting; that is not a hover change.
+      this.touches.delete((e as PointerEvent).pointerId);
+      if (this.touches.size < 2) this.pinch = null;
+      return;
+    }
+    this.touches.clear();
+    this.pinch = null;
     this.interior.pointerLeave();
     this.lastHover = null;
     this.callbacks.onTileHover(null);
@@ -703,6 +745,7 @@ export class CityRenderer {
     c.addEventListener('pointerdown', this.onPointerDown);
     c.addEventListener('pointermove', this.onPointerMove);
     c.addEventListener('pointerup', this.onPointerUp);
+    c.addEventListener('pointercancel', this.onPointerLeave);
     c.addEventListener('pointerleave', this.onPointerLeave);
     c.addEventListener('wheel', this.onWheel, { passive: false });
     c.addEventListener('contextmenu', this.onContextMenu);
@@ -717,6 +760,7 @@ export class CityRenderer {
       c.removeEventListener('pointerdown', this.onPointerDown);
       c.removeEventListener('pointermove', this.onPointerMove);
       c.removeEventListener('pointerup', this.onPointerUp);
+      c.removeEventListener('pointercancel', this.onPointerLeave);
       c.removeEventListener('pointerleave', this.onPointerLeave);
       c.removeEventListener('wheel', this.onWheel);
       c.removeEventListener('contextmenu', this.onContextMenu);

@@ -1,0 +1,12 @@
+{
+  "name": "Neon Dynasty",
+  "short_name": "Neon Dynasty",
+  "description": "Build an Empire. Own the Night. Cyberpunk-Wirtschaftssimulation.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#07060b",
+  "theme_color": "#07060b",
+  "lang": "de",
+  "icons": [{ "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}

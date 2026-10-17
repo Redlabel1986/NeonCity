@@ -66,8 +66,10 @@ export function MainMenu() {
               Aus Datei importieren
             </button>
           </div>
-          <OnlineSection background={background} />
-          <p className="mt-10 text-xs text-muted">Version 0.12.0 – Online-Welt.</p>
+          <div className="hidden lg:block">
+            <OnlineSection background={background} />
+          </div>
+          <p className="mt-10 hidden text-xs text-muted lg:block">Version 0.14.0 – Online-Welt, Casino, Mobil.</p>
         </section>
 
         <form
@@ -147,6 +149,10 @@ export function MainMenu() {
             </button>
           </div>
         </form>
+        <div className="lg:hidden">
+          <OnlineSection background={background} />
+          <p className="mt-6 text-xs text-muted">Version 0.14.0 – Online-Welt, Casino, Mobil.</p>
+        </div>
       </main>
       {showSaves && <SavesDialog onClose={() => setShowSaves(false)} mode="menu" />}
     </div>

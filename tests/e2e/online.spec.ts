@@ -1,6 +1,6 @@
 import { test, expect, type Browser, type Page } from '@playwright/test';
 
-const SERVER = 'http://localhost:8787';
+const SERVER = 'http://localhost:8790';
 
 async function join(browser: Browser, name: string, mode: 'register' | 'login'): Promise<Page> {
   const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });

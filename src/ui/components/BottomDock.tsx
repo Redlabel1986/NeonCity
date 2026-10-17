@@ -7,7 +7,7 @@ import { credits, duration } from '../format';
 
 type Tab = 'log' | 'tasks' | 'warnings' | 'decisions';
 
-export function BottomDock() {
+export function BottomDock({ embedded = false }: { embedded?: boolean } = {}) {
   const state = useSimState();
   const [tab, setTab] = useState<Tab>('tasks');
   const [collapsed, setCollapsed] = useState(false);
@@ -33,8 +33,8 @@ export function BottomDock() {
   const def = placementDefId ? BUILDING_DEFINITIONS[placementDefId] : null;
 
   return (
-    <footer className="panel pointer-events-auto shrink-0 border-x-0 border-b-0" aria-label="Ereignisse, Aufgaben und Bauwerkzeuge">
-      <div className="flex items-center gap-1 px-2 pt-1 text-xs">
+    <footer className={embedded ? 'flex h-full flex-col' : 'panel pointer-events-auto shrink-0 border-x-0 border-b-0'} aria-label="Ereignisse, Aufgaben und Bauwerkzeuge">
+      <div className="flex flex-wrap items-center gap-1 px-2 pt-1 text-xs">
         <TabButton active={tab === 'log'} onClick={() => setTab('log')}>
           Ereignisse
         </TabButton>
@@ -76,12 +76,14 @@ export function BottomDock() {
             </button>
           )}
         </div>
-        <button type="button" className="btn btn-ghost ml-auto px-2 py-0.5" onClick={() => setCollapsed((c) => !c)} aria-expanded={!collapsed}>
-          {collapsed ? 'Aufklappen' : 'Einklappen'}
-        </button>
+        {!embedded && (
+          <button type="button" className="btn btn-ghost ml-auto px-2 py-0.5" onClick={() => setCollapsed((c) => !c)} aria-expanded={!collapsed}>
+            {collapsed ? 'Aufklappen' : 'Einklappen'}
+          </button>
+        )}
       </div>
-      {!collapsed && (
-        <div className="scroll h-32 px-3 py-2 text-sm">
+      {(embedded || !collapsed) && (
+        <div className={`scroll px-3 py-2 text-sm ${embedded ? 'min-h-0 flex-1' : 'h-32'}`}>
           {activeTab === 'log' && (
             <ul className="space-y-0.5">
               {state.log.length === 0 && <li className="text-muted">Noch keine Ereignisse. Die Stadt wartet auf deinen ersten Zug.</li>}

@@ -98,6 +98,8 @@ Futuristisches Betriebssystem auf schwarzem Grund: Stadt im Zentrum, schmale Kop
 
 Neon wird nur für Beleuchtung, Daten und Interaktion eingesetzt; Textflächen bleiben ruhig und kontrastreich.
 
+Auf Telefonen (unter 768 px) weicht das Layout: kompakte Kopfleiste, Bottom-Navigation (Stadt, Bauen, Betriebe, Finanzen, Mehr), Panels als Sheets von unten; Dashboard und Inspektor nehmen die untere Hälfte, damit Karte und Innenansicht sichtbar bleiben. Ein Finger schwenkt, zwei Finger zoomen, Platzieren bestätigt man in einer Leiste nach dem ersten Tipp.
+
 ### Barrierefreiheit (Ziel WCAG 2.2 AA)
 Umgesetzt: Tastaturbedienung aller Panels und Dialoge, sichtbarer Fokus, semantische Rollen (banner, navigation, complementary, dialog, meter), Beschriftungen, skalierbare UI (85–140 %), reduzierte Bewegung (Systemeinstellung und Schalter), tabellarische Daten in Panels, keine reine Farbcodierung (Text und Symbole begleiten Farbe). Offen: frei belegbare Tasten, Screenreader-Beschreibung der Kartenkacheln.
 

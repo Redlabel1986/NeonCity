@@ -2,7 +2,7 @@
 
 Browserbasierte Cyberpunk-Aufbau-, Wirtschafts- und Lebenssimulation. Nova Eclipse, 2187.
 
-**Entwicklungsstand: alle acht Phasen abgeschlossen, Audit 0.8.1, Phase 9 Konzern und Karriere, Phase 10 Grafik und Gebäudeausrichtung, Phase 11 Innenansicht, Phase 12 Online-Welt, Phase 13 Casino (0.13.0).**
+**Entwicklungsstand: alle acht Phasen abgeschlossen, Audit 0.8.1, Phase 9 Konzern und Karriere, Phase 10 Grafik und Gebäudeausrichtung, Phase 11 Innenansicht, Phase 12 Online-Welt, Phase 13 Casino, Phase 14 Mobil (0.14.0).**
 Die Stadt wird prozedural aus einem Seed erzeugt und von bis zu 2.400 simulierten Bürgern bevölkert. Du führst Lokale, Hotels, Taxiflotten, Läden, Sicherheitsfirmen, Labore und Fabriken, kaufst Immobilien, übernimmst Konkurrenten oder gründest eine kriminelle Organisation. Zwölf Fraktionen reagieren auf dich, der Stadtrat beschließt Gesetze, Forschung und Lieferketten senken Kosten, Kredite und Investoren hebeln das Wachstum, Krisen treffen die ganze Stadt. Jeder Credit entsteht aus einer Transaktion.
 
 ## Starten
@@ -47,7 +47,7 @@ npm run test:e2e   # Playwright: Spielstart, Bau, Betrieb, Speichern/Laden (ben�
 9. Einstellungen: Effekte, Audio, Kontrastmodus, Tastenbelegung; Heatmaps über die Übersichtskarte. `J` öffnet das Royal Nova Casino (Slots, Roulette, Blackjack um eigene Credits).
 10. `F5` / `F9` Schnellspeichern und -laden, Spielstände-Dialog für Slots, Export und Import.
 
-Alle Tastenkombinationen: `H` im Spiel.
+Alle Tastenkombinationen: `H` im Spiel. Auf dem Telefon: Bottom-Navigation, ein Finger schwenkt, zwei Finger zoomen, Platzieren per Tipp und „Hier bauen“; „Zum Startbildschirm hinzufügen“ startet das Spiel wie eine App.
 
 ## Dokumentation
 
