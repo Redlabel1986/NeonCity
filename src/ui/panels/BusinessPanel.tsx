@@ -7,7 +7,7 @@ export function BusinessPanel() {
   const openDashboard = useGameStore((s) => s.openDashboard);
   const setPanel = useGameStore((s) => s.setPanel);
   if (!state) return null;
-  const mine = Object.values(state.buildings).filter((b) => b.owner === 'player');
+  const mine = Object.values(state.buildings).filter((b) => b.owner === state.playerId);
   const competitors = Object.values(state.competitors).sort((a, b) => b.reputation - a.reputation);
   if (mine.length === 0) {
     return (

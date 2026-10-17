@@ -5,14 +5,14 @@
  */
 
 import type { SimContext } from '../core/context';
-import type { FactionState, GameState } from '../state';
+import type { FactionState, GameState, SharedFactionState } from '../state';
 import { FACTIONS, FACTION_IDS, type FactionId } from '../data/factions';
 import { expectedWage } from './staff';
 import { createDecision } from './decisions';
 import { book, canAfford } from '../economy/finance';
 
-export function createFactions(): FactionState[] {
-  return FACTION_IDS.map((id) => ({ id, influence: FACTIONS[id].baseInfluence, relation: 0, lastActionDay: -10, activeUntilDay: 0, activeEffect: null }));
+export function createFactions(): SharedFactionState[] {
+  return FACTION_IDS.map((id) => ({ id, influence: FACTIONS[id].baseInfluence }));
 }
 
 export function factionState(state: GameState, id: FactionId): FactionState {
@@ -46,8 +46,21 @@ export function supportFaction(ctx: SimContext, factionId: FactionId, amount: nu
 }
 
 /** Daily: relation drift from behaviour, then faction actions. */
-export function closeFactionsDay(ctx: SimContext, day: number): void {
+/** City-wide faction influence; runs once per day in the shared pass. */
+export function closeFactionsSharedDay(ctx: SimContext, day: number): void {
   const { state, rng } = ctx;
+  for (const f of state.factions) {
+    const def = FACTIONS[f.id];
+    // Influence follows council strength and city state.
+    if (def.kind === 'party') f.influence = Math.max(10, Math.min(100, 30 + (state.politics.council[def.id] ?? 0) * 3));
+    else f.influence = Math.max(5, Math.min(100, f.influence + rng.gaussian() * 0.5));
+  }
+  void day;
+}
+
+/** Relations and faction actions towards one player; runs per player. */
+export function closeFactionsPlayerDay(ctx: SimContext, day: number): void {
+  const { state } = ctx;
   const player = playerProfile(state);
   for (const f of state.factions) {
     const def = FACTIONS[f.id];
@@ -78,9 +91,6 @@ export function closeFactionsDay(ctx: SimContext, day: number): void {
         drift += 0.1;
     }
     f.relation = Math.max(-100, Math.min(100, f.relation + drift));
-    // Influence follows council strength and city state.
-    if (def.kind === 'party') f.influence = Math.max(10, Math.min(100, 30 + (state.politics.council[def.id] ?? 0) * 3));
-    else f.influence = Math.max(5, Math.min(100, f.influence + rng.gaussian() * 0.5));
     if (f.activeUntilDay <= day) f.activeEffect = null;
   }
   factionActions(ctx, day, player);
@@ -111,7 +121,7 @@ function playerProfile(state: GameState): PlayerProfile {
   let bestValue = 0;
   const minWage = state.politics.laws.minimumWage ?? 0;
   for (const b of Object.values(state.buildings)) {
-    if (b.owner !== 'player') continue;
+    if (b.owner !== state.playerId) continue;
     if (b.property) {
       properties++;
       if (b.property.rentLevel > 1.3) highRent++;
@@ -131,7 +141,7 @@ function playerProfile(state: GameState): PlayerProfile {
       bestId = b.id;
     }
   }
-  const polluting = state.districts.filter((d) => d.stats.pollution > 70 && Object.values(state.buildings).some((b) => b.owner === 'player' && b.districtId === d.id && b.business)).length;
+  const polluting = state.districts.filter((d) => d.stats.pollution > 70 && Object.values(state.buildings).some((b) => b.owner === state.playerId && b.districtId === d.id && b.business)).length;
   return { businesses, employees, underpaidShare: employees > 0 ? underpaid / employees : 0, properties, highRentProperties: highRent, patrols, securedBusinesses: secured, pollutingDistricts: polluting, bestBusinessId: bestId, bestBusinessValue: bestValue };
 }
 
@@ -200,7 +210,7 @@ function factionActions(ctx: SimContext, day: number, player: PlayerProfile): vo
   const hackers = factionState(state, 'nullsect');
   if (player.businesses > 0 && hackers.relation < 10 && day - hackers.lastActionDay >= 9 && rng.chance(0.3)) {
     hackers.lastActionDay = day;
-    const targets = Object.values(state.buildings).filter((b) => b.owner === 'player' && b.business && b.status === 'operational');
+    const targets = Object.values(state.buildings).filter((b) => b.owner === state.playerId && b.business && b.status === 'operational');
     const target = rng.pick(targets);
     const amount = Math.round(600 + (target.business!.history[target.business!.history.length - 1]?.revenue ?? 500) * 0.8);
     createDecision(
@@ -259,7 +269,7 @@ function factionActions(ctx: SimContext, day: number, player: PlayerProfile): vo
   const green = factionState(state, 'green_cell');
   if (player.pollutingDistricts > 0 && day - green.lastActionDay >= 11 && rng.chance(0.35)) {
     green.lastActionDay = day;
-    const b = Object.values(state.buildings).find((x) => x.owner === 'player' && x.business && state.districts[x.districtId]!.stats.pollution > 70);
+    const b = Object.values(state.buildings).find((x) => x.owner === state.playerId && x.business && state.districts[x.districtId]!.stats.pollution > 70);
     createDecision(
       ctx,
       {

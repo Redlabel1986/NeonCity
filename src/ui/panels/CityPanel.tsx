@@ -9,7 +9,7 @@ export function CityPanel() {
   const population = state.districts.reduce((s, d) => s + d.stats.population, 0);
   const citizens = state.population.citizens.length;
   const competitors = Object.keys(state.competitors).length;
-  const mine = Object.values(state.buildings).filter((b) => b.owner === 'player');
+  const mine = Object.values(state.buildings).filter((b) => b.owner === state.playerId);
   return (
     <div className="text-sm">
       <p className="text-xs text-muted">

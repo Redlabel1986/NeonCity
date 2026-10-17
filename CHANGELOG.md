@@ -1,5 +1,33 @@
 # Changelog
 
+## 0.13.0 – Royal Nova Casino (2026-10-17)
+
+### Hinzugefügt
+
+- Casino-Panel (`J`): Slots, Roulette und Blackjack um eigene Credits. Einsätze 10 bis 5.000 ¢, jeder Einsatz und jeder Gewinn ist eine Buchung der neuen Kategorie „Casino“; Statistik (Runden, gesetzt, zurückerhalten, größter Gewinn, Bilanz) und Verlauf der letzten 20 Runden.
+- Slots: drei Walzen mit sieben gewichteten Symbolen, Dreier zahlen ×3 bis ×100, zwei Kirschen ×2, jedes andere Paar den Einsatz zurück; exakte Auszahlungsquote 87,5 % (im Panel ausgewiesen).
+- Roulette (europäisch, eine Null): Zahl 35:1, Rot/Schwarz, Gerade/Ungerade, 1–18/19–36 1:1, Dutzend und Kolonne 2:1; beliebig viele Wetten je Drehung bis 5.000 ¢ gesamt; Auszahlungsquote 97,3 %.
+- Blackjack: Dealer steht auf 17, Blackjack zahlt 3:2, Karte, Halten, Verdoppeln mit den ersten beiden Karten; kein Teilen, keine Versicherung. Die laufende Hand ist Teil des Spielstands.
+- Alle Ergebnisse kommen aus dem Zufallsgenerator der Simulation: deterministisch je Seed, online vom Server gezogen und an alle Clients verteilt.
+- Spielstandformat Version 13 mit Migration; 4 neue Unit-Tests (Auszahlungsquoten, Buchungen, Blackjack-Regeln, Determinismus) und ein Phase-13-E2E-Test.
+
+## 0.12.0 – Online-Welt mit Konten und Autospeicher (2026-10-17)
+
+### Hinzugefügt
+
+- Online-Modus: Alle Spieler spielen auf derselben Karte zur selben Zeit. Ein eigener Server (`npm run server`) hält eine dauerhafte Welt, führt die Uhr für alle (Standard 1×, ein Spieltag dauert zwölf Minuten), prüft jedes Kommando und speichert die Welt automatisch (alle 30 Sekunden und beim Beenden) in `data/world.json`. Konten mit Name und Passwort (salted scrypt-Hashes, Sitzungs-Token 30 Tage) liegen in `data/accounts.json`.
+- Lockstep-Synchronisation: Jeder Client rechnet dieselbe deterministische Simulation und wendet den Kommandostrom des Servers an exakt denselben Ticks an; alle 60 Ticks vergleicht der Client einen Fingerabdruck der Welt mit dem Server und lädt bei Abweichung neu. Neue Spieler erhalten einen vollständigen Schnappschuss.
+- Hauptmenü „Online spielen“: Server-Adresse mit Live-Status (Spieltag, Spieler, Verbundene), Registrieren mit dem gewählten Hintergrund, Anmelden, „Weiter als …“ mit gemerkter Sitzung. Kopfleiste zeigt den Online-Status und die Zahl der Verbundenen; der Inspektor zeigt Gebäude anderer Spieler als „Gebäude von …“ (gelb auf der Übersichtskarte).
+- Mehrspieler in der Simulation: Die Welt (`WorldState`) trägt Stadt, Bürger, Konkurrenz, Markt, Rivalenfamilien, Fraktionseinfluss, Stadtrat, Gesetze, Krisen und Wetter gemeinsam; jeder Spieler hat einen eigenen Anteil mit Kasse, Profil, Protokoll, Aufgaben, Organisation, Fraktionsbeziehungen, politischem Einfluss, Entscheidungen, Konzern und Forschung. Stundenschritte und Tagesabschlüsse laufen je Spieler, städtische Systeme einmal. Bürger wählen unter den Lokalen aller Spieler, Konkurrenten reagieren auf alle, Wahlen mitteln die Beziehungen aller Spieler, Gesetze gelten für alle.
+- Spielstandformat Version 12 mit Migration (der bisherige Einzelspieler wird zum Spieler „player“ der Welt). Einzelspieler-Spielstände bleiben kompatibel; `data/world.json` eines Servers lässt sich als Spielstand importieren.
+- `DEPLOY.md` (Client auf Vercel/Pages, Online-Welt auf VPS wie netcup, systemd, Caddy, Docker) und `Dockerfile`.
+- Tests: Mehrspieler-Simulation (getrennte Kassen, Eigentum, Protokolle, Determinismus-Replay, Migration), Server (Konten, Lockstep zweier Clients, Autospeicher, Zugriffsschutz) und ein Online-E2E-Test mit zwei Browsern.
+
+### Geändert
+
+- Online sind Geschwindigkeit, Pause, Schnellspeichern und lokales Laden deaktiviert (Hinweis statt Wirkung); Exportieren der Welt bleibt möglich.
+- Die Spielersicht (`GameState`) ist jetzt eine Sicht auf die Welt (`withPlayer`), für UI und Systeme unverändert nutzbar; Simulationskosten je Spieltag steigen dadurch von rund 180 auf rund 280 ms (Node, 96×96).
+
 ## 0.11.0 – Innenansicht (2026-10-17)
 
 ### Hinzugefügt

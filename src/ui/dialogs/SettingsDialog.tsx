@@ -19,6 +19,7 @@ const BINDING_LABELS: Record<keyof KeyBindings, string> = {
   factions: 'Fraktionen',
   politics: 'Politik',
   research: 'Forschung',
+  casino: 'Casino',
   help: 'Hilfe',
 };
 

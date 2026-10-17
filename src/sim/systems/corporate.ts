@@ -20,7 +20,7 @@ export const MEGACORP_KINDS = 3;
 
 /** Requirements for megacorp status and how far the player is. */
 export function megacorpProgress(state: GameState): { valuation: number; businesses: number; kinds: number; qualifies: boolean } {
-  const owned = Object.values(state.buildings).filter((b) => b.owner === 'player' && b.business && b.status === 'operational');
+  const owned = Object.values(state.buildings).filter((b) => b.owner === state.playerId && b.business && b.status === 'operational');
   const kinds = new Set(owned.map((b) => b.business!.kind)).size;
   const v = valuation(state);
   return { valuation: v, businesses: owned.length, kinds, qualifies: v >= MEGACORP_VALUATION && owned.length >= MEGACORP_BUSINESSES && kinds >= MEGACORP_KINDS };
@@ -50,7 +50,7 @@ export function chainTakeover(ctx: SimContext, districtId: number): { ok: true }
 /** Sells the whole group: every business and property at 90 % of its value; the organisation disbands. */
 export function sellCompany(ctx: SimContext): { ok: true; proceeds: number } | { ok: false; error: string } {
   const { state, events } = ctx;
-  const assets = Object.values(state.buildings).filter((b) => b.owner === 'player' && (b.business || b.property));
+  const assets = Object.values(state.buildings).filter((b) => b.owner === state.playerId && (b.business || b.property));
   if (assets.length === 0) return { ok: false, error: 'Es gibt nichts zu verkaufen.' };
   if (state.corporate.sharesSold > 0) return { ok: false, error: 'Kaufe zuerst alle Anteile der Investoren zurück.' };
   let proceeds = 0;
@@ -138,7 +138,7 @@ export function businessValue(b: Building): number {
 
 export function valuation(state: GameState): number {
   let total = 0;
-  for (const b of Object.values(state.buildings)) if (b.owner === 'player') total += businessValue(b);
+  for (const b of Object.values(state.buildings)) if (b.owner === state.playerId) total += businessValue(b);
   total += Math.max(0, state.ledger.balance);
   for (const l of state.corporate.loans) total -= l.remaining;
   return Math.round(total);
@@ -278,7 +278,7 @@ export function closeCorporateDay(ctx: SimContext): void {
 function liquidate(ctx: SimContext): void {
   const { state, events } = ctx;
   const assets = Object.values(state.buildings)
-    .filter((b) => b.owner === 'player' && (b.business || b.property))
+    .filter((b) => b.owner === state.playerId && (b.business || b.property))
     .sort((a, b) => businessValue(a) - businessValue(b));
   if (assets.length === 0) {
     if (!state.corporate.bankrupt) {

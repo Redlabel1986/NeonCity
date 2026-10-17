@@ -1,5 +1,7 @@
+import { toLegacy } from './legacy';
 import { describe, expect, it } from 'vitest';
 import { createNewGame, Simulation, type NewGameOptions } from '../../src/sim/engine';
+import { withPlayer } from '../../src/sim/players';
 import { checkPlacement } from '../../src/sim/systems/construction';
 import { MINUTES_PER_DAY } from '../../src/sim/core/clock';
 import type { Building, GastronomyState, IndustryState, ResearchLabState } from '../../src/sim/state';
@@ -174,15 +176,15 @@ describe('Save format v7', () => {
     sim.state.research.unlocked.push('prefab');
     sim.apply({ type: 'takeLoan', amount: 3000 });
     sim.run(6 * 60);
-    const { state } = deserialize(serialize(sim.state, 'v7'));
+    const state = withPlayer(deserialize(serialize(sim.state, 'v7')).state, 'player');
     expect(state.research.unlocked).toContain('prefab');
     expect(state.corporate.loans.length).toBe(1);
-    const file = JSON.parse(serialize(sim.state, 'v6')) as { version: number; state: Record<string, unknown> };
+    const file = toLegacy(JSON.parse(serialize(sim.state, 'v6')) as { version: number; state: Record<string, unknown> });
     delete file.state.corporate;
     delete file.state.research;
     delete file.state.crisis;
     const migrated = deserialize(JSON.stringify({ ...file, version: 6 }));
-    expect(migrated.state.corporate.loans.length).toBe(0);
-    expect(migrated.state.research.unlocked.length).toBe(0);
+    expect(withPlayer(migrated.state, 'player').corporate.loans.length).toBe(0);
+    expect(withPlayer(migrated.state, 'player').research.unlocked.length).toBe(0);
   });
 });

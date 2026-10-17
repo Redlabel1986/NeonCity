@@ -25,6 +25,7 @@ const CATEGORY_LABELS: Record<TransactionCategory, string> = {
   insurance: 'Versicherung',
   dividend: 'Dividenden',
   research: 'Forschung',
+  gambling: 'Casino',
   other: 'Sonstiges',
 };
 
@@ -40,7 +41,7 @@ export function FinancePanel() {
     todayByCategory.set(t.category, (todayByCategory.get(t.category) ?? 0) + t.amount);
   }
   const fixedCosts = Object.values(state.buildings).reduce((sum, b) => {
-    if (b.owner !== 'player' || b.status !== 'operational') return sum;
+    if (b.owner !== state.playerId || b.status !== 'operational') return sum;
     const def = BUILDING_DEFINITIONS[b.defId];
     const wages = b.business ? b.business.employees.reduce((w, e) => w + e.wage, 0) : 0;
     return sum + (def?.upkeepPerDay ?? 0) + wages;

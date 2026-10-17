@@ -165,7 +165,7 @@ function TabButton({ active, onClick, children }: { active: boolean; onClick: ()
 function collectWarnings(state: NonNullable<ReturnType<typeof useSimState>>): string[] {
   const out: string[] = [];
   const dailyFixed = state.player.apartmentRent + Object.values(state.buildings).reduce((sum, b) => {
-    if (b.owner !== 'player' || b.status !== 'operational') return sum;
+    if (b.owner !== state.playerId || b.status !== 'operational') return sum;
     const def = BUILDING_DEFINITIONS[b.defId];
     const wages = b.business ? b.business.employees.reduce((w, e) => w + e.wage, 0) : 0;
     return sum + (def?.upkeepPerDay ?? 0) + wages;
@@ -173,7 +173,7 @@ function collectWarnings(state: NonNullable<ReturnType<typeof useSimState>>): st
   if (state.ledger.balance < 0) out.push(`Konto überzogen (${credits(state.ledger.balance)}). Seit ${state.ledger.daysInDebt} Tag(en) in den roten Zahlen.`);
   else if (state.ledger.balance < dailyFixed * 3) out.push(`Reserven reichen für weniger als drei Tage Fixkosten (${credits(dailyFixed)} pro Tag).`);
   for (const b of Object.values(state.buildings)) {
-    if (b.owner !== 'player' || !b.business || b.status !== 'operational') continue;
+    if (b.owner !== state.playerId || !b.business || b.status !== 'operational') continue;
     const last = b.business.history[b.business.history.length - 1];
     if (last && last.revenue - last.costs < 0) out.push(`${b.label} hat gestern Verlust gemacht (${credits(last.revenue - last.costs)}).`);
     if (b.business.reputation < 25) out.push(`${b.label}: Der Ruf ist schlecht. Senke Preise, bessere Zutaten (Lieferant), Küchenausbau oder Hygiene helfen.`);

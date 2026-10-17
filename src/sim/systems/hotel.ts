@@ -80,7 +80,7 @@ export function stepHotelsHour(ctx: SimContext, hour: number, day: number): void
   const profile = hour >= 14 && hour <= 22 ? 1 : hour >= 8 && hour < 14 ? 0.35 : 0.1;
   for (const id in state.buildings) {
     const b = state.buildings[id]!;
-    if (b.owner !== 'player' || b.status !== 'operational' || b.business?.kind !== 'hotel') continue;
+    if (b.owner !== state.playerId || b.status !== 'operational' || b.business?.kind !== 'hotel') continue;
     const model = BUILDING_DEFINITIONS[b.defId]?.business;
     if (!model || model.kind !== 'hotel') continue;
     const biz = b.business;
@@ -119,7 +119,7 @@ export function closeHotelsDay(ctx: SimContext, day: number): void {
   const { state, rng, events } = ctx;
   for (const id in state.buildings) {
     const b = state.buildings[id]!;
-    if (b.owner !== 'player' || b.status !== 'operational' || b.business?.kind !== 'hotel') continue;
+    if (b.owner !== state.playerId || b.status !== 'operational' || b.business?.kind !== 'hotel') continue;
     const model = BUILDING_DEFINITIONS[b.defId]?.business;
     if (!model || model.kind !== 'hotel') continue;
     const biz = b.business;

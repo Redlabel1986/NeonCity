@@ -7,7 +7,7 @@ export function StaffPanel() {
   const state = useSimState();
   const openDashboard = useGameStore((s) => s.openDashboard);
   if (!state) return null;
-  const businesses = Object.values(state.buildings).filter((b) => b.owner === 'player' && b.business);
+  const businesses = Object.values(state.buildings).filter((b) => b.owner === state.playerId && b.business);
   const employees = businesses.flatMap((b) => b.business!.employees.map((e) => ({ e, b })));
   const candidates = businesses.reduce((n, b) => n + b.business!.candidates.length, 0);
   const wages = employees.reduce((s, x) => s + x.e.wage, 0);

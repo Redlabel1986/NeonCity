@@ -1,5 +1,18 @@
 # Aufgaben
 
+## Erledigt (Phase 13 – Casino)
+
+- [x] Slots, Roulette, Blackjack als deterministische Kommandos mit Buchungen
+- [x] Casino-Panel mit Einsatz, Chips, Gewinntabelle, Verlauf, Statistik
+- [x] Spielstand v13, Tests, Dokumentation
+
+## Erledigt (Phase 12 – Online-Welt)
+
+- [x] Welt mit mehreren Spielern: gemeinsame Stadt, getrennte Anteile, Schrittfolge je Spieler, Migration v12
+- [x] Server mit Konten, Sitzungen, Lockstep-Protokoll, Fingerabdruck-Abgleich, Autospeicher
+- [x] Client: Online-Bereich im Menü, Lockstep in der Spielschleife, Kopfleiste, Inspektor für fremde Gebäude
+- [x] DEPLOY.md, Dockerfile, Tests (Unit, Server, E2E)
+
 ## Erledigt (Phase 11 – Innenansicht)
 
 - [x] Innenraumszenen für alle sieben Branchen aus dem Simulationszustand (`render/interior/layouts.ts`)
@@ -105,6 +118,9 @@
 - [ ] Innenansicht: Figuren mit Wegen zwischen Stationen und echten Tagesabläufen (derzeit Stationen mit kleinem Umherlaufen); Gebäudetransparenz auf der Karte
 - [ ] Innenansicht für Immobilien (Mieter, Zustand) und Konkurrenzlokale
 - [ ] Ausrichtung bestehender Gebäude nachträglich ändern (derzeit nur beim Platzieren)
+- [ ] Online: Chat, Rangliste, Admin-Befehle (Geschwindigkeit, Spieler entfernen), Übernahme fremder Spielerbetriebe, Passwort ändern
+- [ ] Casino: Teilen und Versicherung beim Blackjack, Tischlimits je Bezirk, ein eigenes Casino als Betrieb (Hausvorteil als Einnahme)
+- [ ] Online: Verbindungsabbruch automatisch wieder aufnehmen (derzeit Hinweis und manuelles Neuanmelden)
 - [ ] Fahrzeuge mit Abbiegeanimation und Wartezeit an Kreuzungen (derzeit Richtungswechsel ohne Übergang)
 - [ ] Interne Fabriklieferungen mit Verrechnungspreis statt Nullbuchung (derzeit bewusst ohne Geldfluss)
 - [ ] Screenreader-Beschreibung der Kartenkacheln (Tastatur-Cursor über die Karte)
@@ -132,4 +148,4 @@
 
 ## Stand
 
-Alle acht Phasen des Entwicklungsplans plus Phase 9 (Konzern und Karriere), Phase 10 (Grafik und Ausrichtung) und Phase 11 (Innenansicht) sind umgesetzt. Offene Punkte oben sind Erweiterungen über den Plan hinaus; als nächste Phase bietet sich die öffentliche Polizeibehörde an.
+Alle acht Phasen des Entwicklungsplans plus Phase 9 (Konzern und Karriere), Phase 10 (Grafik und Ausrichtung), Phase 11 (Innenansicht), Phase 12 (Online-Welt) und Phase 13 (Casino) sind umgesetzt. Offene Punkte oben sind Erweiterungen über den Plan hinaus; als nächste Phase bietet sich die öffentliche Polizeibehörde an.

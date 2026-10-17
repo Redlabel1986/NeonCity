@@ -2,7 +2,7 @@
 
 Browserbasierte Cyberpunk-Aufbau-, Wirtschafts- und Lebenssimulation. Nova Eclipse, 2187.
 
-**Entwicklungsstand: alle acht Phasen abgeschlossen, Audit 0.8.1, Phase 9 Konzern und Karriere, Phase 10 Grafik und Gebäudeausrichtung, Phase 11 Innenansicht (0.11.0).**
+**Entwicklungsstand: alle acht Phasen abgeschlossen, Audit 0.8.1, Phase 9 Konzern und Karriere, Phase 10 Grafik und Gebäudeausrichtung, Phase 11 Innenansicht, Phase 12 Online-Welt, Phase 13 Casino (0.13.0).**
 Die Stadt wird prozedural aus einem Seed erzeugt und von bis zu 2.400 simulierten Bürgern bevölkert. Du führst Lokale, Hotels, Taxiflotten, Läden, Sicherheitsfirmen, Labore und Fabriken, kaufst Immobilien, übernimmst Konkurrenten oder gründest eine kriminelle Organisation. Zwölf Fraktionen reagieren auf dich, der Stadtrat beschließt Gesetze, Forschung und Lieferketten senken Kosten, Kredite und Investoren hebeln das Wachstum, Krisen treffen die ganze Stadt. Jeder Credit entsteht aus einer Transaktion.
 
 ## Starten
@@ -15,6 +15,15 @@ npm run preview    # Produktionsbuild lokal ausliefern
 ```
 
 Das Spiel läuft nach dem Laden vollständig offline. Spielstände liegen in IndexedDB des Browsers und können als JSON exportiert und importiert werden.
+
+## Online spielen (gemeinsame Stadt)
+
+```bash
+npm run build      # Client bauen (der Server liefert dist/ mit aus)
+npm run server     # Online-Welt auf http://localhost:8787, Welt und Konten in data/
+```
+
+Im Hauptmenü unter „Online spielen“ die Server-Adresse eintragen (bei `npm run dev` genügt die eigene Adresse, der Dev-Server leitet `/api` und `/ws` weiter), registrieren oder anmelden. Alle Konten spielen auf derselben Karte zur selben Zeit; der Server speichert automatisch. Betrieb auf einem eigenen Server, Vercel und Co.: siehe [DEPLOY.md](DEPLOY.md).
 
 ## Prüfen
 
@@ -35,7 +44,7 @@ npm run test:e2e   # Playwright: Spielstart, Bau, Betrieb, Speichern/Laden (ben�
 6. `X` öffnet die Unterwelt: Organisation gründen, Operationen fahren, Schwarzgeld waschen, Fahndung im Auge behalten.
 7. `K` Fraktionen und `O` Politik: Beziehungen pflegen, Anträge stellen, Initiativen finanzieren. Entscheidungen erscheinen in der Kopfleiste und im Dock.
 8. `R` Forschung (braucht ein Labor), Fabriken im Baumenü, Kredite, Investoren und Versicherungen unter Finanzen.
-9. Einstellungen: Effekte, Audio, Kontrastmodus, Tastenbelegung; Heatmaps über die Übersichtskarte.
+9. Einstellungen: Effekte, Audio, Kontrastmodus, Tastenbelegung; Heatmaps über die Übersichtskarte. `J` öffnet das Royal Nova Casino (Slots, Roulette, Blackjack um eigene Credits).
 10. `F5` / `F9` Schnellspeichern und -laden, Spielstände-Dialog für Slots, Export und Import.
 
 Alle Tastenkombinationen: `H` im Spiel.
@@ -48,6 +57,7 @@ Alle Tastenkombinationen: `H` im Spiel.
 - [DEVELOPMENT_PLAN.md](DEVELOPMENT_PLAN.md) – Phasenplan mit Akzeptanzkriterien
 - [TASKS.md](TASKS.md) – Offene, laufende und erledigte Aufgaben
 - [CHANGELOG.md](CHANGELOG.md) – Änderungshistorie
+- [DEPLOY.md](DEPLOY.md) – Veröffentlichung von Client und Online-Welt
 
 ## Technik
 

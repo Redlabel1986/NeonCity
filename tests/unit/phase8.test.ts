@@ -1,3 +1,4 @@
+import { toLegacy } from './legacy';
 import { describe, expect, it } from 'vitest';
 import { createNewGame, Simulation, type NewGameOptions } from '../../src/sim/engine';
 import { checkPlacement } from '../../src/sim/systems/construction';
@@ -45,7 +46,7 @@ describe('Weather', () => {
     sim.state.weather = { kind: 'fog', untilTick: 999, intensity: 0.5 };
     const { state } = deserialize(serialize(sim.state, 'v8'));
     expect(state.weather.kind).toBe('fog');
-    const file = JSON.parse(serialize(sim.state, 'v7')) as { version: number; state: Record<string, unknown> };
+    const file = toLegacy(JSON.parse(serialize(sim.state, 'v7')) as { version: number; state: Record<string, unknown> });
     delete file.state.weather;
     const migrated = deserialize(JSON.stringify({ ...file, version: 7 }));
     expect(migrated.state.weather.kind).toBe('clear');

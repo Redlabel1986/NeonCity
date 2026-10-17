@@ -41,7 +41,7 @@ export function Minimap() {
     const sim = session.sim;
     const canvas = canvasRef.current;
     if (!sim || !canvas) return;
-    const { grid, districts, buildings } = sim.state;
+    const { grid, districts, buildings, playerId } = sim.state;
     const heatValue = (districtId: number): number | null => {
       if (heat === 'none') return null;
       const d = districts[districtId]!;
@@ -78,7 +78,8 @@ export function Minimap() {
         else if (kind === TileKind.Park) color = '#143a28';
         else if (kind === TileKind.Building) {
           const b = buildings[grid.occupant[i]!];
-          if (b?.owner === 'player') color = '#ff2bd6';
+          if (b?.owner === playerId) color = '#ff2bd6';
+          else if (b && b.owner !== 'city') color = '#ffb020';
           else {
             const arch = DISTRICT_ARCHETYPES[districts[grid.district[i]!]!.archetype];
             const c = arch.color;

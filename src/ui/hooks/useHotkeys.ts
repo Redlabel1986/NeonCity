@@ -19,6 +19,7 @@ const PANEL_BINDINGS: Partial<Record<keyof KeyBindings, Panel>> = {
   factions: 'factions',
   politics: 'politics',
   research: 'research',
+  casino: 'casino',
 };
 
 /** Global keyboard shortcuts for the game screen, using the configurable bindings. */
@@ -33,7 +34,7 @@ export function useHotkeys(): void {
       }
       if (e.key === 'F9') {
         e.preventDefault();
-        void quickLoad();
+        if (!store.online) void quickLoad();
         return;
       }
       if (e.key === 'Escape') {

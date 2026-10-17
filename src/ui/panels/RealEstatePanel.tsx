@@ -10,7 +10,7 @@ export function RealEstatePanel() {
   const focusBuilding = useGameStore((s) => s.focusBuilding);
   const [confirmSell, setConfirmSell] = useState<number | null>(null);
   if (!state) return null;
-  const owned = Object.values(state.buildings).filter((b) => b.owner === 'player' && b.property);
+  const owned = Object.values(state.buildings).filter((b) => b.owner === state.playerId && b.property);
   const totalRent = owned.reduce((s, b) => s + dailyRent(state, b), 0);
   const totalUpkeep = owned.reduce((s, b) => s + b.floors * b.w * b.h * 4, 0);
   const competitors = Object.values(state.competitors).slice(0, 8);

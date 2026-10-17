@@ -1,5 +1,7 @@
+import { toLegacy } from './legacy';
 import { describe, expect, it } from 'vitest';
 import { createNewGame, Simulation, type NewGameOptions } from '../../src/sim/engine';
+import { withPlayer } from '../../src/sim/players';
 import { checkPlacement } from '../../src/sim/systems/construction';
 import { MINUTES_PER_DAY } from '../../src/sim/core/clock';
 import { FOUNDING_COST, successChance, wantedLevel } from '../../src/sim/systems/underworld';
@@ -221,20 +223,21 @@ describe('Save format v5', () => {
     recruitRole(sim, 'enforcer');
     sim.state.ledger.dirtyBalance = 1234;
     sim.run(6 * 60);
-    const { state } = deserialize(serialize(sim.state, 'v5'));
+    const world = deserialize(serialize(sim.state, 'v5')).state;
+    const state = withPlayer(world, 'player');
     expect(state.underworld.org!.name).toBe('Neon Syndikat');
     expect(state.ledger.dirtyBalance).toBe(1234);
-    const restored = new Simulation(state);
+    const restored = new Simulation(world);
     sim.run(MINUTES_PER_DAY);
     restored.run(MINUTES_PER_DAY);
     expect(restored.state.underworld.heat).toBe(sim.state.underworld.heat);
     // v4 migration
-    const file = JSON.parse(serialize(sim.state, 'v4')) as { version: number; state: Record<string, unknown> };
+    const file = toLegacy(JSON.parse(serialize(sim.state, 'v4')) as { version: number; state: Record<string, unknown> });
     delete file.state.underworld;
     delete (file.state.ledger as Record<string, unknown>).dirtyBalance;
     const migrated = deserialize(JSON.stringify({ ...file, version: 4 }));
-    expect(migrated.state.underworld.org).toBeNull();
-    expect(migrated.state.underworld.rivals.length).toBe(3);
-    expect(migrated.state.ledger.dirtyBalance).toBe(0);
+    expect(withPlayer(migrated.state, 'player').underworld.org).toBeNull();
+    expect(withPlayer(migrated.state, 'player').underworld.rivals.length).toBe(3);
+    expect(withPlayer(migrated.state, 'player').ledger.dirtyBalance).toBe(0);
   });
 });

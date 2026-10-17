@@ -21,6 +21,14 @@ tests/e2e/        Playwright (vollständige Spielflüsse im Browser)
 
 Abhängigkeitsrichtung: `ui → render → sim`, `ui → persistence → sim`. `sim` importiert nichts aus den anderen Schichten.
 
+## Mehrspieler und Online-Welt
+
+`WorldState` ist die gespeicherte Welt: Stadt, Bürger, Konkurrenz, Markt, Rivalenfamilien, Fraktionseinfluss, Stadtrat und Gesetze, Krisen, Wetter und `players` (je Spieler ein `PlayerSlice` mit Kasse, Profil, Protokoll, Aufgaben, Rückgängig-Stapel, Organisation, Fraktionsbeziehungen, politischem Einfluss, Entscheidungen, Konzern, Forschung). `GameState` ist die Sicht eines Spielers darauf (`withPlayer(world, id)` in `sim/players.ts`): gemeinsame Felder leiten an die Welt weiter, Spielerfelder an den Anteil, und `underworld`, `factions`, `politics` sind zusammengesetzte Objekte. Systeme und UI arbeiten unverändert auf dieser Sicht; `owner` eines Gebäudes ist die Spieler-Id (lokal `player`).
+
+Die Engine führt städtische Systeme einmal je Stunde/Tag (Wetter, Bevölkerung, Konkurrenz, Markt, Rivalen-Stärke, Fraktionseinfluss, Ratsvoten, Wahlen, Krisenbeginn, Bezirksentwicklung) und spielerbezogene Systeme je Spieler in Beitrittsreihenfolge (Betriebe, Immobilien, Sicherheit, Organisation, Labore, Fabriken, Beziehungen, Steuern, Konzern, Entscheidungen, Tagesabschluss). Protokollzeilen gehen an den Eigentümer des betroffenen Gebäudes, sonst an den Spieler des laufenden Durchlaufs, sonst an alle. Der Zufallsgenerator ist einer für alle; da die Reihenfolge fest ist, bleibt die Welt deterministisch.
+
+`server/` (Node, `npm run server`) hält eine Welt, führt die Uhr in Echtzeit, prüft Kommandos (`setSpeed` ist dem Server vorbehalten), sendet jedes angenommene Kommando mit seinem Tick an alle Clients und speichert atomar (`world.json.tmp` → `world.json`). Konten: `server/accounts.ts` (scrypt, Token). Protokoll: `src/net/protocol.ts`. Der Client (`src/net/client.ts`) lädt den Schnappschuss, rechnet nur bis zum zuletzt gemeldeten Server-Tick und wendet Kommandos exakt an ihrem Tick an (Lockstep); alle 60 Ticks vergleicht er `worldHash` (`src/sim/hash.ts`) und fordert bei Abweichung einen neuen Schnappschuss an. Der Game-Loop hat dafür einen Online-Zweig; Store-Kommandos gehen online an den Server statt an die lokale Simulation.
+
 ## Grundsätze und Entscheidungen
 
 ### Deterministische Simulation mit festen Schritten

@@ -4,6 +4,7 @@
 
 import type { SimContext } from '../core/context';
 import type { Building, Facing, GameState } from '../state';
+import { viewOf } from '../players';
 import { TileKind } from '../world/grid';
 import { occupy, vacate } from '../world/generator';
 import { BUILDING_DEFINITIONS, CURRENT_PHASE, type BuildingDefinition } from '../data/buildings';
@@ -133,7 +134,7 @@ export function placeBuilding(
     defId,
     facing: check.facing,
     label: def.name,
-    owner: 'player',
+    owner: state.playerId,
     x,
     y,
     w: def.footprint.w,
@@ -183,7 +184,7 @@ export function removeBuilding(
   const { state, events } = ctx;
   const b = state.buildings[buildingId];
   if (!b) return { ok: false, error: 'Gebäude nicht gefunden.' };
-  if (b.owner !== 'player') return { ok: false, error: 'Dieses Gebäude gehört dir nicht.' };
+  if (b.owner !== state.playerId) return { ok: false, error: 'Dieses Gebäude gehört dir nicht.' };
   const def = BUILDING_DEFINITIONS[b.defId];
   const name = def?.name ?? b.label;
   if (mode === 'undo') {
@@ -226,7 +227,10 @@ export function stepConstruction(ctx: SimContext): void {
       b.status = 'operational';
       b.progress = b.buildTime;
       const def = BUILDING_DEFINITIONS[b.defId];
-      state.undoStack = state.undoStack.filter((u) => u.buildingId !== b.id);
+      if (b.owner !== 'city' && state.world.players[b.owner]) {
+        const owner = viewOf(state, b.owner);
+        owner.undoStack = owner.undoStack.filter((u) => u.buildingId !== b.id);
+      }
       events.emit({ type: 'building:completed', tick: state.tick, buildingId: String(b.id) });
       events.emit({
         type: 'log',

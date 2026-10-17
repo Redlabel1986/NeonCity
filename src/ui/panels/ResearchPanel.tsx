@@ -13,7 +13,7 @@ export function ResearchPanel() {
   const [tree, setTree] = useState<ResearchTree | 'all'>('all');
   const [chosenLab, setChosenLab] = useState<number | null>(null);
   if (!state) return null;
-  const labs = Object.values(state.buildings).filter((b) => b.owner === 'player' && b.business?.kind === 'lab' && b.status === 'operational');
+  const labs = Object.values(state.buildings).filter((b) => b.owner === state.playerId && b.business?.kind === 'lab' && b.status === 'operational');
   const labId = labs.some((b) => b.id === chosenLab) ? chosenLab : (labs[0]?.id ?? null);
   const costFactor = DIFFICULTIES[state.player.difficulty].costMultiplier;
   const nodes = Object.values(RESEARCH).filter((n) => tree === 'all' || n.tree === tree);

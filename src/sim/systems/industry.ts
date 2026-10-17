@@ -69,7 +69,7 @@ export function setLine(state: GameState, buildingId: number, lineId: number | n
   const b = state.buildings[buildingId];
   const model = BUILDING_DEFINITIONS[b?.defId ?? '']?.business;
   const biz = b?.business;
-  if (!b || b.owner !== 'player' || !biz || biz.kind !== 'industry' || !model || model.kind !== 'industry') return { ok: false, error: 'Keine eigene Fabrik.' };
+  if (!b || b.owner !== state.playerId || !biz || biz.kind !== 'industry' || !model || model.kind !== 'industry') return { ok: false, error: 'Keine eigene Fabrik.' };
   if (!PRODUCTION[recipeId] || !model.lines.includes(recipeId)) return { ok: false, error: 'Diese Fabrik kann das nicht herstellen.' };
   const target = Math.max(0, Math.min(2000, Math.round(targetPerDay)));
   if (lineId === null) {
@@ -107,7 +107,7 @@ export function closeIndustryDay(ctx: SimContext, day: number): void {
   const tech = techFactors(state);
   for (const id in state.buildings) {
     const b = state.buildings[id]!;
-    if (b.owner !== 'player' || b.status !== 'operational' || b.business?.kind !== 'industry') continue;
+    if (b.owner !== state.playerId || b.status !== 'operational' || b.business?.kind !== 'industry') continue;
     const model = BUILDING_DEFINITIONS[b.defId]?.business;
     if (!model || model.kind !== 'industry') continue;
     const biz = b.business;
@@ -213,7 +213,7 @@ export function closeIndustryDay(ctx: SimContext, day: number): void {
 function internalTransfers(state: GameState, factory: Building, biz: IndustryState): void {
   for (const id in state.buildings) {
     const venue = state.buildings[id]!;
-    if (venue.id === factory.id || venue.owner !== 'player' || venue.status !== 'operational') continue;
+    if (venue.id === factory.id || venue.owner !== state.playerId || venue.status !== 'operational') continue;
     const holder = venue.business;
     if (!holder || (holder.kind !== 'gastronomy' && holder.kind !== 'retail')) continue;
     const target = holder as StockHolder;

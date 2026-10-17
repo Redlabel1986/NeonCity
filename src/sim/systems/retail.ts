@@ -104,7 +104,7 @@ export function stepRetailHour(ctx: SimContext, hour: number): void {
   const { state, rng, events } = ctx;
   for (const id in state.buildings) {
     const b = state.buildings[id]!;
-    if (b.owner !== 'player' || b.status !== 'operational' || b.business?.kind !== 'retail') continue;
+    if (b.owner !== state.playerId || b.status !== 'operational' || b.business?.kind !== 'retail') continue;
     const model = BUILDING_DEFINITIONS[b.defId]?.business;
     if (!model || model.kind !== 'retail') continue;
     const biz = b.business;
@@ -188,7 +188,7 @@ export function closeRetailDay(ctx: SimContext, day: number): void {
   const { state, rng, events } = ctx;
   for (const id in state.buildings) {
     const b = state.buildings[id]!;
-    if (b.owner !== 'player' || b.status !== 'operational' || b.business?.kind !== 'retail') continue;
+    if (b.owner !== state.playerId || b.status !== 'operational' || b.business?.kind !== 'retail') continue;
     const model = BUILDING_DEFINITIONS[b.defId]?.business;
     if (!model || model.kind !== 'retail') continue;
     const biz = b.business;

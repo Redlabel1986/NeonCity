@@ -1,3 +1,4 @@
+import { toLegacy } from './legacy';
 import { describe, expect, it } from 'vitest';
 import type { GastronomyState } from '../../src/sim/state';
 import { createNewGame, Simulation, type NewGameOptions } from '../../src/sim/engine';
@@ -213,7 +214,7 @@ describe('Menu, satisfaction and upgrades', () => {
 describe('Save compatibility', () => {
   it('migrates a version 1 save to the current format', () => {
     const { sim } = withRamenBar();
-    const file = JSON.parse(serialize(sim.state, 'v1')) as SaveFile;
+    const file = toLegacy(JSON.parse(serialize(sim.state, 'v1')) as SaveFile);
     const legacyState = JSON.parse(JSON.stringify(file.state)) as Record<string, unknown>;
     const buildings = legacyState.buildings as Record<string, Record<string, unknown>>;
     for (const b of Object.values(buildings)) {

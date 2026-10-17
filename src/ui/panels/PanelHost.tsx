@@ -13,6 +13,7 @@ import { UnderworldPanel } from './UnderworldPanel';
 import { FactionsPanel } from './FactionsPanel';
 import { PoliticsPanel } from './PoliticsPanel';
 import { ResearchPanel } from './ResearchPanel';
+import { CasinoPanel } from './CasinoPanel';
 import { useSimState } from '../store/gameStore';
 
 export function PanelHost() {
@@ -47,6 +48,9 @@ export function PanelHost() {
       break;
     case 'research':
       content = <ResearchPanel />;
+      break;
+    case 'casino':
+      content = <CasinoPanel />;
       break;
     case 'build':
       content = <BuildPanel />;

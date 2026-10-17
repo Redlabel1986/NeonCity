@@ -81,15 +81,16 @@ function BuildingDetails({ b }: { b: Building }) {
   const district = state.districts[b.districtId]!;
   const arch = DISTRICT_ARCHETYPES[district.archetype];
   const def = BUILDING_DEFINITIONS[b.defId];
-  const isPlayer = b.owner === 'player';
+  const isPlayer = b.owner === state.playerId;
+  const otherOwner = !isPlayer && b.owner !== 'city' ? state.players[b.owner]?.player.name ?? 'anderer Spieler' : null;
   const date = tickToDate(state.tick);
 
   return (
     <div>
       <Header
         title={b.label}
-        subtitle={`${isPlayer ? def?.name ?? 'Eigenes Gebäude' : 'Stadtgebäude'} · ${district.name}`}
-        color={isPlayer ? 0xff2bd6 : arch.color}
+        subtitle={`${isPlayer ? (def?.name ?? 'Eigenes Gebäude') : otherOwner ? `Gebäude von ${otherOwner}` : 'Stadtgebäude'} · ${district.name}`}
+        color={isPlayer ? 0xff2bd6 : otherOwner ? 0xffb020 : arch.color}
         onClose={() => selectBuilding(null)}
       />
       {renaming !== null && (
@@ -108,7 +109,10 @@ function BuildingDetails({ b }: { b: Building }) {
       )}
       <dl className="mt-3 text-sm">
         <Row label="Grundfläche" value={`${b.w} × ${b.h} Felder, ${b.floors} Etagen`} />
-        <Row label="Eigentümer" value={isPlayer ? state.player.name : 'Stadt Nova Eclipse'} />
+        <Row label="Eigentümer" value={isPlayer ? state.player.name : (otherOwner ?? 'Stadt Nova Eclipse')} />
+        {otherOwner && b.business && <Row label="Betrieb" value={`${def?.name ?? b.label} (${b.status === 'operational' ? 'geöffnet' : 'im Bau'})`} />}
+        {otherOwner && b.business && b.status === 'operational' && <Row label="Ruf" value={String(Math.round(b.business.reputation))} />}
+        {otherOwner && b.property && <Row label="Nutzung" value="Immobilie eines anderen Spielers" />}
         {!isPlayer && state.competitors[b.id] && (
           <>
             <Row label="Betrieb" value={state.competitors[b.id]!.name} />
@@ -119,7 +123,7 @@ function BuildingDetails({ b }: { b: Building }) {
         )}
         {isPlayer && <Row label="Investiert" value={credits(b.investment)} />}
       </dl>
-      {!isPlayer && <PurchaseOffer b={b} />}
+      {!isPlayer && !otherOwner && <PurchaseOffer b={b} />}
       {isPlayer && b.property && <PropertyDetails b={b} />}
 
       {isPlayer && b.status === 'construction' && (

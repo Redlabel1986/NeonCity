@@ -5,10 +5,12 @@
 
 import type { Simulation } from '../sim/engine';
 import type { CityRenderer } from '../render/CityRenderer';
+import type { OnlineClient } from '../net/client';
 
-export const session: { sim: Simulation | null; renderer: CityRenderer | null } = {
+export const session: { sim: Simulation | null; renderer: CityRenderer | null; online: OnlineClient | null } = {
   sim: null,
   renderer: null,
+  online: null,
 };
 
 /** Footprints whose ground tiles must be re-drawn after a building was removed. */

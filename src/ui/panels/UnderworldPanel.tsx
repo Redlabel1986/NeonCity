@@ -92,7 +92,7 @@ function Overview() {
   const wanted = WANTED_LEVELS[level]!;
   const day = tickToDate(state.tick).day;
   const jailed = org.members.filter((m) => m.jailed).length;
-  const legalRevenue = Object.values(state.buildings).reduce((s, b) => s + (b.owner === 'player' && b.business ? (b.business.history[b.business.history.length - 1]?.revenue ?? 0) : 0), 0);
+  const legalRevenue = Object.values(state.buildings).reduce((s, b) => s + (b.owner === state.playerId && b.business ? (b.business.history[b.business.history.length - 1]?.revenue ?? 0) : 0), 0);
   return (
     <div className="space-y-4">
       <div className="num grid grid-cols-3 gap-2 text-center text-xs">
@@ -208,7 +208,7 @@ function OperationsTab() {
   const [frontId, setFrontId] = useState<number | ''>('');
   const org = state?.underworld.org;
   if (!state || !org) return null;
-  const fronts = Object.values(state.buildings).filter((b) => b.owner === 'player' && b.property && !isResidential(b) && b.districtId === districtId);
+  const fronts = Object.values(state.buildings).filter((b) => b.owner === state.playerId && b.property && !isResidential(b) && b.districtId === districtId);
   return (
     <div className="space-y-4">
       {org.operations.length > 0 && (

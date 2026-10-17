@@ -18,7 +18,8 @@ const CREW_ROLES: readonly CrewRole[] = ['underboss', 'advisor', 'captain', 'enf
 export const MAX_CREW = 16;
 export const FOUNDING_COST = 5000;
 
-export function createUnderworld(state: GameState, rng: Rng): UnderworldState {
+/** Rival families of a fresh city (shared by all players). */
+export function createRivals(state: GameState, rng: Rng): RivalFamily[] {
   const rivals: RivalFamily[] = [];
   const names = [...RIVAL_FAMILY_NAMES].sort(() => rng.next() - 0.5).slice(0, 3);
   // Each family holds a few districts, strongest in the rough ones.
@@ -32,7 +33,7 @@ export function createUnderworld(state: GameState, rng: Rng): UnderworldState {
     if (second !== home) control[second] = rng.int(10, 30);
     rivals.push({ name, strength: rng.int(40, 70), control, relation: rng.int(-30, 10), truceUntilDay: 0 });
   });
-  return { org: null, heat: 0, lockdownUntilDay: 0, rivals, recentBribes: 0 };
+  return rivals;
 }
 
 export function wantedLevel(state: GameState): number {
@@ -152,7 +153,7 @@ export function startOperation(ctx: SimContext, operationId: string, districtId:
   }
   if (operationId === 'casino') {
     const front = frontBuildingId !== null ? state.buildings[frontBuildingId] : undefined;
-    if (!front || front.owner !== 'player' || !front.property || front.districtId !== districtId || isResidential(front)) {
+    if (!front || front.owner !== state.playerId || !front.property || front.districtId !== districtId || isResidential(front)) {
       return { ok: false, error: 'Ein Casino braucht eine eigene Gewerbeimmobilie im Bezirk als Fassade.' };
     }
     if (org.operations.some((o) => o.frontBuildingId === frontBuildingId)) return { ok: false, error: 'Diese Immobilie ist bereits eine Fassade.' };
@@ -314,7 +315,7 @@ export function closeUnderworldDay(ctx: SimContext, day: number): void {
   uw.heat = Math.max(0, uw.heat - (2.5 / budget) * (BACKGROUNDS[state.player.background].perks?.heatDecay ?? 1));
   uw.recentBribes = Math.max(0, uw.recentBribes - 0.5);
   const org = uw.org;
-  rivalsAct(ctx, day);
+  contestTerritory(ctx, day);
   if (!org) {
     state.player.wantedLevel = wantedLevel(state);
     return;
@@ -352,7 +353,7 @@ export function closeUnderworldDay(ctx: SimContext, day: number): void {
     uw.heat = Math.min(100, uw.heat + def.heat * 0.6);
   }
   // Laundering through legal businesses.
-  const legalRevenue = Object.values(state.buildings).reduce((s, b) => s + (b.owner === 'player' && b.business && b.status === 'operational' ? dailyRevenueOf(b) : 0), 0);
+  const legalRevenue = Object.values(state.buildings).reduce((s, b) => s + (b.owner === state.playerId && b.business && b.status === 'operational' ? dailyRevenueOf(b) : 0), 0);
   const level = wantedLevel(state);
   const capacity = legalRevenue * org.launderingRate * (level >= 3 ? 0.5 : 1) * (level >= 5 ? 0 : 1);
   const laundered = Math.min(state.ledger.dirtyBalance, Math.round(capacity));
@@ -450,15 +451,21 @@ function policeResponse(ctx: SimContext, day: number): void {
   }
 }
 
-/** Rival families: contest territory, pressure the player, react to truces. */
-function rivalsAct(ctx: SimContext, day: number): void {
+/** Rival families drift in strength with their territory; runs once per day (shared pass). */
+export function closeRivalsDay(ctx: SimContext): void {
+  const { state, rng } = ctx;
+  for (const family of state.underworld.rivals) {
+    const territory = Object.values(family.control).reduce((s, c) => s + c, 0);
+    family.strength = Math.max(10, Math.min(100, family.strength + (territory / 200 - 0.3) + rng.gaussian() * 0.5));
+  }
+}
+
+/** Rival families contest territory with this player's organisation (per player). */
+function contestTerritory(ctx: SimContext, day: number): void {
   const { state, events, rng } = ctx;
   const uw = state.underworld;
   const org = uw.org;
   for (const family of uw.rivals) {
-    // Strength drifts with their territory.
-    const territory = Object.values(family.control).reduce((s, c) => s + c, 0);
-    family.strength = Math.max(10, Math.min(100, family.strength + (territory / 200 - 0.3) + rng.gaussian() * 0.5));
     if (!org || family.truceUntilDay > day) continue;
     // Contest districts where both have control.
     for (const [key, theirs] of Object.entries(family.control)) {

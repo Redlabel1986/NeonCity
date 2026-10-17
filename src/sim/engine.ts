@@ -8,8 +8,9 @@ import { EventBus, type SimEvent } from './core/events';
 import type { SimContext } from './core/context';
 import { isDayBoundary, isHourBoundary, tickToDate } from './core/clock';
 import { generateCity } from './world/generator';
-import { createLedger, book, closeDay } from './economy/finance';
+import { book, closeDay } from './economy/finance';
 import { BACKGROUNDS, DIFFICULTIES, type BackgroundId, type DifficultyId } from './data/difficulty';
+import { addPlayer, withPlayer, SYSTEM_PLAYER_ID, type NewPlayerOptions } from './players';
 import { BUILDING_DEFINITIONS } from './data/buildings';
 import { placeBuilding, removeBuilding, stepConstruction, PLACEMENT_ERROR_TEXT } from './systems/construction';
 import { stepBusinessHour, closeBusinessDay, priceBounds, clamp, startUpgrade, stepUpgrades } from './systems/business';
@@ -17,7 +18,7 @@ import { placeOrder } from './systems/inventory';
 import { hire, fire, setWage } from './systems/staff';
 import { SUPPLIERS } from './data/suppliers';
 import { INGREDIENTS } from './data/ingredients';
-import { createTaskStates, stepTasks } from './systems/tasks';
+import { stepTasks } from './systems/tasks';
 import { createPopulation, generateCitizens, stepPopulationHour, closePopulationDay } from './systems/population';
 import { createCompetitorsForCity, stepCompetitorsHour, closeCompetitorsDay } from './systems/competitors';
 import { createMarket, closeMarketDay } from './systems/market';
@@ -26,22 +27,24 @@ import { stepTransportHour, closeTransportDay, buyVehicle, sellVehicle, fareBoun
 import { stepRetailHour, closeRetailDay, retailPriceBounds } from './systems/retail';
 import { buyProperty, sellProperty, setRentLevel, renovate, takeoverCompetitor, closePropertyDay } from './systems/property';
 import { stockHolderOf } from './systems/inventory';
-import { createUnderworld, foundOrganisation, recruit, dismiss, startOperation, cancelOperation, bribe, negotiateTruce, setLaunderingRate, stepUnderworldHour, closeUnderworldDay } from './systems/underworld';
+import { createRivals, foundOrganisation, recruit, dismiss, startOperation, cancelOperation, bribe, negotiateTruce, setLaunderingRate, stepUnderworldHour, closeUnderworldDay, closeRivalsDay } from './systems/underworld';
 import { closeSecurityDay, assignPatrol, startInvestigation } from './systems/security';
-import { createFactions, closeFactionsDay, supportFaction, activeEffect } from './systems/factions';
-import { createPolitics, closePoliticsDay, proposeLaw, districtInitiative } from './systems/politics';
-import { createDecisionState, resolveDecision, expireDecisions } from './systems/decisions';
+import { createFactions, closeFactionsSharedDay, closeFactionsPlayerDay, supportFaction, activeEffect } from './systems/factions';
+import { createPolitics, closePoliticsSharedDay, closePoliticsPlayerDay, proposeLaw, districtInitiative } from './systems/politics';
+import { resolveDecision, expireDecisions } from './systems/decisions';
 import { laborState } from './systems/staff';
-import { createResearchState, startResearch, closeLabsDay } from './systems/research';
+import { startResearch, closeLabsDay } from './systems/research';
 import { closeIndustryDay, setLine, removeLine, setSurplusPolicy } from './systems/industry';
 import { createCorporateState, closeCorporateDay, takeLoan, repayLoan, sellShares, buyBackShares, setInsurance, chainTakeover, sellCompany, stepMegacorp } from './systems/corporate';
 import { createCrisisState, closeCrisisDay, crisisFactors, activeCrisis } from './systems/crises';
 import { createWeather, stepWeatherHour } from './systems/weather';
+import { playSlots, playRoulette, blackjackDeal, blackjackHit, blackjackStand, blackjackDouble } from './systems/casino';
+import type { RouletteBet } from './data/casino';
 import type { FactionId } from './data/factions';
 import { wantedLevelFor } from './data/underworld';
-import { LOG_LIMIT, type Facing, type GameState } from './state';
+import { LOG_LIMIT, LOCAL_PLAYER_ID, type Facing, type GameState, type WorldState } from './state';
 
-export const SAVE_FORMAT_VERSION = 11;
+export const SAVE_FORMAT_VERSION = 13;
 export const SPEEDS = [0, 1, 3, 8] as const;
 export type Speed = (typeof SPEEDS)[number];
 
@@ -102,20 +105,27 @@ export type Command =
   | { type: 'chainTakeover'; districtId: number }
   | { type: 'sellCompany' }
   | { type: 'newCareer'; background: BackgroundId; name: string }
-  | { type: 'rename'; buildingId: number; label: string };
+  | { type: 'rename'; buildingId: number; label: string }
+  | { type: 'casinoSlots'; bet: number }
+  | { type: 'casinoRoulette'; bets: RouletteBet[] }
+  | { type: 'blackjackDeal'; bet: number }
+  | { type: 'blackjackHit' }
+  | { type: 'blackjackStand' }
+  | { type: 'blackjackDouble' };
 
 export type CommandResult = { ok: true } | { ok: false; error: string };
 
-export function createNewGame(options: NewGameOptions): GameState {
+export interface NewWorldOptions {
+  seed: string | number;
+  citySize?: number;
+}
+
+/** Creates the shared world: city, citizens, competitors, rival families, council. No players yet. */
+export function createWorld(options: NewWorldOptions): WorldState {
   const seed = typeof options.seed === 'string' ? hashSeed(options.seed.trim() || 'nova') : options.seed >>> 0;
   const rng = new Rng(seed);
   const city = generateCity(seed, options.citySize);
-  const difficulty = DIFFICULTIES[options.difficulty];
-  const background = BACKGROUNDS[options.background];
-  const homeDistrict = city.districts.find((d) => d.archetype === background.homeDistrict) ?? city.districts[0]!;
-  const startingCredits = Math.max(2000, difficulty.startingCredits + background.creditsBonus);
-
-  const state: GameState = {
+  const world: WorldState = {
     version: SAVE_FORMAT_VERSION,
     seed,
     rng: rng.toJSON(),
@@ -125,49 +135,33 @@ export function createNewGame(options: NewGameOptions): GameState {
     districts: city.districts,
     buildings: city.buildings,
     nextBuildingId: city.nextBuildingId,
-    ledger: createLedger(startingCredits),
-    player: {
-      name: options.playerName.trim() || 'Unbekannt',
-      background: background.id,
-      difficulty: difficulty.id,
-      apartmentRent: Math.round(background.apartmentRent * difficulty.rentMultiplier),
-      homeDistrictId: homeDistrict.id,
-      reputation: 10,
-      wantedLevel: 0,
-    },
-    log: [],
-    nextLogId: 1,
-    tasks: createTaskStates(),
-    undoStack: [],
     population: createPopulation(),
     competitors: {},
     market: createMarket(),
     lastCompetitorExpansionDay: 0,
-    underworld: { org: null, heat: 0, lockdownUntilDay: 0, rivals: [], recentBribes: 0 },
+    rivals: [],
     factions: createFactions(),
     politics: createPolitics(),
-    decisions: createDecisionState(),
-    corporate: createCorporateState(`${options.playerName.trim() || 'Unbekannt'} Holdings`),
-    research: createResearchState(),
     crisis: createCrisisState(),
     weather: createWeather(),
     meta: { createdAt: Date.now(), cityName: 'Nova Eclipse' },
+    players: {},
+    playerOrder: [],
   };
   const worldRng = rng.fork('population');
-  createCompetitorsForCity(state, worldRng, 0);
-  generateCitizens(state, worldRng);
-  state.underworld = createUnderworld(state, worldRng);
-  const perks = background.perks;
-  if (perks) {
-    if (perks.startDirty) state.ledger.dirtyBalance = perks.startDirty;
-    if (perks.startInfluence) state.politics.influence = perks.startInfluence;
-    for (const [id, value] of Object.entries(perks.relations ?? {})) {
-      const f = state.factions.find((x) => x.id === id);
-      if (f && value !== undefined) f.relation = value;
-    }
-  }
-  state.rng = rng.toJSON();
-  return state;
+  const system = withPlayer(world, SYSTEM_PLAYER_ID);
+  createCompetitorsForCity(system, worldRng, 0);
+  generateCitizens(system, worldRng);
+  world.rivals = createRivals(system, worldRng);
+  world.rng = rng.toJSON();
+  return world;
+}
+
+/** Single-player start: a fresh world with one local player. */
+export function createNewGame(options: NewGameOptions): WorldState {
+  const world = createWorld({ seed: options.seed, citySize: options.citySize });
+  addPlayer(world, { id: LOCAL_PLAYER_ID, name: options.playerName, background: options.background, difficulty: options.difficulty });
+  return world;
 }
 
 /** Starts a new career in the same city: new background, perks and home; money and city state stay. */
@@ -175,7 +169,7 @@ function startNewCareer(ctx: SimContext, backgroundId: BackgroundId, name: strin
   const { state, events } = ctx;
   const background = BACKGROUNDS[backgroundId];
   if (!background) return { ok: false, error: 'Unbekannter Hintergrund.' };
-  const assets = Object.values(state.buildings).filter((b) => b.owner === 'player' && (b.business || b.property));
+  const assets = Object.values(state.buildings).filter((b) => b.owner === state.playerId && (b.business || b.property));
   if (assets.length > 0) return { ok: false, error: 'Verkaufe zuerst die Unternehmensgruppe.' };
   const difficulty = DIFFICULTIES[state.player.difficulty];
   const home = state.districts.find((d) => d.archetype === background.homeDistrict) ?? state.districts[0]!;
@@ -204,44 +198,106 @@ function startNewCareer(ctx: SimContext, backgroundId: BackgroundId, name: strin
 }
 
 export class Simulation {
-  readonly state: GameState;
+  /** The shared world (what gets saved). */
+  readonly world: WorldState;
   readonly events: EventBus;
   private readonly rng: Rng;
   private readonly ctx: SimContext;
+  private primary: string;
+  /** Player whose pass is running (log routing); null = shared pass. */
+  private currentPlayer: string | null = null;
 
-  constructor(state: GameState) {
-    this.state = state;
+  constructor(world: WorldState, primaryPlayerId?: string) {
+    this.world = world;
     this.events = new EventBus();
-    this.rng = Rng.fromJSON(state.rng);
-    this.ctx = { state, events: this.events, rng: this.rng };
+    this.rng = Rng.fromJSON(world.rng);
+    this.primary = primaryPlayerId ?? world.playerOrder[0] ?? SYSTEM_PLAYER_ID;
+    this.ctx = { state: withPlayer(world, this.primary), events: this.events, rng: this.rng };
     this.events.on('log', (e) => this.appendLog(e));
+  }
+
+  /** The world as seen by the primary player (the local player, or the logged-in one online). */
+  get state(): GameState {
+    return withPlayer(this.world, this.primary);
+  }
+
+  get primaryPlayerId(): string {
+    return this.primary;
+  }
+
+  setPrimaryPlayer(id: string): void {
+    if (!this.world.players[id]) throw new Error(`Unbekannter Spieler: ${id}`);
+    this.primary = id;
+    this.ctx.state = withPlayer(this.world, id);
+  }
+
+  /** View of any player of this world. */
+  view(playerId: string): GameState {
+    return withPlayer(this.world, playerId);
+  }
+
+  get playerIds(): readonly string[] {
+    return this.world.playerOrder;
+  }
+
+  /** Lets a new player join the world (used by the online server and by new games). */
+  addPlayer(options: NewPlayerOptions): CommandResult {
+    if (this.world.players[options.id]) return { ok: false, error: 'Dieser Spieler ist bereits in der Welt.' };
+    if (!BACKGROUNDS[options.background] || !DIFFICULTIES[options.difficulty]) return { ok: false, error: 'Unbekannter Hintergrund oder Schwierigkeitsgrad.' };
+    addPlayer(this.world, options);
+    if (this.primary === SYSTEM_PLAYER_ID) this.setPrimaryPlayer(options.id);
+    const home = this.world.districts[this.world.players[options.id]!.player.homeDistrictId]!;
+    this.runAs(null, () => this.events.emit({ type: 'log', tick: this.world.tick, level: 'info', message: `${options.name.trim() || 'Unbekannt'} ist der Stadt beigetreten und wohnt in ${home.name}.` }));
+    return { ok: true };
+  }
+
+  /** Runs `fn` with the context switched to a player's view (null = shared pass). */
+  private runAs<T>(id: string | null, fn: (state: GameState) => T): T {
+    const prevState = this.ctx.state;
+    const prevPlayer = this.currentPlayer;
+    this.currentPlayer = id;
+    this.ctx.state = withPlayer(this.world, id ?? SYSTEM_PLAYER_ID);
+    try {
+      return fn(this.ctx.state);
+    } finally {
+      this.ctx.state = prevState;
+      this.currentPlayer = prevPlayer;
+    }
   }
 
   /** Advances the simulation by exactly one minute. */
   step(): void {
-    const state = this.state;
-    state.tick += 1;
-    stepConstruction(this.ctx);
-    stepUpgrades(this.ctx);
-    if (isHourBoundary(state.tick)) {
-      const date = tickToDate(state.tick);
-      stepWeatherHour(this.ctx);
-      laborState.strike = activeEffect(state, 'strike', date.day) || activeCrisis(state, 'general_strike');
-      const cf = crisisFactors(state);
-      laborState.wageFactor = cf.wages;
-      laborState.candidateFactor = cf.candidates;
-      stepPopulationHour(this.ctx, date.hour);
-      stepBusinessHour(this.ctx, date.hour, date.day);
-      stepRetailHour(this.ctx, date.hour);
-      stepHotelsHour(this.ctx, date.hour, date.day);
-      stepTransportHour(this.ctx, date.hour);
-      stepCompetitorsHour(this.ctx, date.hour);
-      stepUnderworldHour(this.ctx);
-      state.player.wantedLevel = wantedLevelFor(state.underworld.heat);
+    const world = this.world;
+    world.tick += 1;
+    this.runAs(null, () => {
+      stepConstruction(this.ctx);
+      stepUpgrades(this.ctx);
+    });
+    if (isHourBoundary(world.tick)) {
+      const date = tickToDate(world.tick);
+      this.runAs(null, (shared) => {
+        stepWeatherHour(this.ctx);
+        const cf = crisisFactors(shared);
+        laborState.wageFactor = cf.wages;
+        laborState.candidateFactor = cf.candidates;
+        stepPopulationHour(this.ctx, date.hour);
+      });
+      for (const id of world.playerOrder) {
+        this.runAs(id, (state) => {
+          laborState.strike = activeEffect(state, 'strike', date.day) || activeCrisis(state, 'general_strike');
+          stepBusinessHour(this.ctx, date.hour, date.day);
+          stepRetailHour(this.ctx, date.hour);
+          stepHotelsHour(this.ctx, date.hour, date.day);
+          stepTransportHour(this.ctx, date.hour);
+          stepUnderworldHour(this.ctx);
+          state.player.wantedLevel = wantedLevelFor(state.underworld.heat);
+        });
+      }
+      this.runAs(null, () => stepCompetitorsHour(this.ctx, date.hour));
     }
-    if (isDayBoundary(state.tick)) this.closeDay();
-    if (state.tick % 15 === 0) stepTasks(this.ctx);
-    state.rng.state = this.rng.toJSON().state;
+    if (isDayBoundary(world.tick)) this.closeDay();
+    if (world.tick % 15 === 0) for (const id of world.playerOrder) this.runAs(id, () => stepTasks(this.ctx));
+    world.rng.state = this.rng.toJSON().state;
   }
 
   run(ticks: number): void {
@@ -252,18 +308,22 @@ export class Simulation {
     return this.events.drain();
   }
 
-  apply(command: Command): CommandResult {
-    const result = this.applyInner(command);
-    if (result.ok) {
-      this.state.player.wantedLevel = wantedLevelFor(this.state.underworld.heat);
-      stepTasks(this.ctx);
-      this.syncRng();
-    }
-    return result;
+  /** Applies a command for a player (default: the primary player). */
+  apply(command: Command, playerId: string = this.primary): CommandResult {
+    if (!this.world.players[playerId]) return { ok: false, error: 'Unbekannter Spieler.' };
+    return this.runAs(playerId, (state) => {
+      const result = this.applyInner(command);
+      if (result.ok) {
+        state.player.wantedLevel = wantedLevelFor(state.underworld.heat);
+        stepTasks(this.ctx);
+        this.syncRng();
+      }
+      return result;
+    });
   }
 
   private applyInner(command: Command): CommandResult {
-    const state = this.state;
+    const state = this.ctx.state;
     switch (command.type) {
       case 'placeBuilding': {
         const result = placeBuilding(this.ctx, command.defId, command.x, command.y, command.facing);
@@ -449,9 +509,21 @@ export class Simulation {
       }
       case 'newCareer':
         return startNewCareer(this.ctx, command.background, command.name);
+      case 'casinoSlots':
+        return playSlots(this.ctx, command.bet);
+      case 'casinoRoulette':
+        return playRoulette(this.ctx, command.bets);
+      case 'blackjackDeal':
+        return blackjackDeal(this.ctx, command.bet);
+      case 'blackjackHit':
+        return blackjackHit(this.ctx);
+      case 'blackjackStand':
+        return blackjackStand(this.ctx);
+      case 'blackjackDouble':
+        return blackjackDouble(this.ctx);
       case 'rename': {
         const b = state.buildings[command.buildingId];
-        if (!b || b.owner !== 'player') return { ok: false, error: 'Kein eigenes Gebäude.' };
+        if (!b || b.owner !== state.playerId) return { ok: false, error: 'Kein eigenes Gebäude.' };
         const label = command.label.trim().slice(0, 40);
         if (!label) return { ok: false, error: 'Der Name darf nicht leer sein.' };
         b.label = label;
@@ -465,76 +537,114 @@ export class Simulation {
   }
 
   private ownBusiness(buildingId: number) {
-    const b = this.state.buildings[buildingId];
-    if (!b || b.owner !== 'player' || !b.business) return null;
+    const state = this.ctx.state;
+    const b = state.buildings[buildingId];
+    if (!b || b.owner !== state.playerId || !b.business) return null;
     return b;
   }
 
   private closeDay(): void {
-    const state = this.state;
-    const date = tickToDate(state.tick);
+    const world = this.world;
+    const date = tickToDate(world.tick);
     const day = date.day; // the day that just started; the closed day is day - 1
-    book(state, this.events, -state.player.apartmentRent, {
-      category: 'rent',
-      description: 'Miete: deine Wohnung',
-    });
-    closeBusinessDay(this.ctx, day - 1);
-    closeRetailDay(this.ctx, day - 1);
-    closeHotelsDay(this.ctx, day - 1);
-    closeTransportDay(this.ctx, day - 1);
-    closePropertyDay(this.ctx);
-    closeSecurityDay(this.ctx, day - 1);
-    closeUnderworldDay(this.ctx, day - 1);
-    closePopulationDay(this.ctx);
-    closeLabsDay(this.ctx, day - 1);
-    closeIndustryDay(this.ctx, day - 1);
-    closeFactionsDay(this.ctx, day);
-    closePoliticsDay(this.ctx, day);
-    closeCrisisDay(this.ctx, day);
-    closeCorporateDay(this.ctx);
-    stepMegacorp(this.ctx, day);
-    expireDecisions(this.ctx, day);
-    closeCompetitorsDay(this.ctx, day - 1);
-    closeMarketDay(this.ctx);
-    const totals = closeDay(state, day);
-    this.events.emit({ type: 'day:ended', tick: state.tick, day: day - 1, income: totals.income, expenses: totals.expenses });
-    const net = totals.income - totals.expenses;
-    this.events.emit({
-      type: 'log',
-      tick: state.tick,
-      level: net >= 0 ? 'info' : 'warning',
-      message: `Tagesabschluss Tag ${day}: ${net >= 0 ? '+' : ''}${Math.round(net)} ¢ (Einnahmen ${Math.round(totals.income)} ¢, Ausgaben ${Math.round(totals.expenses)} ¢).`,
-    });
-    if (state.ledger.balance < 0) {
-      this.events.emit({
-        type: 'log',
-        tick: state.tick,
-        level: 'danger',
-        message: `Konto überzogen: ${Math.round(state.ledger.balance)} ¢. Seit ${state.ledger.daysInDebt} Tag(en) in den roten Zahlen.`,
+    const players = world.playerOrder;
+    for (const id of players) {
+      this.runAs(id, (state) => {
+        laborState.strike = activeEffect(state, 'strike', day) || activeCrisis(state, 'general_strike');
+        book(state, this.events, -state.player.apartmentRent, { category: 'rent', description: 'Miete: deine Wohnung' });
+        closeBusinessDay(this.ctx, day - 1);
+        closeRetailDay(this.ctx, day - 1);
+        closeHotelsDay(this.ctx, day - 1);
+        closeTransportDay(this.ctx, day - 1);
+        closePropertyDay(this.ctx);
+        closeSecurityDay(this.ctx, day - 1);
+        closeUnderworldDay(this.ctx, day - 1);
+        closeLabsDay(this.ctx, day - 1);
+        closeIndustryDay(this.ctx, day - 1);
       });
     }
-    // Company reputation follows the average business reputation, slowly.
-    const businesses = Object.values(state.buildings).filter((b) => b.owner === 'player' && b.business && b.status === 'operational');
-    if (businesses.length > 0) {
-      const avg = businesses.reduce((s, b) => s + (b.business?.reputation ?? 0), 0) / businesses.length;
-      state.player.reputation = clamp(state.player.reputation + (avg - state.player.reputation) * 0.1, 0, 100);
+    this.runAs(null, () => {
+      closeRivalsDay(this.ctx);
+      closePopulationDay(this.ctx);
+      closeFactionsSharedDay(this.ctx, day);
+    });
+    for (const id of players) {
+      this.runAs(id, () => {
+        closeFactionsPlayerDay(this.ctx, day);
+        closePoliticsPlayerDay(this.ctx, day);
+      });
     }
+    this.runAs(null, () => {
+      closePoliticsSharedDay(this.ctx, day);
+      closeCrisisDay(this.ctx, day);
+    });
+    for (const id of players) {
+      this.runAs(id, () => {
+        closeCorporateDay(this.ctx);
+        stepMegacorp(this.ctx, day);
+        expireDecisions(this.ctx, day);
+      });
+    }
+    this.runAs(null, () => {
+      closeCompetitorsDay(this.ctx, day - 1);
+      closeMarketDay(this.ctx);
+    });
+    let income = 0;
+    let expenses = 0;
+    for (const id of players) {
+      this.runAs(id, (state) => {
+        const totals = closeDay(state, day);
+        income += totals.income;
+        expenses += totals.expenses;
+        const net = totals.income - totals.expenses;
+        this.events.emit({
+          type: 'log',
+          tick: state.tick,
+          level: net >= 0 ? 'info' : 'warning',
+          message: `Tagesabschluss Tag ${day}: ${net >= 0 ? '+' : ''}${Math.round(net)} ¢ (Einnahmen ${Math.round(totals.income)} ¢, Ausgaben ${Math.round(totals.expenses)} ¢).`,
+        });
+        if (state.ledger.balance < 0) {
+          this.events.emit({
+            type: 'log',
+            tick: state.tick,
+            level: 'danger',
+            message: `Konto überzogen: ${Math.round(state.ledger.balance)} ¢. Seit ${state.ledger.daysInDebt} Tag(en) in den roten Zahlen.`,
+          });
+        }
+        // Company reputation follows the average business reputation, slowly.
+        const businesses = Object.values(state.buildings).filter((b) => b.owner === state.playerId && b.business && b.status === 'operational');
+        if (businesses.length > 0) {
+          const avg = businesses.reduce((sum, b) => sum + (b.business?.reputation ?? 0), 0) / businesses.length;
+          state.player.reputation = clamp(state.player.reputation + (avg - state.player.reputation) * 0.1, 0, 100);
+        }
+      });
+    }
+    this.events.emit({ type: 'day:ended', tick: world.tick, day: day - 1, income, expenses });
   }
 
+  /** Routes a log line to the right players: the building's owner, else the player whose pass is running, else everyone. */
   private appendLog(e: Extract<SimEvent, { type: 'log' }>): void {
-    const state = this.state;
-    state.log.push({
-      id: state.nextLogId++,
-      tick: e.tick,
-      level: e.level,
-      message: e.message,
-      buildingId: e.buildingId !== undefined ? Number(e.buildingId) : undefined,
-    });
-    if (state.log.length > LOG_LIMIT) state.log.splice(0, state.log.length - LOG_LIMIT);
+    const world = this.world;
+    let targets: readonly string[];
+    const owner = e.buildingId !== undefined ? world.buildings[Number(e.buildingId)]?.owner : undefined;
+    if (owner && owner !== 'city' && world.players[owner]) targets = [owner];
+    else if (this.currentPlayer && world.players[this.currentPlayer]) targets = [this.currentPlayer];
+    else targets = world.playerOrder;
+    for (const id of targets) {
+      const slice = world.players[id]!;
+      slice.log.push({
+        id: slice.nextLogId++,
+        tick: e.tick,
+        level: e.level,
+        message: e.message,
+        buildingId: e.buildingId !== undefined ? Number(e.buildingId) : undefined,
+      });
+      if (slice.log.length > LOG_LIMIT) slice.log.splice(0, slice.log.length - LOG_LIMIT);
+    }
   }
 
   private syncRng(): void {
-    this.state.rng.state = this.rng.toJSON().state;
+    this.world.rng.state = this.rng.toJSON().state;
   }
 }
 

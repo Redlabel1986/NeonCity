@@ -6,7 +6,7 @@
  */
 
 import { SAVE_FORMAT_VERSION } from '../sim/engine';
-import { stateFromJSON, stateToJSON, type GameState, type GameStateJSON } from '../sim/state';
+import { stateFromJSON, stateToJSON, type GameState, type GameStateJSON, type WorldState } from '../sim/state';
 import { DISTRICT_ARCHETYPES } from '../sim/data/districts';
 import { DIFFICULTIES, BACKGROUNDS } from '../sim/data/difficulty';
 import { MIGRATIONS } from './migrations';
@@ -28,18 +28,23 @@ export class SaveValidationError extends Error {
   }
 }
 
-export function serialize(state: GameState, name: string): string {
+/** The shared world behind a player view (or the world itself). */
+export function worldOf(state: GameState | WorldState): WorldState {
+  return 'world' in state ? (state as GameState).world : (state as WorldState);
+}
+
+export function serialize(state: GameState | WorldState, name: string): string {
   const file: SaveFile = {
     magic: 'NEON_DYNASTY_SAVE',
     version: SAVE_FORMAT_VERSION,
     savedAt: Date.now(),
     name,
-    state: stateToJSON(state),
+    state: stateToJSON(worldOf(state)),
   };
   return JSON.stringify(file);
 }
 
-export function deserialize(text: string): { state: GameState; name: string; savedAt: number } {
+export function deserialize(text: string): { state: WorldState; name: string; savedAt: number } {
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
@@ -147,7 +152,7 @@ function validateState(s: Record<string, unknown>, version: number): void {
     if (String(id) !== key) throw new SaveValidationError(`${path}.id passt nicht zum Schlüssel.`);
     expectString(b, 'defId', path);
     expectString(b, 'label', path);
-    if (b.owner !== 'player' && b.owner !== 'city') throw new SaveValidationError(`${path}.owner ist ungültig.`);
+    if (typeof b.owner !== 'string' || b.owner.length === 0 || (version < 12 && b.owner !== 'player' && b.owner !== 'city')) throw new SaveValidationError(`${path}.owner ist ungültig.`);
     const x = expectNumber(b, 'x', path);
     const y = expectNumber(b, 'y', path);
     const w = expectNumber(b, 'w', path);
@@ -199,27 +204,31 @@ function validateState(s: Record<string, unknown>, version: number): void {
     }
   }
 
-  if (!isObject(s.ledger)) throw new SaveValidationError('state.ledger fehlt.');
-  expectNumber(s.ledger, 'balance', 'state.ledger');
-  if (!Array.isArray(s.ledger.transactions)) throw new SaveValidationError('state.ledger.transactions fehlt.');
-  if (!Array.isArray(s.ledger.balanceHistory)) throw new SaveValidationError('state.ledger.balanceHistory fehlt.');
-  for (const key of ['todayIncome', 'todayExpenses', 'yesterdayIncome', 'yesterdayExpenses', 'daysInDebt']) expectNumber(s.ledger, key, 'state.ledger');
+  // Player slices (v12+) or the single legacy player (older saves).
+  const slices: [string, Record<string, unknown>][] = [];
+  if (version >= 12) {
+    if (!isObject(s.players)) throw new SaveValidationError('state.players fehlt.');
+    if (!Array.isArray(s.playerOrder)) throw new SaveValidationError('state.playerOrder fehlt.');
+    for (const id of s.playerOrder as unknown[]) {
+      if (typeof id !== 'string' || !isObject((s.players as Record<string, unknown>)[id])) throw new SaveValidationError(`state.players[${String(id)}] fehlt.`);
+      slices.push([`state.players.${id}`, (s.players as Record<string, Record<string, unknown>>)[id]!]);
+    }
+    for (const b of Object.values(s.buildings as Record<string, Record<string, unknown>>)) {
+      if (b.owner !== 'city' && !isObject((s.players as Record<string, unknown>)[b.owner as string])) throw new SaveValidationError(`Gebäude ${String(b.id)} gehört einem unbekannten Spieler.`);
+    }
+  } else {
+    slices.push(['state', s]);
+  }
+  for (const [path, slice] of slices) {
+    validatePlayerSlice(slice, path, version);
+  }
 
-  if (!isObject(s.player)) throw new SaveValidationError('state.player fehlt.');
-  expectString(s.player, 'name', 'state.player');
-  const difficulty = expectString(s.player, 'difficulty', 'state.player');
-  if (!(difficulty in DIFFICULTIES)) throw new SaveValidationError(`Unbekannter Schwierigkeitsgrad: ${difficulty}`);
-  const background = expectString(s.player, 'background', 'state.player');
-  if (!(background in BACKGROUNDS)) throw new SaveValidationError(`Unbekannter Hintergrund: ${background}`);
-  expectNumber(s.player, 'apartmentRent', 'state.player');
-  expectNumber(s.player, 'homeDistrictId', 'state.player');
-  expectNumber(s.player, 'reputation', 'state.player');
-  expectNumber(s.player, 'wantedLevel', 'state.player');
-
-  if (!Array.isArray(s.log)) throw new SaveValidationError('state.log fehlt.');
-  expectNumber(s, 'nextLogId', 'state');
-  if (!Array.isArray(s.tasks)) throw new SaveValidationError('state.tasks fehlt.');
-  if (!Array.isArray(s.undoStack)) throw new SaveValidationError('state.undoStack fehlt.');
+  if (version < 12) {
+    if (!Array.isArray(s.log)) throw new SaveValidationError('state.log fehlt.');
+    expectNumber(s, 'nextLogId', 'state');
+    if (!Array.isArray(s.tasks)) throw new SaveValidationError('state.tasks fehlt.');
+    if (!Array.isArray(s.undoStack)) throw new SaveValidationError('state.undoStack fehlt.');
+  }
   if (!isObject(s.meta)) throw new SaveValidationError('state.meta fehlt.');
   if (version >= 3) {
     if (!isObject(s.population) || !Array.isArray((s.population as Record<string, unknown>).citizens)) throw new SaveValidationError('state.population fehlt.');
@@ -241,7 +250,7 @@ function validateState(s: Record<string, unknown>, version: number): void {
     }
     if (!isObject(s.market) || !isObject((s.market as Record<string, unknown>).index)) throw new SaveValidationError('state.market fehlt.');
     expectNumber(s, 'lastCompetitorExpansionDay', 'state');
-    if (version >= 5) {
+    if (version >= 5 && version < 12) {
       if (!isObject(s.underworld)) throw new SaveValidationError('state.underworld fehlt.');
       const uw = s.underworld as Record<string, unknown>;
       expectNumber(uw, 'heat', 'state.underworld');
@@ -254,18 +263,23 @@ function validateState(s: Record<string, unknown>, version: number): void {
       }
       expectNumber(s.ledger as Record<string, unknown>, 'dirtyBalance', 'state.ledger');
     }
-    if (version >= 6) {
+    if (version >= 12) {
+      if (!Array.isArray(s.rivals)) throw new SaveValidationError('state.rivals fehlt.');
+      if (!Array.isArray(s.factions)) throw new SaveValidationError('state.factions fehlt.');
+      if (!isObject(s.politics) || !isObject((s.politics as Record<string, unknown>).laws) || !isObject((s.politics as Record<string, unknown>).council)) throw new SaveValidationError('state.politics fehlt.');
+    }
+    if (version >= 6 && version < 12) {
       if (!Array.isArray(s.factions)) throw new SaveValidationError('state.factions fehlt.');
       if (!isObject(s.politics) || !isObject((s.politics as Record<string, unknown>).laws) || !isObject((s.politics as Record<string, unknown>).council)) throw new SaveValidationError('state.politics fehlt.');
       expectNumber(s.politics as Record<string, unknown>, 'influence', 'state.politics');
       if (!isObject(s.decisions) || !Array.isArray((s.decisions as Record<string, unknown>).pending)) throw new SaveValidationError('state.decisions fehlt.');
     }
-    if (version >= 7) {
+    if (version >= 7 && version < 12) {
       if (!isObject(s.corporate) || !Array.isArray((s.corporate as Record<string, unknown>).loans)) throw new SaveValidationError('state.corporate fehlt.');
       expectNumber(s.corporate as Record<string, unknown>, 'sharesSold', 'state.corporate');
       if (!isObject(s.research) || !Array.isArray((s.research as Record<string, unknown>).unlocked)) throw new SaveValidationError('state.research fehlt.');
-      if (!isObject(s.crisis)) throw new SaveValidationError('state.crisis fehlt.');
     }
+    if (version >= 7 && !isObject(s.crisis)) throw new SaveValidationError('state.crisis fehlt.');
     if (version >= 8) {
       if (!isObject(s.weather) || typeof (s.weather as Record<string, unknown>).kind !== 'string') throw new SaveValidationError('state.weather fehlt.');
     }
@@ -331,7 +345,7 @@ function validateGastronomyV2(biz: Record<string, unknown>, path: string): void 
  * Attempts to recover a damaged save: strips unknown log entries, resets
  * transient fields. Returns null when the core data is unusable.
  */
-export function tryRepair(text: string): { state: GameState; name: string; savedAt: number; repaired: string[] } | null {
+export function tryRepair(text: string): { state: WorldState; name: string; savedAt: number; repaired: string[] } | null {
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
@@ -341,19 +355,52 @@ export function tryRepair(text: string): { state: GameState; name: string; saved
   if (!isObject(parsed) || !isObject(parsed.state)) return null;
   const repaired: string[] = [];
   const s = parsed.state;
-  if (!Array.isArray(s.log)) {
+  // Player slices (v12+) carry log, tasks, undo stack and ledger; older saves keep them at the top level.
+  const slices: Record<string, unknown>[] = isObject(s.players) ? Object.values(s.players as Record<string, unknown>).filter(isObject) : [];
+  for (const slice of slices) {
+    if (!Array.isArray(slice.log)) {
+      slice.log = [];
+      repaired.push('Ereignisprotokoll zurückgesetzt');
+    }
+    if (typeof slice.nextLogId !== 'number') slice.nextLogId = 1;
+    if (!Array.isArray(slice.tasks)) {
+      slice.tasks = [];
+      repaired.push('Aufgaben zurückgesetzt');
+    }
+    if (!Array.isArray(slice.undoStack)) {
+      slice.undoStack = [];
+      repaired.push('Rückgängig-Verlauf zurückgesetzt');
+    }
+    if (isObject(slice.ledger)) {
+      for (const key of ['todayIncome', 'todayExpenses', 'yesterdayIncome', 'yesterdayExpenses', 'daysInDebt']) {
+        if (typeof slice.ledger[key] !== 'number') {
+          slice.ledger[key] = 0;
+          repaired.push(`Finanzfeld ${key} zurückgesetzt`);
+        }
+      }
+      if (!Array.isArray(slice.ledger.transactions)) {
+        slice.ledger.transactions = [];
+        repaired.push('Transaktionen zurückgesetzt');
+      }
+      if (!Array.isArray(slice.ledger.balanceHistory)) {
+        slice.ledger.balanceHistory = [];
+        repaired.push('Kontoverlauf zurückgesetzt');
+      }
+    }
+  }
+  if (slices.length === 0 && !Array.isArray(s.log)) {
     s.log = [];
     repaired.push('Ereignisprotokoll zurückgesetzt');
   }
-  if (typeof s.nextLogId !== 'number') {
+  if (slices.length === 0 && typeof s.nextLogId !== 'number') {
     s.nextLogId = 1;
     repaired.push('Protokollzähler zurückgesetzt');
   }
-  if (!Array.isArray(s.tasks)) {
+  if (slices.length === 0 && !Array.isArray(s.tasks)) {
     s.tasks = [];
     repaired.push('Aufgaben zurückgesetzt');
   }
-  if (!Array.isArray(s.undoStack)) {
+  if (slices.length === 0 && !Array.isArray(s.undoStack)) {
     s.undoStack = [];
     repaired.push('Rückgängig-Verlauf zurückgesetzt');
   }
@@ -386,5 +433,35 @@ export function tryRepair(text: string): { state: GameState; name: string; saved
     return { ...result, repaired };
   } catch {
     return null;
+  }
+}
+
+/** Checks one player's slice (ledger, profile, company). Older saves keep these fields at the top level. */
+function validatePlayerSlice(slice: Record<string, unknown>, path: string, version: number): void {
+  if (!isObject(slice.ledger)) throw new SaveValidationError(`${path}.ledger fehlt.`);
+  expectNumber(slice.ledger, 'balance', `${path}.ledger`);
+  if (!Array.isArray(slice.ledger.transactions)) throw new SaveValidationError(`${path}.ledger.transactions fehlt.`);
+  if (!Array.isArray(slice.ledger.balanceHistory)) throw new SaveValidationError(`${path}.ledger.balanceHistory fehlt.`);
+  for (const key of ['todayIncome', 'todayExpenses', 'yesterdayIncome', 'yesterdayExpenses', 'daysInDebt']) expectNumber(slice.ledger, key, `${path}.ledger`);
+  if (!isObject(slice.player)) throw new SaveValidationError(`${path}.player fehlt.`);
+  expectString(slice.player, 'name', `${path}.player`);
+  const difficulty = expectString(slice.player, 'difficulty', `${path}.player`);
+  if (!(difficulty in DIFFICULTIES)) throw new SaveValidationError(`Unbekannter Schwierigkeitsgrad: ${difficulty}`);
+  const background = expectString(slice.player, 'background', `${path}.player`);
+  if (!(background in BACKGROUNDS)) throw new SaveValidationError(`Unbekannter Hintergrund: ${background}`);
+  expectNumber(slice.player, 'apartmentRent', `${path}.player`);
+  expectNumber(slice.player, 'homeDistrictId', `${path}.player`);
+  expectNumber(slice.player, 'reputation', `${path}.player`);
+  if (version >= 12) {
+    expectString(slice, 'id', path);
+    if (!Array.isArray(slice.log) || !Array.isArray(slice.tasks) || !Array.isArray(slice.undoStack)) throw new SaveValidationError(`${path}: Protokoll, Aufgaben oder Rückgängig-Stapel fehlen.`);
+    if (!isObject(slice.underworld) || !isObject(slice.factions) || !isObject(slice.politics)) throw new SaveValidationError(`${path}: Unterwelt, Fraktionen oder Politik fehlen.`);
+    expectNumber(slice.underworld, 'heat', `${path}.underworld`);
+    expectNumber(slice.politics, 'influence', `${path}.politics`);
+    if (!isObject(slice.decisions) || !isObject(slice.corporate) || !isObject(slice.research)) throw new SaveValidationError(`${path}: Entscheidungen, Konzern oder Forschung fehlen.`);
+    expectNumber(slice.ledger as Record<string, unknown>, 'dirtyBalance', `${path}.ledger`);
+  }
+  if (version >= 13) {
+    if (!isObject(slice.casino) || !isObject((slice.casino as Record<string, unknown>).stats) || !Array.isArray((slice.casino as Record<string, unknown>).history)) throw new SaveValidationError(`${path}.casino fehlt.`);
   }
 }

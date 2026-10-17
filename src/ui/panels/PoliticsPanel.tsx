@@ -52,7 +52,7 @@ export function PoliticsPanel() {
                 </div>
                 {proposal ? (
                   <p className="mt-1 text-amber">
-                    Antrag von {proposal.by === 'player' ? 'dir' : FACTIONS[proposal.by as keyof typeof FACTIONS]?.name}: {law.options.find((o) => o.value === proposal.value)?.label}, Abstimmung Tag {proposal.voteDay + 1}, Zustimmung ≈ {percent(councilSupport(state, law.id, proposal.value) * 100)}
+                    Antrag von {proposal.by === state.playerId ? 'dir' : (FACTIONS[proposal.by as keyof typeof FACTIONS]?.name ?? state.players[proposal.by]?.player.name ?? proposal.by)}: {law.options.find((o) => o.value === proposal.value)?.label}, Abstimmung Tag {proposal.voteDay + 1}, Zustimmung ≈ {percent(councilSupport(state, law.id, proposal.value) * 100)}
                   </p>
                 ) : (
                   <div className="mt-1 flex flex-wrap gap-1">

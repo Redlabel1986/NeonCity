@@ -8,10 +8,20 @@ export default defineConfig({
     baseURL: 'http://localhost:4173',
     viewport: { width: 1440, height: 900 },
   },
-  webServer: {
-    command: 'npm run preview -- --port 4173 --strictPort',
-    url: 'http://localhost:4173',
-    reuseExistingServer: true,
-    timeout: 120_000,
-  },
+  webServer: [
+    {
+      command: 'npm run preview -- --port 4173 --strictPort',
+      url: 'http://localhost:4173',
+      reuseExistingServer: true,
+      timeout: 120_000,
+    },
+    {
+      // Online world for tests/e2e/online.spec.ts: a fresh data directory per run, small city, 1× speed.
+      command: 'npx tsx server/index.ts',
+      url: 'http://localhost:8787/api/status',
+      reuseExistingServer: false,
+      timeout: 120_000,
+      env: { PORT: '8787', NEON_DATA: `test-results/online-${Date.now()}`, NEON_CITY_SIZE: '48', NEON_SPEED: '1', NEON_SEED: 'e2e-online' },
+    },
+  ],
 });

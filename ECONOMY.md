@@ -278,3 +278,12 @@ Alle Werte werden pro Stadt um ±7 % gestreut, Einwohnerzahlen nach Bezirksgrö�
 ## Beispielrechnung (Standard, Gastronom, Ramenbar im Neon Market)
 
 Grundstück ≈ 1.041 ¢ + Bau 6.500 ¢ = 7.541 ¢. Ein Shoyu-Ramen braucht ca. 3,7 Zutateneinheiten (≈ 6 ¢ beim Neon Market Kurier) und kostet 18 ¢. Bei rund 120 Gästen am Tag: ≈ 2.100 ¢ Umsatz, ≈ 700 ¢ Wareneinsatz, ≈ 245 ¢ Löhne (zwei Mitarbeiter), 90 ¢ Betrieb, 90 ¢ Miete → ≈ +950 ¢. Ein zweiter Koch hebt die Kapazität, kostet aber ≈ 130 ¢/Tag; Ausbauten amortisieren sich über Zufriedenheit und Anziehung.
+
+## Casino
+
+Royal Nova Casino, Einsatz je Runde 10 bis 5.000 ¢ (Roulette: Summe aller Wetten). Einsatz wird beim Setzen gebucht (Kategorie Casino, Ausgabe), die Rückzahlung inklusive Einsatz beim Rundenende (Einnahme).
+
+- **Slots:** drei unabhängige Walzen, Symbolgewichte Kirsche 30, Zitrone 25, Glocke 18, Bar 12, Sieben 8, Neon 5, Diamant 2 (je 100). Dreier: ×3, ×4, ×6, ×10, ×20, ×40, ×100; genau zwei Kirschen ×2; jedes andere Paar ×1. Auszahlungsquote = Σ p(Kombination) · Faktor = 0,875.
+- **Roulette:** europäisch, 0–36. Zahl 35:1, Rot/Schwarz, Gerade/Ungerade, 1–18/19–36 1:1, Dutzend/Kolonne 2:1. Jede Wette zahlt im Mittel 36/37 des Einsatzes (97,3 %).
+- **Blackjack:** unendlicher Schuh (jede Karte unabhängig gleichverteilt), Dealer steht auf jeder 17, Blackjack 3:2, Verdoppeln nur mit zwei Karten, kein Teilen, keine Versicherung. Gewinn zahlt den doppelten Einsatz zurück, Unentschieden den Einsatz.
+- Alle Ziehungen nutzen den Simulations-RNG; der Einsatz muss durch das Konto gedeckt sein (Sandbox: unbegrenzt).

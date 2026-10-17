@@ -9,7 +9,9 @@ import { createBusinessState } from '../sim/systems/business';
 import { createPopulation, generateCitizens } from '../sim/systems/population';
 import { createCompetitorsForCity } from '../sim/systems/competitors';
 import { createMarket } from '../sim/systems/market';
-import { createUnderworld } from '../sim/systems/underworld';
+import { createRivals } from '../sim/systems/underworld';
+import { withPlayer, SYSTEM_PLAYER_ID, defaultFactionState } from '../sim/players';
+import { FACTION_IDS } from '../sim/data/factions';
 import { createFactions } from '../sim/systems/factions';
 import { createPolitics } from '../sim/systems/politics';
 import { createDecisionState } from '../sim/systems/decisions';
@@ -82,11 +84,12 @@ const migrateV2toV3: Migration = (raw) => {
   raw.market = createMarket();
   raw.lastCompetitorExpansionDay = 0;
   raw.version = 3;
-  const state = stateFromJSON(raw as unknown as GameStateJSON);
-  const rng = new Rng(`${state.seed}:migrate:v3`);
-  createCompetitorsForCity(state, rng, Math.floor((state.tick + 7 * 60) / 1440));
-  generateCitizens(state, rng);
-  return stateToJSON(state) as unknown as Record<string, unknown>;
+  const world = stateFromJSON(raw as unknown as GameStateJSON);
+  const view = withPlayer(world, SYSTEM_PLAYER_ID);
+  const rng = new Rng(`${world.seed}:migrate:v3`);
+  createCompetitorsForCity(view, rng, Math.floor((world.tick + 7 * 60) / 1440));
+  generateCitizens(view, rng);
+  return stateToJSON(world) as unknown as Record<string, unknown>;
 };
 
 /** v3 → v4: new business kinds and real estate are optional additions; only the version changes. */
@@ -99,11 +102,11 @@ const migrateV3toV4: Migration = (raw) => {
 const migrateV4toV5: Migration = (raw) => {
   const ledger = raw.ledger as Record<string, unknown>;
   if (typeof ledger.dirtyBalance !== 'number') ledger.dirtyBalance = 0;
-  raw.underworld = { org: null, heat: 0, lockdownUntilDay: 0, rivals: [], recentBribes: 0 };
   raw.version = 5;
-  const state = stateFromJSON(raw as unknown as GameStateJSON);
-  state.underworld = createUnderworld(state, new Rng(`${state.seed}:migrate:v5`));
-  return stateToJSON(state) as unknown as Record<string, unknown>;
+  const world = stateFromJSON(raw as unknown as GameStateJSON);
+  const rivals = createRivals(withPlayer(world, SYSTEM_PLAYER_ID), new Rng(`${world.seed}:migrate:v5`));
+  raw.underworld = { org: null, heat: 0, lockdownUntilDay: 0, rivals, recentBribes: 0 };
+  return raw;
 };
 
 /** v5 → v6: factions, politics, decisions. */
@@ -187,6 +190,67 @@ const migrateV10toV11: Migration = (raw) => {
   return raw;
 };
 
+/** v11 → v12: shared world with player slices; the single player becomes player 'player'. */
+const migrateV11toV12: Migration = (raw) => {
+  const uw = (raw.underworld ?? { org: null, heat: 0, lockdownUntilDay: 0, rivals: [], recentBribes: 0 }) as Record<string, unknown>;
+  const factions = (raw.factions ?? []) as Record<string, unknown>[];
+  const pol = (raw.politics ?? {}) as Record<string, unknown>;
+  const slice: Record<string, unknown> = {
+    id: 'player',
+    player: raw.player,
+    ledger: raw.ledger,
+    log: raw.log ?? [],
+    nextLogId: raw.nextLogId ?? 1,
+    tasks: raw.tasks ?? [],
+    undoStack: raw.undoStack ?? [],
+    underworld: { org: uw.org ?? null, heat: uw.heat ?? 0, lockdownUntilDay: uw.lockdownUntilDay ?? 0, recentBribes: uw.recentBribes ?? 0 },
+    factions: Object.fromEntries(
+      FACTION_IDS.map((id) => {
+        const f = factions.find((x) => x.id === id);
+        return [id, f ? { relation: f.relation ?? 0, lastActionDay: f.lastActionDay ?? -10, activeUntilDay: f.activeUntilDay ?? 0, activeEffect: f.activeEffect ?? null } : defaultFactionState()];
+      }),
+    ),
+    politics: {
+      influence: pol.influence ?? 0,
+      districtInfluence: pol.districtInfluence ?? {},
+      initiativeCooldownDay: pol.initiativeCooldownDay ?? {},
+      lifetimeTaxes: pol.lifetimeTaxes ?? 0,
+      lifetimeDonations: pol.lifetimeDonations ?? 0,
+    },
+    decisions: raw.decisions ?? createDecisionState(),
+    corporate: raw.corporate ?? createCorporateState('Holdings'),
+    research: raw.research ?? createResearchState(),
+    joinedTick: 0,
+  };
+  raw.players = { player: slice };
+  raw.playerOrder = ['player'];
+  raw.rivals = uw.rivals ?? [];
+  raw.factions = FACTION_IDS.map((id) => {
+    const f = factions.find((x) => x.id === id);
+    return { id, influence: f?.influence ?? 30 };
+  });
+  raw.politics = {
+    council: pol.council ?? { progress_bloc: 13, social_alliance: 11 },
+    laws: pol.laws ?? {},
+    proposals: pol.proposals ?? [],
+    nextProposalId: pol.nextProposalId ?? 1,
+    nextElectionDay: pol.nextElectionDay ?? 30,
+  };
+  for (const key of ['player', 'ledger', 'log', 'nextLogId', 'tasks', 'undoStack', 'underworld', 'decisions', 'corporate', 'research']) delete raw[key];
+  raw.version = 12;
+  return raw;
+};
+
+/** v12 → v13: casino state per player. */
+const migrateV12toV13: Migration = (raw) => {
+  const players = (raw.players ?? {}) as Record<string, Record<string, unknown>>;
+  for (const slice of Object.values(players)) {
+    if (!slice.casino) slice.casino = { blackjack: null, lastSlots: null, lastRoulette: null, stats: { rounds: 0, wagered: 0, returned: 0, biggestWin: 0 }, history: [] };
+  }
+  raw.version = 13;
+  return raw;
+};
+
 export const MIGRATIONS: Record<number, Migration> = {
   1: migrateV1toV2,
   2: migrateV2toV3,
@@ -198,4 +262,6 @@ export const MIGRATIONS: Record<number, Migration> = {
   8: migrateV8toV9,
   9: migrateV9toV10,
   10: migrateV10toV11,
+  11: migrateV11toV12,
+  12: migrateV12toV13,
 };

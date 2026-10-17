@@ -152,7 +152,7 @@ function expand(ctx: SimContext, day: number): void {
   }
   if (!b) return;
   const c = openCompetitor(state, rng, b, day);
-  const near = Object.values(state.buildings).find((p) => p.owner === 'player' && p.business && Math.abs(p.x - b.x) + Math.abs(p.y - b.y) <= 6);
+  const near = Object.values(state.buildings).find((p) => p.owner !== 'city' && p.business && Math.abs(p.x - b.x) + Math.abs(p.y - b.y) <= 6);
   events.emit({
     type: 'log',
     tick: state.tick,

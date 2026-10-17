@@ -1,5 +1,7 @@
+import { toLegacy } from './legacy';
 import { describe, expect, it } from 'vitest';
 import { createNewGame, Simulation, type NewGameOptions } from '../../src/sim/engine';
+import { withPlayer } from '../../src/sim/players';
 import { checkPlacement } from '../../src/sim/systems/construction';
 import { MINUTES_PER_DAY } from '../../src/sim/core/clock';
 import { megacorpProgress, MEGACORP_VALUATION } from '../../src/sim/systems/corporate';
@@ -88,13 +90,13 @@ describe('Save format v9', () => {
   it('migrates v8 and round-trips megacorp fields', () => {
     const sim = new Simulation(createNewGame(options));
     sim.state.corporate.megacorp = true;
-    const { state } = deserialize(serialize(sim.state, 'v9'));
+    const state = withPlayer(deserialize(serialize(sim.state, 'v9')).state, 'player');
     expect(state.corporate.megacorp).toBe(true);
-    const file = JSON.parse(serialize(sim.state, 'v8')) as { version: number; state: { corporate: Record<string, unknown> } };
+    const file = toLegacy(JSON.parse(serialize(sim.state, 'v8')) as { version: number; state: { corporate: Record<string, unknown> } });
     delete file.state.corporate.megacorp;
     delete file.state.corporate.careers;
     const migrated = deserialize(JSON.stringify({ ...file, version: 8 }));
-    expect(migrated.state.corporate.megacorp).toBe(false);
-    expect(migrated.state.corporate.careers).toBe(1);
+    expect(withPlayer(migrated.state, 'player').corporate.megacorp).toBe(false);
+    expect(withPlayer(migrated.state, 'player').corporate.careers).toBe(1);
   });
 });

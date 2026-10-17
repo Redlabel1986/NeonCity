@@ -5,7 +5,7 @@
 
 import { create } from 'zustand';
 import { createNewGame, Simulation, type Command, type NewGameOptions, type Speed } from '../../sim/engine';
-import type { Facing, GameState } from '../../sim/state';
+import { LOCAL_PLAYER_ID, type Facing, type GameState, type WorldState } from '../../sim/state';
 import { checkPlacement, type PlacementCheck } from '../../sim/systems/construction';
 import type { DashboardTab } from '../../render/interior/layouts';
 import type { LogLevel } from '../../sim/core/events';
@@ -15,6 +15,8 @@ import { AUTOSAVE_SLOT, QUICK_SLOT, createManualSave, loadSave, saveToSlot, expo
 import { getDatabase } from '../../persistence/db';
 import { tickToDate, formatDate } from '../../sim/core/clock';
 import { audio } from '../audio';
+import { OnlineClient } from '../../net/client';
+import type { OnlinePlayer } from '../../net/protocol';
 
 export function applyAudioSettings(settings: Settings): void {
   audio.setSettings({
@@ -37,6 +39,7 @@ export type Panel =
   | 'politics'
   | 'underworld'
   | 'stats'
+  | 'casino'
   | 'dashboard';
 
 export type Dialog = 'saves' | 'settings' | 'help' | 'career' | null;
@@ -57,6 +60,7 @@ export interface KeyBindings {
   factions: string;
   politics: string;
   research: string;
+  casino: string;
   help: string;
 }
 
@@ -76,6 +80,7 @@ export const DEFAULT_KEYBINDINGS: KeyBindings = {
   factions: 'k',
   politics: 'o',
   research: 'r',
+  casino: 'j',
   help: 'h',
 };
 
@@ -95,6 +100,15 @@ export interface Settings {
   showMinimap: boolean;
   /** Fly into the building and show its interior while managing it. */
   interiorView: boolean;
+}
+
+/** Connection to the shared online world (null = local single-player game). */
+export interface OnlineState {
+  connected: boolean;
+  url: string;
+  playerId: string;
+  name: string;
+  players: OnlinePlayer[];
 }
 
 export interface Toast {
@@ -132,9 +146,12 @@ export interface GameStore {
   toasts: Toast[];
   settings: Settings;
   busy: string | null;
+  online: OnlineState | null;
 
   newGame: (options: NewGameOptions) => void;
-  loadFromState: (state: GameState, name: string) => void;
+  loadFromState: (state: WorldState, name: string, playerId?: string) => void;
+  connectOnline: (auth: { url: string; token: string; playerId: string; name: string }) => Promise<void>;
+  disconnectOnline: () => void;
   quitToMenu: () => Promise<void>;
   dispatch: (command: Command) => boolean;
   setSpeed: (speed: Speed) => void;
@@ -221,16 +238,18 @@ export const useGameStore = create<GameStore>((set, get) => ({
   toasts: [],
   settings: loadSettings(),
   busy: null,
+  online: null,
 
   newGame: (options) => {
-    const state = createNewGame(options);
-    get().loadFromState(state, `${options.playerName.trim() || 'Unbekannt'} – Nova Eclipse`);
-    get().notify('info', `Willkommen in Nova Eclipse, ${state.player.name}. Deine Miete beträgt ${state.player.apartmentRent} ¢ pro Tag.`);
+    const world = createNewGame(options);
+    get().loadFromState(world, `${options.playerName.trim() || 'Unbekannt'} – Nova Eclipse`);
+    const me = world.players[LOCAL_PLAYER_ID]!.player;
+    get().notify('info', `Willkommen in Nova Eclipse, ${me.name}. Deine Miete beträgt ${me.apartmentRent} ¢ pro Tag.`);
   },
 
-  loadFromState: (state, name) => {
+  loadFromState: (state, name, playerId) => {
     stopLoop();
-    session.sim = new Simulation(state);
+    session.sim = new Simulation(state, playerId);
     set({
       screen: 'game',
       saveName: name,
@@ -248,11 +267,53 @@ export const useGameStore = create<GameStore>((set, get) => ({
     startLoop();
   },
 
+  connectOnline: async (auth) => {
+    get().disconnectOnline();
+    const client = new OnlineClient(auth.url, auth.token, {
+      onWorld: (world, playerId) => {
+        if (get().screen !== 'game' || !session.sim) {
+          get().loadFromState(world, `Online – ${world.meta.cityName}`, playerId);
+          return;
+        }
+        // Resync: swap the world underneath the running UI.
+        const sim = new Simulation(world, playerId);
+        session.sim = sim;
+        session.renderer?.loadWorld(sim.state);
+        get().bumpStructure();
+      },
+      onPresence: (players) => set((s) => (s.online ? { online: { ...s.online, players } } : {})),
+      onDisconnect: (reason) => {
+        get().notify('danger', `Verbindung zum Server getrennt: ${reason}`);
+        set((s) => (s.online ? { online: { ...s.online, connected: false } } : {}));
+      },
+      onNotice: (level, message) => get().notify(level, message),
+      onBuildingRemoved: (x, y, w, h) => pendingGroundRefresh.push([x, y, w, h]),
+    });
+    session.online = client;
+    set({ online: { connected: false, url: auth.url, playerId: auth.playerId, name: auth.name, players: [] } });
+    try {
+      await client.connect();
+    } catch (err) {
+      session.online = null;
+      set({ online: null });
+      throw err;
+    }
+    set((s) => (s.online ? { online: { ...s.online, connected: true, players: client.players } } : {}));
+    get().notify('success', `Online in ${session.sim?.world.meta.cityName ?? 'Nova Eclipse'}: ${client.players.filter((p) => p.online).length} Spieler verbunden.`);
+  },
+
+  disconnectOnline: () => {
+    session.online?.close();
+    session.online = null;
+    if (get().online) set({ online: null });
+  },
+
   quitToMenu: async () => {
     const sim = session.sim;
-    if (sim && get().settings.autosave) {
+    if (get().online) get().disconnectOnline();
+    else if (sim && get().settings.autosave) {
       try {
-        await saveToSlot(sim.state, AUTOSAVE_SLOT, get().saveName);
+        await saveToSlot(sim.world, AUTOSAVE_SLOT, get().saveName);
       } catch (err) {
         console.error(err);
       }
@@ -265,6 +326,17 @@ export const useGameStore = create<GameStore>((set, get) => ({
   dispatch: (command) => {
     const sim = session.sim;
     if (!sim) return false;
+    const online = session.online;
+    if (online && get().online) {
+      if (command.type === 'setSpeed') {
+        get().notify('info', 'Online läuft die Zeit für alle gleich; Geschwindigkeit und Pause setzt der Server.');
+        return false;
+      }
+      void online.send(command).then((result) => {
+        if (!result.ok) get().notify('danger', result.error);
+      });
+      return true;
+    }
     if (command.type === 'demolish' || command.type === 'undoPlacement') {
       const id = command.type === 'demolish' ? command.buildingId : sim.state.undoStack[sim.state.undoStack.length - 1]?.buildingId;
       const b = id !== undefined ? sim.state.buildings[id] : undefined;
@@ -375,7 +447,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (defId) {
       const ok = get().dispatch({ type: 'placeBuilding', defId, x, y, facing: get().placementFacing ?? undefined });
       if (ok) {
-        const placed = Object.values(sim.state.buildings).find((b) => b.owner === 'player' && b.x === x && b.y === y);
+        const placed = Object.values(sim.state.buildings).find((b) => b.owner === sim.state.playerId && b.x === x && b.y === y);
         get().notify('success', `${placed?.label ?? 'Gebäude'} platziert.`);
         // Keep placing while shift is held is a later refinement; for now leave placement mode.
         get().cancelPlacement();
@@ -452,9 +524,13 @@ export const useGameStore = create<GameStore>((set, get) => ({
   saveManual: async (name) => {
     const sim = session.sim;
     if (!sim) return;
+    if (get().online) {
+      get().notify('info', 'Online speichert der Server die Welt automatisch.');
+      return;
+    }
     set({ busy: 'Speichern…' });
     try {
-      await createManualSave(sim.state, name.trim() || get().saveName);
+      await createManualSave(sim.world, name.trim() || get().saveName);
       get().notify('success', `Spielstand „${name.trim() || get().saveName}“ gespeichert.`);
     } catch (err) {
       get().notify('danger', `Speichern fehlgeschlagen: ${(err as Error).message}`);
@@ -466,8 +542,12 @@ export const useGameStore = create<GameStore>((set, get) => ({
   quickSave: async () => {
     const sim = session.sim;
     if (!sim) return;
+    if (get().online) {
+      get().notify('info', 'Online speichert der Server die Welt automatisch.');
+      return;
+    }
     try {
-      await saveToSlot(sim.state, QUICK_SLOT, `Schnellspeicherung – ${formatDate(tickToDate(sim.state.tick))}`);
+      await saveToSlot(sim.world, QUICK_SLOT, `Schnellspeicherung – ${formatDate(tickToDate(sim.state.tick))}`);
       get().notify('success', 'Schnellspeicherung angelegt (F5). Laden mit F9.');
     } catch (err) {
       get().notify('danger', `Speichern fehlgeschlagen: ${(err as Error).message}`);
@@ -477,14 +557,19 @@ export const useGameStore = create<GameStore>((set, get) => ({
   autosave: async () => {
     const sim = session.sim;
     if (!sim || !get().settings.autosave) return;
+    if (get().online) return;
     try {
-      await saveToSlot(sim.state, AUTOSAVE_SLOT, `Autosave – ${get().saveName}`);
+      await saveToSlot(sim.world, AUTOSAVE_SLOT, `Autosave – ${get().saveName}`);
     } catch (err) {
       console.error('autosave failed', err);
     }
   },
 
   loadSlot: async (id) => {
+    if (get().online) {
+      get().notify('warning', 'Online kann kein lokaler Spielstand geladen werden. Zurück ins Hauptmenü, um offline zu spielen.');
+      return;
+    }
     set({ busy: 'Laden…' });
     try {
       const { state, name, repaired } = await loadSave(id);
@@ -503,7 +588,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     if (!sim) return;
     const date = tickToDate(sim.state.tick);
     const file = `neon-dynasty-${sim.state.player.name.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-tag${date.day + 1}.json`;
-    downloadTextFile(file, exportToText(sim.state, get().saveName));
+    downloadTextFile(file, exportToText(sim.world, get().saveName));
     get().notify('success', `Spielstand als ${file} exportiert.`);
   },
 

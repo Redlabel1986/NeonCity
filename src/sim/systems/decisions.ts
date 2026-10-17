@@ -76,7 +76,7 @@ function applyOutcome(ctx: SimContext, p: PendingDecision, optionId: string): Ou
   switch (p.kind) {
     case 'takeover_offer': {
       if (optionId === 'accept') {
-        if (!building || building.owner !== 'player') return { ok: false, error: 'Der Betrieb existiert nicht mehr.' };
+        if (!building || building.owner !== state.playerId) return { ok: false, error: 'Der Betrieb existiert nicht mehr.' };
         book(state, events, amount, { category: 'other', description: `Verkauf an ${FACTIONS.kosei.name}: ${building.label}`, buildingId });
         building.owner = 'city';
         building.label = `${FACTIONS.kosei.name} ${building.label}`;
@@ -92,7 +92,7 @@ function applyOutcome(ctx: SimContext, p: PendingDecision, optionId: string): Ou
       if (optionId === 'raise') {
         let raised = 0;
         for (const b of Object.values(state.buildings)) {
-          if (b.owner !== 'player' || !b.business) continue;
+          if (b.owner !== state.playerId || !b.business) continue;
           for (const e of b.business.employees) {
             e.wage = Math.round(e.wage * 1.1);
             e.morale = Math.min(100, e.morale + 10);
@@ -117,7 +117,7 @@ function applyOutcome(ctx: SimContext, p: PendingDecision, optionId: string): Ou
     }
     case 'protest': {
       if (optionId === 'lower_rents') {
-        for (const b of Object.values(state.buildings)) if (b.property && b.owner === 'player') b.property.rentLevel = Math.min(b.property.rentLevel, 1);
+        for (const b of Object.values(state.buildings)) if (b.property && b.owner === state.playerId) b.property.rentLevel = Math.min(b.property.rentLevel, 1);
         adjustRelation(state, 'citizens', 18);
         return { ok: true, summary: 'Mieten auf Normalniveau gesenkt, der Protest löst sich auf.' };
       }
@@ -154,11 +154,11 @@ function applyOutcome(ctx: SimContext, p: PendingDecision, optionId: string): Ou
         if (!canAfford(state, amount)) return { ok: false, error: 'Nicht genug Credits.' };
         book(state, events, -amount, { category: 'donation', description: 'Werbepartnerschaft NovaNet' });
         adjustRelation(state, 'novanet', 15);
-        for (const b of Object.values(state.buildings)) if (b.owner === 'player' && b.business) b.business.reputation = Math.min(100, b.business.reputation + 6);
+        for (const b of Object.values(state.buildings)) if (b.owner === state.playerId && b.business) b.business.reputation = Math.min(100, b.business.reputation + 6);
         return { ok: true, summary: 'Wohlwollende Berichterstattung: Ruf aller Betriebe +6.' };
       }
       const positive = relationOf(state, 'novanet') > 0 || rng.chance(0.4);
-      for (const b of Object.values(state.buildings)) if (b.owner === 'player' && b.business) b.business.reputation = Math.max(0, Math.min(100, b.business.reputation + (positive ? 3 : -7)));
+      for (const b of Object.values(state.buildings)) if (b.owner === state.playerId && b.business) b.business.reputation = Math.max(0, Math.min(100, b.business.reputation + (positive ? 3 : -7)));
       return { ok: true, summary: positive ? 'Der Bericht fällt freundlich aus (+3 Ruf).' : 'Der Bericht ist vernichtend (−7 Ruf).' };
     }
     case 'vip_visit': {

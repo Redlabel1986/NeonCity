@@ -5,25 +5,28 @@
  */
 
 import type { SimContext } from '../core/context';
-import type { GameState, PoliticsState } from '../state';
+import type { GameState, SharedPoliticsState } from '../state';
+import { viewOf } from '../players';
 import { COUNCIL_SEATS, ELECTION_INTERVAL_DAYS, FACTIONS, LAWS, PARTY_IDS } from '../data/factions';
 import { DISTRICT_ARCHETYPES } from '../data/districts';
 import { book, canAfford } from '../economy/finance';
 import { DIFFICULTIES } from '../data/difficulty';
 
-export function createPolitics(): PoliticsState {
+export function createPolitics(): SharedPoliticsState {
   return {
-    influence: 0,
     council: { progress_bloc: 13, social_alliance: 11 },
     laws: Object.fromEntries(Object.values(LAWS).map((l) => [l.id, l.defaultValue])),
     proposals: [],
     nextProposalId: 1,
     nextElectionDay: ELECTION_INTERVAL_DAYS,
-    districtInfluence: {},
-    initiativeCooldownDay: {},
-    lifetimeTaxes: 0,
-    lifetimeDonations: 0,
   };
+}
+
+/** Average relation of all players towards a faction (0 without players). */
+function averageRelation(state: GameState, factionId: string): number {
+  const ids = state.world.playerOrder;
+  if (ids.length === 0) return 0;
+  return ids.reduce((sum, id) => sum + (state.world.players[id]!.factions[factionId]?.relation ?? 0), 0) / ids.length;
 }
 
 export function lawValue(state: GameState, lawId: string): number {
@@ -56,7 +59,7 @@ export function proposeLaw(ctx: SimContext, lawId: string, value: number): { ok:
   if (!canAfford(state, cost)) return { ok: false, error: `Ein Antrag kostet ${cost} ¢ Lobbyarbeit.` };
   book(state, events, -cost, { category: 'donation', description: `Antrag: ${law.name} ${law.options.find((o) => o.value === value)?.label}` });
   const day = Math.floor((state.tick + 7 * 60) / 1440);
-  state.politics.proposals.push({ id: state.politics.nextProposalId++, lawId, value, by: 'player', voteDay: day + 3, support: councilSupport(state, lawId, value) });
+  state.politics.proposals.push({ id: state.politics.nextProposalId++, lawId, value, by: state.playerId, voteDay: day + 3, support: councilSupport(state, lawId, value) });
   events.emit({ type: 'log', tick: state.tick, level: 'info', message: `Antrag eingebracht: ${law.name} → ${law.options.find((o) => o.value === value)?.label}. Abstimmung in drei Tagen.` });
   return { ok: true };
 }
@@ -90,8 +93,9 @@ export function districtInitiative(ctx: SimContext, districtId: number, kind: 'i
 }
 
 /** Day close: taxes, proposals, elections, influence, district dynamics. */
-export function closePoliticsDay(ctx: SimContext, day: number): void {
-  const { state, events, rng } = ctx;
+/** Taxes and political standing of one player; runs per player. */
+export function closePoliticsPlayerDay(ctx: SimContext, day: number): void {
+  const { state, events } = ctx;
   const pol = state.politics;
   // Taxes on today's sales.
   const dayStart = state.tick - 1440;
@@ -103,16 +107,35 @@ export function closePoliticsDay(ctx: SimContext, day: number): void {
     book(state, events, -tax, { category: 'tax', description: `Umsatzsteuer ${Math.round(rate * 100)} %` });
     pol.lifetimeTaxes += tax;
   }
+  // Player influence from assets and relations; decays slowly.
+  const assets = Object.values(state.buildings).filter((b) => b.owner === state.playerId && (b.business || b.property));
+  const mediaRel = state.factions.find((f) => f.id === 'novanet')!.relation;
+  const hallRel = state.factions.find((f) => f.id === 'city_hall')!.relation;
+  const target = Math.min(100, assets.length * 2.5 + Math.max(0, mediaRel) * 0.2 + Math.max(0, hallRel) * 0.2 + pol.lifetimeDonations / 2000);
+  pol.influence = Math.max(0, Math.min(100, pol.influence + (target - pol.influence) * 0.1));
+  for (const d of state.districts) {
+    const local = assets.filter((b) => b.districtId === d.id).length;
+    const t = Math.min(100, local * 12 + pol.influence / 4);
+    pol.districtInfluence[d.id] = Math.max(0, Math.min(100, (pol.districtInfluence[d.id] ?? 0) + (t - (pol.districtInfluence[d.id] ?? 0)) * 0.15));
+  }
+  void day;
+}
+
+/** Council votes, faction proposals, elections and district development; runs once per day. */
+export function closePoliticsSharedDay(ctx: SimContext, day: number): void {
+  const { state, events, rng } = ctx;
+  const pol = state.politics;
   // Proposals come to a vote.
   for (const p of [...pol.proposals]) {
     if (p.voteDay > day) continue;
     pol.proposals = pol.proposals.filter((x) => x.id !== p.id);
     const law = LAWS[p.lawId]!;
-    const support = councilSupport(state, p.lawId, p.value);
+    const proposer = state.world.players[p.by] ? viewOf(state, p.by) : state;
+    const support = councilSupport(proposer, p.lawId, p.value);
     const passed = rng.chance(support);
     if (passed) {
       pol.laws[p.lawId] = p.value;
-      pol.influence = Math.min(100, pol.influence + 3);
+      if (proposer !== state) proposer.politics.influence = Math.min(100, proposer.politics.influence + 3);
       events.emit({ type: 'log', tick: state.tick, level: 'success', message: `Der Rat beschließt: ${law.name} → ${law.options.find((o) => o.value === p.value)?.label} (${Math.round(support * 100)} % Zustimmung).` });
       applyLawSideEffects(state, p.lawId);
     } else {
@@ -137,25 +160,18 @@ export function closePoliticsDay(ctx: SimContext, day: number): void {
     pol.nextElectionDay = day + ELECTION_INTERVAL_DAYS;
     const progressVote = state.districts.reduce((s, d) => s + d.economy.citizens * (d.stats.purchasingPower / 100), 0);
     const socialVote = state.districts.reduce((s, d) => s + d.economy.citizens * (1 - d.stats.purchasingPower / 100) * (1 + (d.economy.citizens > 0 ? 1 - d.economy.employed / d.economy.citizens : 0)), 0);
-    const progressRel = state.factions.find((f) => f.id === 'progress_bloc')!.relation;
-    const socialRel = state.factions.find((f) => f.id === 'social_alliance')!.relation;
+    const progressRel = averageRelation(state, 'progress_bloc');
+    const socialRel = averageRelation(state, 'social_alliance');
     const pw = progressVote * (1 + progressRel / 400) * rng.range(0.9, 1.1);
     const sw = socialVote * (1 + socialRel / 400) * rng.range(0.9, 1.1);
     const progressSeats = Math.round((pw / (pw + sw)) * COUNCIL_SEATS);
     pol.council = { progress_bloc: progressSeats, social_alliance: COUNCIL_SEATS - progressSeats };
     events.emit({ type: 'log', tick: state.tick, level: 'info', message: `Ratswahl: Fortschrittsblock ${progressSeats} Sitze, Soziale Allianz ${COUNCIL_SEATS - progressSeats} Sitze.` });
   }
-  // Player influence from assets and relations; decays slowly.
-  const assets = Object.values(state.buildings).filter((b) => b.owner === 'player' && (b.business || b.property));
-  const mediaRel = state.factions.find((f) => f.id === 'novanet')!.relation;
-  const hallRel = state.factions.find((f) => f.id === 'city_hall')!.relation;
-  const target = Math.min(100, assets.length * 2.5 + Math.max(0, mediaRel) * 0.2 + Math.max(0, hallRel) * 0.2 + pol.lifetimeDonations / 2000);
-  pol.influence = Math.max(0, Math.min(100, pol.influence + (target - pol.influence) * 0.1));
+  // District political influence blends in every player's standing.
   for (const d of state.districts) {
-    const local = assets.filter((b) => b.districtId === d.id).length;
-    const t = Math.min(100, local * 12 + (pol.influence / 4));
-    pol.districtInfluence[d.id] = Math.max(0, Math.min(100, (pol.districtInfluence[d.id] ?? 0) + (t - (pol.districtInfluence[d.id] ?? 0)) * 0.15));
-    d.stats.politicalInfluence = Math.max(0, Math.min(100, d.stats.politicalInfluence * 0.98 + pol.districtInfluence[d.id]! * 0.02));
+    const total = Math.min(100, state.world.playerOrder.reduce((sum, id) => sum + (state.world.players[id]!.politics.districtInfluence[d.id] ?? 0), 0));
+    d.stats.politicalInfluence = Math.max(0, Math.min(100, d.stats.politicalInfluence * 0.98 + total * 0.02));
   }
   developDistricts(ctx);
 }
@@ -167,7 +183,7 @@ function applyLawSideEffects(state: GameState, lawId: string): void {
   }
   if (lawId === 'minimumWage') {
     const min = lawValue(state, 'minimumWage');
-    for (const b of Object.values(state.buildings)) if (b.owner === 'player' && b.business) for (const e of b.business.employees) if (e.wage < min) e.wage = min;
+    for (const b of Object.values(state.buildings)) if (b.owner !== 'city' && b.business) for (const e of b.business.employees) if (e.wage < min) e.wage = min;
   }
 }
 
@@ -188,7 +204,7 @@ function developDistricts(ctx: SimContext): void {
     let conditionCount = 0;
     for (const b of Object.values(state.buildings)) {
       if (b.districtId !== d.id) continue;
-      if (b.business && b.owner === 'player' && b.status === 'operational') {
+      if (b.business && b.owner !== 'city' && b.status === 'operational') {
         venueQuality += b.business.reputation;
         venueCount++;
       }

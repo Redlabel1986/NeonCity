@@ -5,6 +5,7 @@
 
 import type { SimContext } from '../core/context';
 import type { CrisisState, GameState } from '../state';
+import { viewOf } from '../players';
 import { CRISES } from '../data/crises';
 import { INGREDIENT_IDS, RETAIL_GOOD_IDS } from '../data/ingredients';
 import { hasTech } from './research';
@@ -51,7 +52,8 @@ export function closeCrisisDay(ctx: SimContext, day: number): void {
   if (day - cs.lastCrisisEndDay < 6 || day < 5) return;
   // Instability raises the odds: high crime, high gang control, low employment.
   const avgCrime = state.districts.reduce((s, d) => s + d.stats.crime, 0) / state.districts.length;
-  const instability = 1 + avgCrime / 100 + (state.underworld.org ? 0.3 : 0);
+  const anyOrg = state.world.playerOrder.some((id) => !!state.world.players[id]!.underworld.org);
+  const instability = 1 + avgCrime / 100 + (anyOrg ? 0.3 : 0);
   for (const def of Object.values(CRISES)) {
     if (rng.chance(def.chance * instability)) {
       startCrisis(ctx, def.id, day);
@@ -80,10 +82,13 @@ function startCrisis(ctx: SimContext, id: string, day: number): void {
       for (const g of [...INGREDIENT_IDS, ...RETAIL_GOOD_IDS]) state.market.index[g] = Math.min(1.9, (state.market.index[g] ?? 1) * 1.3);
       break;
     case 'financial_scandal': {
-      const pulled = Math.round(state.corporate.investorCapital * 0.2);
-      if (pulled > 0 && state.corporate.sharesSold > 0) {
-        book(state, events, -Math.min(pulled, Math.max(0, state.ledger.balance)), { category: 'capital', description: 'Investoren ziehen Kapital ab' });
-        state.corporate.investorCapital -= pulled;
+      for (const id of state.world.playerOrder) {
+        const v = viewOf(state, id);
+        const pulled = Math.round(v.corporate.investorCapital * 0.2);
+        if (pulled > 0 && v.corporate.sharesSold > 0) {
+          book(v, events, -Math.min(pulled, Math.max(0, v.ledger.balance)), { category: 'capital', description: 'Investoren ziehen Kapital ab' });
+          v.corporate.investorCapital -= pulled;
+        }
       }
       break;
     }
@@ -98,14 +103,15 @@ function applyDailyEffects(ctx: SimContext, day: number): void {
   const c = state.crisis.active!;
   if (c.id === 'cyber_wave') {
     for (const b of Object.values(state.buildings)) {
-      if (b.owner !== 'player' || !b.business || b.status !== 'operational') continue;
-      if ((b.business.upgrades.security ?? 0) > 0 || hasTech(state, 'surveillance_ai')) continue;
+      if (b.owner === 'city' || !state.world.players[b.owner] || !b.business || b.status !== 'operational') continue;
+      const v = viewOf(state, b.owner);
+      if ((b.business.upgrades.security ?? 0) > 0 || hasTech(v, 'surveillance_ai')) continue;
       if (!rng.chance(0.3)) continue;
       const last = b.business.history[b.business.history.length - 1];
       const loss = Math.round(last ? last.revenue : 300);
       if (loss <= 0) continue;
-      book(state, events, -loss, { category: 'other', description: `Cyberangriff: ${b.label}`, buildingId: b.id });
-      insuranceClaim(ctx, 'cyber', loss, b.label);
+      book(v, events, -loss, { category: 'other', description: `Cyberangriff: ${b.label}`, buildingId: b.id });
+      insuranceClaim({ ...ctx, state: v }, 'cyber', loss, b.label);
       events.emit({ type: 'log', tick: state.tick, level: 'warning', message: `${b.label}: Systeme lahmgelegt, ${loss} ¢ Verlust.`, buildingId: String(b.id) });
     }
   }

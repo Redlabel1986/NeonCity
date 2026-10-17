@@ -10,7 +10,10 @@ import type { DistrictArchetypeId, DistrictStats } from './data/districts';
 import type { DifficultyId, BackgroundId } from './data/difficulty';
 import type { LogLevel } from './core/events';
 
-export type OwnerId = 'player' | 'city';
+/** Owner of a building: the city or a player id. The local single player uses LOCAL_PLAYER_ID. */
+export type OwnerId = string;
+export const CITY_OWNER = 'city';
+export const LOCAL_PLAYER_ID = 'player';
 
 export type BuildingStatus = 'construction' | 'operational';
 
@@ -354,16 +357,24 @@ export interface RivalFamily {
 
 // ---------------------------------------------------------------- factions & politics
 
-export interface FactionState {
+/** City-wide part of a faction (shared by all players). */
+export interface SharedFactionState {
   id: import('./data/factions').FactionId;
   influence: number; // 0-100
+}
+
+/** A faction's stance towards one player. */
+export interface PlayerFactionState {
   relation: number; // -100 .. 100 towards the player
-  /** Day of the last action this faction took. */
+  /** Day of the last action this faction took against / for this player. */
   lastActionDay: number;
   /** Active effect on the player, e.g. a strike, until day. */
   activeUntilDay: number;
   activeEffect: string | null;
 }
+
+/** Merged faction view a player sees (shared influence + own relation). */
+export interface FactionState extends SharedFactionState, PlayerFactionState {}
 
 export interface LawProposal {
   id: number;
@@ -375,14 +386,19 @@ export interface LawProposal {
   support: number; // 0-1 estimated
 }
 
-export interface PoliticsState {
-  /** Player's political influence 0-100. */
-  influence: number;
+/** City council, laws and proposals (shared by all players). */
+export interface SharedPoliticsState {
   council: Record<string, number>; // party id -> seats
   laws: Record<string, number>;
   proposals: LawProposal[];
   nextProposalId: number;
   nextElectionDay: number;
+}
+
+/** One player's political standing. */
+export interface PlayerPoliticsState {
+  /** Player's political influence 0-100. */
+  influence: number;
   /** Player influence per district (0-100). */
   districtInfluence: Record<number, number>;
   /** Day until which a district initiative blocks another one. */
@@ -390,6 +406,9 @@ export interface PoliticsState {
   lifetimeTaxes: number;
   lifetimeDonations: number;
 }
+
+/** Merged politics view a player sees. */
+export interface PoliticsState extends SharedPoliticsState, PlayerPoliticsState {}
 
 export interface DecisionOption {
   id: string;
@@ -417,7 +436,8 @@ export interface DecisionState {
   resolvedCount: number;
 }
 
-export interface UnderworldState {
+/** One player's criminal side (organisation, police attention). */
+export interface PlayerUnderworldState {
   org: {
     name: string;
     foundedTick: number;
@@ -438,9 +458,13 @@ export interface UnderworldState {
   heat: number;
   /** Day until which all operations are blocked (city-wide operation). */
   lockdownUntilDay: number;
-  rivals: RivalFamily[];
   /** Bribes paid in the last days reduce heat decay effects (diminishing returns). */
   recentBribes: number;
+}
+
+/** Merged underworld view a player sees: own organisation plus the city's rival families. */
+export interface UnderworldState extends PlayerUnderworldState {
+  rivals: RivalFamily[];
 }
 
 /** A city building the player owns as real estate. */
@@ -601,6 +625,7 @@ export type TransactionCategory =
   | 'insurance'
   | 'dividend'
   | 'research'
+  | 'gambling'
   | 'other';
 
 export interface Transaction {
@@ -640,22 +665,71 @@ export interface TaskState {
   completedTick: number | null;
 }
 
-export interface PlayerState {
+export interface PlayerProfile {
   name: string;
   background: BackgroundId;
   difficulty: DifficultyId;
   apartmentRent: number;
   homeDistrictId: number;
   reputation: number; // 0-100 company reputation
-  wantedLevel: number; // 0-6, see docs; always 0 in phase 1
+  wantedLevel: number; // 0-6, see docs
 }
+
+/** @deprecated name kept for older imports; use PlayerProfile. */
+export type PlayerState = PlayerProfile;
 
 export interface UndoEntry {
   buildingId: number;
   tick: number;
 }
 
-export interface GameState {
+// ---------------------------------------------------------------- casino
+
+export interface BlackjackHand {
+  bet: number;
+  player: import('./data/casino').Card[];
+  dealer: import('./data/casino').Card[];
+  doubled: boolean;
+  phase: 'player' | 'done';
+  outcome: 'win' | 'lose' | 'push' | 'blackjack' | null;
+  /** Total returned to the player when the hand ended (0 = lost). */
+  payout: number;
+}
+
+export interface CasinoState {
+  blackjack: BlackjackHand | null;
+  lastSlots: { reels: import('./data/casino').SlotSymbol[]; bet: number; payout: number; tick: number } | null;
+  lastRoulette: { number: number; bets: import('./data/casino').RouletteBet[]; payout: number; tick: number } | null;
+  stats: { rounds: number; wagered: number; returned: number; biggestWin: number };
+  /** Last 20 rounds, newest first. */
+  history: { tick: number; game: 'slots' | 'roulette' | 'blackjack'; wagered: number; returned: number; text: string }[];
+}
+
+/** Everything that belongs to one player: finances, company, standing, log. */
+export interface PlayerSlice {
+  id: string;
+  player: PlayerProfile;
+  ledger: Ledger;
+  log: LogEntry[];
+  nextLogId: number;
+  tasks: TaskState[];
+  undoStack: UndoEntry[];
+  underworld: PlayerUnderworldState;
+  factions: Record<string, PlayerFactionState>;
+  politics: PlayerPoliticsState;
+  decisions: DecisionState;
+  corporate: CorporateState;
+  research: ResearchState;
+  casino: CasinoState;
+  /** Tick at which the player joined the world. */
+  joinedTick: number;
+}
+
+/**
+ * The shared world: city, population, market, factions' influence, council,
+ * crises, weather and every player's slice. This is what gets saved.
+ */
+export interface WorldState {
   /** Save format version. */
   version: number;
   seed: number;
@@ -666,39 +740,59 @@ export interface GameState {
   districts: District[];
   buildings: Record<number, Building>;
   nextBuildingId: number;
-  ledger: Ledger;
-  player: PlayerState;
-  log: LogEntry[];
-  nextLogId: number;
-  tasks: TaskState[];
-  undoStack: UndoEntry[];
   population: PopulationState;
   competitors: Record<number, Competitor>;
   market: MarketState;
   /** Day index of the last AI expansion check. */
   lastCompetitorExpansionDay: number;
+  rivals: RivalFamily[];
+  factions: SharedFactionState[];
+  politics: SharedPoliticsState;
+  crisis: CrisisState;
+  weather: WeatherState;
+  /** Real-world creation timestamp and name shown in save slots. */
+  meta: { createdAt: number; cityName: string };
+  players: Record<string, PlayerSlice>;
+  /** Deterministic iteration order of players (join order). */
+  playerOrder: string[];
+}
+
+/**
+ * The state as one player sees it: the shared world plus that player's own
+ * slice merged in (ledger, company, relations, ...). Created with
+ * `withPlayer(world, id)` from sim/players.ts; writes go to the right place.
+ * Systems, commands and the UI work on this view.
+ */
+export interface GameState extends Omit<WorldState, 'rivals' | 'factions' | 'politics'> {
+  /** Id of the player this view belongs to. */
+  playerId: string;
+  /** The underlying shared world. */
+  world: WorldState;
+  ledger: Ledger;
+  player: PlayerProfile;
+  log: LogEntry[];
+  nextLogId: number;
+  tasks: TaskState[];
+  undoStack: UndoEntry[];
   underworld: UnderworldState;
   factions: FactionState[];
   politics: PoliticsState;
   decisions: DecisionState;
   corporate: CorporateState;
   research: ResearchState;
-  crisis: CrisisState;
-  weather: WeatherState;
-  /** Real-world creation timestamp and name shown in save slots. */
-  meta: { createdAt: number; cityName: string };
+  casino: CasinoState;
 }
 
-/** JSON-friendly shape of the state (grid as plain arrays). */
-export interface GameStateJSON extends Omit<GameState, 'grid'> {
+/** JSON-friendly shape of the world (grid as plain arrays). */
+export interface GameStateJSON extends Omit<WorldState, 'grid'> {
   grid: GridJSON;
 }
 
-export function stateToJSON(state: GameState): GameStateJSON {
+export function stateToJSON(state: WorldState): GameStateJSON {
   return { ...state, grid: state.grid.toJSON() };
 }
 
-export function stateFromJSON(json: GameStateJSON): GameState {
+export function stateFromJSON(json: GameStateJSON): WorldState {
   return { ...json, grid: CityGrid.fromJSON(json.grid) };
 }
 

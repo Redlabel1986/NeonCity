@@ -145,7 +145,7 @@ export function explainDemand(state: GameState, b: Building): DemandBreakdown | 
   let competition = 1 - stats.competition / 250;
   for (const id in state.buildings) {
     const other = state.buildings[id]!;
-    if (other.id === b.id || other.owner !== 'player' || other.status !== 'operational' || !other.business) continue;
+    if (other.id === b.id || other.owner !== state.playerId || other.status !== 'operational' || !other.business) continue;
     const dist = Math.abs(other.x - b.x) + Math.abs(other.y - b.y);
     if (dist <= 6) competition *= 0.92;
   }
@@ -213,7 +213,7 @@ export function stepBusinessHour(ctx: SimContext, hour: number, day: number): vo
   const { state, rng } = ctx;
   for (const id in state.buildings) {
     const b = state.buildings[id]!;
-    if (b.owner !== 'player' || b.status !== 'operational' || !b.business) continue;
+    if (b.owner !== state.playerId || b.status !== 'operational' || !b.business) continue;
     const model = BUILDING_DEFINITIONS[b.defId]?.business;
     if (!model) continue;
     stepDeliveries(ctx, b, day);
@@ -341,7 +341,7 @@ export function closeBusinessDay(ctx: SimContext, day: number): void {
   const { state, events, rng } = ctx;
   for (const id in state.buildings) {
     const b = state.buildings[id]!;
-    if (b.owner !== 'player') continue;
+    if (b.owner !== state.playerId) continue;
     const def = BUILDING_DEFINITIONS[b.defId];
     if (!def) continue;
     if (b.status === 'operational' && def.upkeepPerDay > 0) {

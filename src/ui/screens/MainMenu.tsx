@@ -3,6 +3,7 @@ import { useGameStore } from '../store/gameStore';
 import { DIFFICULTIES, BACKGROUNDS, type DifficultyId, type BackgroundId } from '../../sim/data/difficulty';
 import { SavesDialog } from '../dialogs/SavesDialog';
 import { credits } from '../format';
+import { OnlineSection } from './OnlineSection';
 
 const SEED_WORDS = ['nova', 'eclipse', 'chrome', 'ghost', 'rust', 'neon', 'skyline', 'undercity', 'amber', 'cyan', 'dynasty', 'night'];
 
@@ -65,7 +66,8 @@ export function MainMenu() {
               Aus Datei importieren
             </button>
           </div>
-          <p className="mt-10 text-xs text-muted">Version 0.9.0 – Konzern und Karriere.</p>
+          <OnlineSection background={background} />
+          <p className="mt-10 text-xs text-muted">Version 0.12.0 – Online-Welt.</p>
         </section>
 
         <form

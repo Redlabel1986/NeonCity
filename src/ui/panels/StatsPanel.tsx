@@ -6,8 +6,8 @@ export function StatsPanel() {
   const state = useSimState();
   if (!state) return null;
   const history = state.ledger.balanceHistory;
-  const businesses = Object.values(state.buildings).filter((b) => b.owner === 'player' && b.business?.kind === 'gastronomy' && b.business.history.length > 0);
-  const others = Object.values(state.buildings).filter((b) => b.owner === 'player' && b.business && b.business.kind !== 'gastronomy' && b.business.history.length > 1);
+  const businesses = Object.values(state.buildings).filter((b) => b.owner === state.playerId && b.business?.kind === 'gastronomy' && b.business.history.length > 0);
+  const others = Object.values(state.buildings).filter((b) => b.owner === state.playerId && b.business && b.business.kind !== 'gastronomy' && b.business.history.length > 1);
   return (
     <div className="space-y-5 text-sm">
       <section>

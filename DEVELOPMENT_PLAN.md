@@ -168,6 +168,30 @@ Umfang: Beim Verwalten eines Betriebs ins Gebäude fliegen und den Innenraum mit
 | Spielstand v11 mit Migration der Stundenzähler | `phase11.test.ts` |
 | Dashboard öffnen fliegt auf Zoom 2,6 und zeigt die Innenansicht; Zonenklick wechselt den Reiter; Verlassen fliegt zurück; sieben Branchen mit Screenshots | `phase11.spec.ts` |
 
+## Phase 12 – Online-Welt ✅ abgeschlossen (über den Plan hinaus)
+
+Umfang: eine gemeinsame, dauerhafte Stadt für alle Spieler mit Konten und Autospeicher; die Simulation trägt mehrere Spieler.
+
+| Kriterium | Nachweis |
+|---|---|
+| Zwei Spieler in einer Welt: getrennte Kassen und Eigentum, fremde Betriebe nicht steuerbar, Protokolle getrennt, gemeinsame Fraktionen/Gesetze/Rivalen | `phase12.test.ts` |
+| Dieselben Kommandos auf zwei Kopien der Welt ergeben byteidentische Spielstände (Lockstep) | `phase12.test.ts` |
+| Einzelspieler-Spielstand wird zur Welt mit einem Spieler migriert und spielt identisch weiter | `phase12.test.ts` |
+| Server: Registrieren/Anmelden mit Hashes, Ablehnung falscher Passwörter und ungültiger Sitzungen, zwei Clients im Lockstep mit gleichem Fingerabdruck, Kommandos anderer abgelehnt, Uhr nur vom Server, Welt auf Platte | `server.test.ts` |
+| Zwei Browser: beide sehen einander, die Uhr läuft ohne Tastendruck, Adas Bar erscheint bei Bo als „Gebäude von Ada“, erneutes Anmelden findet die Bar wieder | `online.spec.ts` |
+
+## Phase 13 – Casino ✅ abgeschlossen (über den Plan hinaus)
+
+Umfang: Royal Nova Casino mit Slots, Roulette und Blackjack um die eigenen Credits.
+
+| Kriterium | Nachweis |
+|---|---|
+| Auszahlungsquoten: Slots exakt aus der Gewinntabelle (87,5 %), jede Roulette-Wette 36/37, Blackjack-Handwerte mit weichen Assen | `phase13.test.ts` |
+| Jeder Einsatz und Gewinn wird gebucht, Konto stimmt mit Statistik überein, zu kleine/große/ungedeckte Einsätze und ungültige Wetten werden abgelehnt | `phase13.test.ts` |
+| Blackjack-Regeln (Dealer 17, 3:2, Verdoppeln, eine Hand gleichzeitig) über 200 Hände | `phase13.test.ts` |
+| Deterministisch je Seed; laufende Hand und Statistik überstehen Speichern/Laden; Migration v12→v13 | `phase13.test.ts` |
+| Im Browser: Slots, Roulette und Blackjack verändern das Konto passend zum Ergebnis, Finanzen zeigen die Kategorie Casino | `phase13.spec.ts` |
+
 ## Gesamtstand
 
-Alle acht Phasen sind abgeschlossen, mit Version 0.8.1 auditiert und mit Phase 9, 10 und 11 erweitert. Stand der Prüfung: 108 Unit-Tests (Vitest) und 16 E2E-Tests (Playwright) laufen fehlerfrei; Typecheck strict und Lint sind sauber bis auf zwei dokumentierte Hinweise.
+Alle acht Phasen sind abgeschlossen, mit Version 0.8.1 auditiert und mit Phase 9 bis 13 erweitert. Stand der Prüfung: 118 Unit-Tests (Vitest) und 18 E2E-Tests (Playwright) laufen fehlerfrei; Typecheck strict und Lint sind sauber bis auf zwei dokumentierte Hinweise.

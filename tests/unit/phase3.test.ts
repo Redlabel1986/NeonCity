@@ -1,3 +1,4 @@
+import { toLegacy } from './legacy';
 import { describe, expect, it } from 'vitest';
 import type { GastronomyState } from '../../src/sim/state';
 import { createNewGame, Simulation, SAVE_FORMAT_VERSION, type NewGameOptions } from '../../src/sim/engine';
@@ -127,7 +128,7 @@ describe('Market', () => {
 describe('Save format v3', () => {
   it('migrates a v2 save by generating citizens, competitors and market', () => {
     const { sim } = withBar();
-    const file = JSON.parse(serialize(sim.state, 'v2')) as SaveFile;
+    const file = toLegacy(JSON.parse(serialize(sim.state, 'v2')) as SaveFile);
     const raw = JSON.parse(JSON.stringify(file.state)) as Record<string, unknown>;
     delete raw.population;
     delete raw.competitors;

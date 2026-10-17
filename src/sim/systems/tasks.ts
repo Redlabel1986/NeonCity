@@ -18,13 +18,13 @@ export const TASK_DEFINITIONS: readonly TaskDefinition[] = [
     id: 'first_build',
     title: 'Eröffne deine erste Baustelle',
     hint: 'Öffne das Baumenü (B), wähle eine Ramenbar oder einen Streetfood-Stand und platziere ihn an einer Straße.',
-    check: (s) => Object.values(s.buildings).some((b) => b.owner === 'player'),
+    check: (s) => Object.values(s.buildings).some((b) => b.owner === s.playerId),
   },
   {
     id: 'first_open',
     title: 'Erlebe deine erste Eröffnung',
     hint: 'Lass die Zeit laufen, bis die Baustelle fertig ist. Die Bauzeit hängt vom Gebäude und der Energieversorgung ab.',
-    check: (s) => Object.values(s.buildings).some((b) => b.owner === 'player' && b.status === 'operational'),
+    check: (s) => Object.values(s.buildings).some((b) => b.owner === s.playerId && b.status === 'operational'),
   },
   {
     id: 'first_guests',
@@ -42,7 +42,7 @@ export const TASK_DEFINITIONS: readonly TaskDefinition[] = [
     id: 'second_business',
     title: 'Betreibe zwei Standorte gleichzeitig',
     hint: 'Ein zweiter Standort in einem anderen Bezirk erreicht andere Kundschaft.',
-    check: (s) => Object.values(s.buildings).filter((b) => b.owner === 'player' && b.status === 'operational').length >= 2,
+    check: (s) => Object.values(s.buildings).filter((b) => b.owner === s.playerId && b.status === 'operational').length >= 2,
   },
   {
     id: 'order_supplies',
@@ -75,13 +75,13 @@ export const TASK_DEFINITIONS: readonly TaskDefinition[] = [
     id: 'second_industry',
     title: 'Steig in eine zweite Branche ein',
     hint: 'Kapselhotel, Taxidepot oder Nachtkiosk: jede Branche hat ihre eigene Logik.',
-    check: (s) => new Set(Object.values(s.buildings).filter((b) => b.owner === 'player' && b.business).map((b) => b.business!.kind)).size >= 2,
+    check: (s) => new Set(Object.values(s.buildings).filter((b) => b.owner === s.playerId && b.business).map((b) => b.business!.kind)).size >= 2,
   },
   {
     id: 'landlord',
     title: 'Werde Vermieter',
     hint: 'Kaufe ein Wohngebäude im Immobilien-Panel und kassiere Miete von den Bewohnern.',
-    check: (s) => Object.values(s.buildings).some((b) => b.owner === 'player' && b.property),
+    check: (s) => Object.values(s.buildings).some((b) => b.owner === s.playerId && b.property),
   },
   {
     id: 'reserve',

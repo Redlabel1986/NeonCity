@@ -16,6 +16,7 @@ export function TopBar() {
   const quitToMenu = useGameStore((s) => s.quitToMenu);
   const saveName = useGameStore((s) => s.saveName);
   const requestDockTab = useGameStore((s) => s.requestDockTab);
+  const online = useGameStore((s) => s.online);
   if (!state) return null;
   const date = tickToDate(state.tick);
   const net = state.ledger.todayIncome - state.ledger.todayExpenses;
@@ -37,6 +38,15 @@ export function TopBar() {
         <span className="text-muted">{formatDate(date)}</span>
         <span className="hidden text-muted xl:inline">Tag {date.day + 1}</span>
       </div>
+      {online ? (
+        <span
+          className={`rounded-sm border px-2 py-0.5 text-xs ${online.connected ? 'border-cyan/60 bg-cyan/10 text-cyan' : 'border-blood/60 bg-blood/15 text-blood'}`}
+          title={online.players.map((p) => `${p.name}${p.online ? ' (online)' : ''}`).join(', ') || 'Online-Welt'}
+          data-testid="online-badge"
+        >
+          {online.connected ? `Online · ${state.speed}× · ${online.players.filter((p) => p.online).length} verbunden` : 'Online · getrennt'}
+        </span>
+      ) : (
       <div className="flex items-center gap-1" role="group" aria-label="Spielgeschwindigkeit">
         {SPEEDS.map((sp) => (
           <button
@@ -51,6 +61,7 @@ export function TopBar() {
           </button>
         ))}
       </div>
+      )}
       <Stat label="Ruf" value={`${Math.round(state.player.reputation)}`} title="Unternehmensreputation (0–100)" />
       <Stat label="Fahndung" value={WANTED_LABELS[state.player.wantedLevel] ?? '–'} valueClass={state.player.wantedLevel >= 4 ? 'text-blood' : state.player.wantedLevel >= 2 ? 'text-amber' : 'text-white'} title={`Polizeiaufmerksamkeit ${Math.round(state.underworld.heat)} / 100`} />
       <Stat label="Wetter" value={WEATHER_LABELS[state.weather.kind]} title={`Intensität ${Math.round(state.weather.intensity * 100)} %. Regen: weniger Laufkundschaft, mehr Taxis.`} />

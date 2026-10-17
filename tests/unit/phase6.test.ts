@@ -1,3 +1,4 @@
+import { toLegacy } from './legacy';
 import { describe, expect, it } from 'vitest';
 import { createNewGame, Simulation, type NewGameOptions } from '../../src/sim/engine';
 import { checkPlacement } from '../../src/sim/systems/construction';
@@ -49,6 +50,11 @@ describe('Factions', () => {
     for (const e of biz.employees) sim.apply({ type: 'setWage', buildingId: bar.id, employeeId: e.id, wage: 20 });
     let found = false;
     for (let i = 0; i < 25 && !found; i++) {
+      // Keep the underpaid staff from quitting so the union has time to react.
+      for (const e of biz.employees) {
+        e.morale = 100;
+        e.lowMoraleDays = 0;
+      }
       sim.run(MINUTES_PER_DAY);
       found = sim.state.decisions.pending.some((d) => d.kind === 'strike');
     }
@@ -174,7 +180,7 @@ describe('Save format v6', () => {
     const { state } = deserialize(serialize(sim.state, 'v6'));
     expect(state.politics.laws.salesTax).toBe(0.12);
     expect(state.factions.length).toBe(12);
-    const file = JSON.parse(serialize(sim.state, 'v5')) as { version: number; state: Record<string, unknown> };
+    const file = toLegacy(JSON.parse(serialize(sim.state, 'v5')) as { version: number; state: Record<string, unknown> });
     delete file.state.factions;
     delete file.state.politics;
     delete file.state.decisions;

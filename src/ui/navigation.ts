@@ -20,4 +20,5 @@ export const RAIL_ENTRIES: RailEntry[] = [
   { id: 'politics', label: 'Politik', key: 'O', phase: 1 },
   { id: 'underworld', label: 'Unterwelt', key: 'X', phase: 1 },
   { id: 'stats', label: 'Statistik', key: 'T', phase: 1 },
+  { id: 'casino', label: 'Casino', key: 'J', phase: 1 },
 ];

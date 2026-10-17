@@ -53,7 +53,7 @@ export function startResearch(ctx: SimContext, buildingId: number, nodeId: strin
   const { state, events } = ctx;
   const b = state.buildings[buildingId];
   const biz = b?.business;
-  if (!b || b.owner !== 'player' || !biz || biz.kind !== 'lab') return { ok: false, error: 'Kein eigenes Labor.' };
+  if (!b || b.owner !== state.playerId || !biz || biz.kind !== 'lab') return { ok: false, error: 'Kein eigenes Labor.' };
   if (b.status !== 'operational') return { ok: false, error: 'Das Labor ist noch im Bau.' };
   const check = canResearch(state, nodeId);
   if (!check.ok) return check;
@@ -83,7 +83,7 @@ export function closeLabsDay(ctx: SimContext, day: number): void {
   const { state, events, rng } = ctx;
   for (const id in state.buildings) {
     const b = state.buildings[id]!;
-    if (b.owner !== 'player' || b.status !== 'operational' || b.business?.kind !== 'lab') continue;
+    if (b.owner !== state.playerId || b.status !== 'operational' || b.business?.kind !== 'lab') continue;
     const biz = b.business;
     const wages = closeStaffDay(ctx, b, biz.activeNodeId ? 0.8 : 0.3);
     let points = 0;
@@ -114,7 +114,7 @@ export function closeLabsDay(ctx: SimContext, day: number): void {
 function applyUnlockSideEffects(state: GameState, nodeId: string): void {
   if (nodeId === 'synth_cuisine') {
     for (const b of Object.values(state.buildings)) {
-      if (b.owner !== 'player' || b.business?.kind !== 'gastronomy') continue;
+      if (b.owner !== state.playerId || b.business?.kind !== 'gastronomy') continue;
       const model = BUILDING_DEFINITIONS[b.defId]?.business;
       if (!model || model.kind !== 'gastronomy' || b.defId === 'food_stand') continue;
       for (const recipeId of ['synth_sushi', 'lab_steak']) {

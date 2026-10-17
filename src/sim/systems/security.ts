@@ -48,7 +48,7 @@ export function assignedGuards(biz: SecurityState): number {
 export function assignPatrol(state: GameState, buildingId: number, districtId: number, guards: number): { ok: true } | { ok: false; error: string } {
   const b = state.buildings[buildingId];
   const biz = b?.business;
-  if (!b || b.owner !== 'player' || !biz || biz.kind !== 'security') return { ok: false, error: 'Keine eigene Sicherheitsfirma.' };
+  if (!b || b.owner !== state.playerId || !biz || biz.kind !== 'security') return { ok: false, error: 'Keine eigene Sicherheitsfirma.' };
   if (!state.districts[districtId]) return { ok: false, error: 'Unbekannter Bezirk.' };
   const n = Math.max(0, Math.floor(guards));
   const others = assignedGuards(biz) - (biz.patrols[districtId] ?? 0);
@@ -61,7 +61,7 @@ export function assignPatrol(state: GameState, buildingId: number, districtId: n
 export function startInvestigation(state: GameState, buildingId: number, familyIndex: number): { ok: true } | { ok: false; error: string } {
   const b = state.buildings[buildingId];
   const biz = b?.business;
-  if (!b || b.owner !== 'player' || !biz || biz.kind !== 'security') return { ok: false, error: 'Keine eigene Sicherheitsfirma.' };
+  if (!b || b.owner !== state.playerId || !biz || biz.kind !== 'security') return { ok: false, error: 'Keine eigene Sicherheitsfirma.' };
   if (!state.underworld.rivals[familyIndex]) return { ok: false, error: 'Unbekannte Familie.' };
   if (biz.employees.filter((e) => e.role === 'investigator').length === 0) return { ok: false, error: 'Ermittlungen brauchen mindestens einen Ermittler.' };
   biz.investigation = { familyIndex, progress: 0 };
@@ -73,7 +73,7 @@ export function closeSecurityDay(ctx: SimContext, day: number): void {
   const { state, events, rng } = ctx;
   for (const id in state.buildings) {
     const b = state.buildings[id]!;
-    if (b.owner !== 'player' || b.status !== 'operational' || b.business?.kind !== 'security') continue;
+    if (b.owner !== state.playerId || b.status !== 'operational' || b.business?.kind !== 'security') continue;
     const model = BUILDING_DEFINITIONS[b.defId]?.business;
     if (!model || model.kind !== 'security') continue;
     const biz = b.business;

@@ -1,7 +1,7 @@
 {
   "name": "neon-dynasty",
   "private": true,
-  "version": "0.11.0",
+  "version": "0.13.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -11,7 +11,9 @@
     "typecheck": "tsc -b",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "server": "tsx server/index.ts",
+    "server:dev": "tsx watch server/index.ts"
   },
   "dependencies": {
     "dexie": "^4.4.6",
@@ -26,11 +28,14 @@
     "@types/node": "^24.13.3",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.7",
+    "@types/ws": "^8.18.2",
     "@vitejs/plugin-react": "^6.1.1",
     "oxlint": "^1.81.0",
     "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.15",
     "typescript": "~6.0.2",
     "vite": "^8.3.0",
-    "vitest": "^5.0.5"
+    "vitest": "^5.0.5",
+    "ws": "^8.22.0"
   }
 }

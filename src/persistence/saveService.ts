@@ -5,7 +5,7 @@
 
 import { getDatabase, type SaveRecord } from './db';
 import { deserialize, serialize, tryRepair, SaveValidationError } from './serializer';
-import type { GameState } from '../sim/state';
+import type { WorldState } from '../sim/state';
 
 export const AUTOSAVE_SLOT = 'autosave';
 export const QUICK_SLOT = 'quick';
@@ -26,7 +26,7 @@ export async function listSaves(): Promise<SaveSummary[]> {
   return records.map(toSummary);
 }
 
-export async function saveToSlot(state: GameState, slot: string, name: string): Promise<SaveSummary> {
+export async function saveToSlot(state: WorldState, slot: string, name: string): Promise<SaveSummary> {
   const db = getDatabase();
   const data = serialize(state, name);
   const now = Date.now();
@@ -38,8 +38,8 @@ export async function saveToSlot(state: GameState, slot: string, name: string): 
     version: state.version,
     seed: state.seed,
     tick: state.tick,
-    balance: state.ledger.balance,
-    playerName: state.player.name,
+    balance: state.players[state.playerOrder[0] ?? '']?.ledger.balance ?? 0,
+    playerName: state.players[state.playerOrder[0] ?? '']?.player.name ?? 'Welt',
     createdAt: existing?.createdAt ?? now,
     updatedAt: now,
     data,
@@ -48,12 +48,12 @@ export async function saveToSlot(state: GameState, slot: string, name: string): 
   return toSummary({ ...record, id });
 }
 
-export async function createManualSave(state: GameState, name: string): Promise<SaveSummary> {
+export async function createManualSave(state: WorldState, name: string): Promise<SaveSummary> {
   const slot = `manual-${Date.now().toString(36)}`;
   return saveToSlot(state, slot, name);
 }
 
-export async function loadSave(id: number): Promise<{ state: GameState; name: string; repaired: string[] }> {
+export async function loadSave(id: number): Promise<{ state: WorldState; name: string; repaired: string[] }> {
   const db = getDatabase();
   const record = await db.saves.get(id);
   if (!record) throw new SaveValidationError('Spielstand nicht gefunden.');
@@ -64,16 +64,16 @@ export async function deleteSave(id: number): Promise<void> {
   await getDatabase().saves.delete(id);
 }
 
-export function exportToText(state: GameState, name: string): string {
+export function exportToText(state: WorldState, name: string): string {
   return serialize(state, name);
 }
 
-export function importFromText(text: string): { state: GameState; name: string; repaired: string[] } {
+export function importFromText(text: string): { state: WorldState; name: string; repaired: string[] } {
   if (text.length > 64 * 1024 * 1024) throw new SaveValidationError('Die Datei ist zu groß.');
   return parseWithRepair(text);
 }
 
-function parseWithRepair(text: string): { state: GameState; name: string; repaired: string[] } {
+function parseWithRepair(text: string): { state: WorldState; name: string; repaired: string[] } {
   try {
     const result = deserialize(text);
     return { state: result.state, name: result.name, repaired: [] };

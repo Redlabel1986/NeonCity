@@ -108,7 +108,7 @@ export function collectVenues(state: GameState, hour: number): Venue[] {
   const venues: Venue[] = [];
   for (const id in state.buildings) {
     const b = state.buildings[id]!;
-    if (b.owner === 'player' && b.status === 'operational' && b.business) {
+    if (b.owner !== 'city' && b.status === 'operational' && b.business) {
       const model = BUILDING_DEFINITIONS[b.defId]?.business;
       if (!model) continue;
       if (model.kind === 'gastronomy' && b.business.kind === 'gastronomy') {
@@ -294,7 +294,7 @@ export function updateDistrictCensus(state: GameState): void {
   for (const key in state.competitors) state.districts[state.competitors[key]!.districtId]!.economy.venues++;
   for (const id in state.buildings) {
     const b = state.buildings[id]!;
-    if (b.owner === 'player' && b.business && b.status === 'operational') state.districts[b.districtId]!.economy.venues++;
+    if (b.owner !== 'city' && b.business && b.status === 'operational') state.districts[b.districtId]!.economy.venues++;
   }
 }
 

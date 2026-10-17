@@ -1,5 +1,7 @@
+import { toLegacy } from './legacy';
 import { describe, expect, it } from 'vitest';
 import { createNewGame, Simulation, SAVE_FORMAT_VERSION } from '../../src/sim/engine';
+import { withPlayer } from '../../src/sim/players';
 import { deserialize, serialize, migrate, MIGRATIONS, SaveValidationError, tryRepair, type SaveFile } from '../../src/persistence/serializer';
 import { checkPlacement } from '../../src/sim/systems/construction';
 import { MINUTES_PER_DAY } from '../../src/sim/core/clock';
@@ -22,13 +24,14 @@ describe('Serializer', () => {
   it('round-trips a game state and continues identically', () => {
     const sim = makeSim();
     const text = serialize(sim.state, 'Test');
-    const { state, name } = deserialize(text);
+    const { state: world, name } = deserialize(text);
+    const state = withPlayer(world, 'player');
     expect(name).toBe('Test');
     expect(state.tick).toBe(sim.state.tick);
     expect(state.ledger.balance).toBe(sim.state.ledger.balance);
     expect(Array.from(state.grid.kind)).toEqual(Array.from(sim.state.grid.kind));
 
-    const restored = new Simulation(state);
+    const restored = new Simulation(world);
     sim.run(MINUTES_PER_DAY);
     restored.run(MINUTES_PER_DAY);
     expect(restored.state.ledger.balance).toBe(sim.state.ledger.balance);
@@ -44,7 +47,8 @@ describe('Serializer', () => {
     expect(() => deserialize(JSON.stringify(broken))).toThrow(/grid\.kind/);
     const outOfMap = { ...file, state: { ...file.state, buildings: { 1: { ...file.state.buildings[1], x: 999 } } } };
     expect(() => deserialize(JSON.stringify(outOfMap))).toThrow(/außerhalb/);
-    const badDifficulty = { ...file, state: { ...file.state, player: { ...file.state.player, difficulty: 'cheat' } } };
+    const me = file.state.players.player!;
+    const badDifficulty = { ...file, state: { ...file.state, players: { player: { ...me, player: { ...me.player, difficulty: 'cheat' } } } } };
     expect(() => deserialize(JSON.stringify(badDifficulty))).toThrow(/Schwierigkeitsgrad/);
   });
 
@@ -52,23 +56,24 @@ describe('Serializer', () => {
     const sim = makeSim();
     const file = JSON.parse(serialize(sim.state, 'x')) as SaveFile;
     expect(() => migrate({ ...file, version: SAVE_FORMAT_VERSION + 1 })).toThrow(/neueren Version/);
+    const legacy = toLegacy(file);
     MIGRATIONS[0] = (s) => ({ ...s, migratedMarker: true });
     try {
-      const migrated = migrate({ ...file, version: 0 });
+      const migrated = migrate({ ...legacy, version: 0 });
       expect(migrated.version).toBe(SAVE_FORMAT_VERSION);
       expect((migrated.state as unknown as Record<string, unknown>).migratedMarker).toBe(true);
     } finally {
       delete MIGRATIONS[0];
     }
-    expect(() => migrate({ ...file, version: -5 })).toThrow(/Keine Migration/);
+    expect(() => migrate({ ...legacy, version: -5 })).toThrow(/Keine Migration/);
   });
 
   it('repairs saves with missing transient fields', () => {
     const sim = makeSim();
     const file = JSON.parse(serialize(sim.state, 'x')) as SaveFile;
-    const damaged = { ...file, state: { ...file.state } } as unknown as { state: Record<string, unknown> };
-    delete damaged.state.log;
-    delete damaged.state.undoStack;
+    const damaged = JSON.parse(JSON.stringify(file)) as { state: { players: Record<string, Record<string, unknown>> } };
+    delete damaged.state.players.player!.log;
+    delete damaged.state.players.player!.undoStack;
     expect(() => deserialize(JSON.stringify(damaged))).toThrow(SaveValidationError);
     const repaired = tryRepair(JSON.stringify(damaged));
     expect(repaired).not.toBeNull();

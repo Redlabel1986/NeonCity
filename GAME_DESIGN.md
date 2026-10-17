@@ -14,6 +14,14 @@ Corporate Heights, Neon Market, Rust Docks, Ghost Quarter, Old City, Chrome Dist
 
 **Stand:** Alle acht Bezirke werden prozedural erzeugt (verrauschte Voronoi-Regionen, Hafenfront im Osten, Straßenraster mit bezirksabhängiger Blockteilung, Stadtgebäude im Bezirksstil, Parks, Plätze, freie Grundstücke). Werte sind im Stadt-Panel sichtbar und wirken auf Baukosten, Bauzeit, Nachfrage, Hotelgäste, Taxifahrten, Schwund und Operationen; sie driften mit Bürgern, Betrieben, Politik und Kriminalität (siehe Fraktionen und Politik).
 
+## Online-Welt
+
+Alle Spieler eines Servers teilen sich Nova Eclipse zur selben Zeit: dieselben Grundstücke, Bürger, Konkurrenten, Fraktionen, Gesetze und Krisen. Jeder hat eigene Credits, Betriebe, Immobilien, Ruf, Organisation und Beziehungen. Wer ein Grundstück zuerst bebaut, hat es; fremde Betriebe sind sichtbar und im Inspektor als „Gebäude von …“ ausgewiesen, aber nicht steuerbar. Die Zeit läuft für alle gleich (Standard 1×, ein Spieltag in zwölf Minuten) und auch ohne Verbundene weiter; der Server speichert automatisch. Konten bestehen aus Name und Passwort; beim Registrieren wählt man seinen Hintergrund.
+
+## Casino
+
+Das Royal Nova Casino im Neon Market steht jedem Spieler offen (`J`): Slots, Roulette und Blackjack um die eigenen Credits, Einsätze von 10 bis 5.000 ¢. Das Haus hat einen Vorteil (Slots 12,5 %, Roulette 2,7 %, Blackjack je nach Spielweise wenige Prozent), die Ergebnisse kommen aus dem Zufallsgenerator der Simulation und sind online für alle gleich. Gewinne und Verluste erscheinen als Buchungen in den Finanzen.
+
 ## Spielerfreiheit und Hintergründe
 
 Zehn Hintergründe (Straßenkind, Ex-Konzernangestellter, Gastronom, Immobilienerbe, Mechaniker, Ehemaliger Polizist, Hacker, Schmuggler, Unternehmensberater, Gangmitglied) beeinflussen Startkapital, Miete, Heimatbezirk, Startbeziehungen zu Fraktionen und je einen Vorteil im passenden System (Fahrzeugverschleiß, Forschung, Gründungskosten, Schwarzgeld, politischer Einfluss, Crew-Fähigkeit, Abklingen der Aufmerksamkeit).

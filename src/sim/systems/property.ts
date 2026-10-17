@@ -58,11 +58,12 @@ export function buyProperty(ctx: SimContext, buildingId: number): { ok: true } |
   const { state, events } = ctx;
   const b = state.buildings[buildingId];
   if (!b) return { ok: false, error: 'Gebäude nicht gefunden.' };
-  if (b.owner !== 'city') return { ok: false, error: 'Dieses Gebäude gehört bereits dir.' };
+  if (b.owner === state.playerId) return { ok: false, error: 'Dieses Gebäude gehört bereits dir.' };
+  if (b.owner !== 'city') return { ok: false, error: 'Dieses Gebäude gehört einem anderen Spieler.' };
   const price = propertyPrice(state, b);
   if (!canAfford(state, price)) return { ok: false, error: `Nicht genug Credits für den Kauf (${price} ¢).` };
   book(state, events, -price, { category: 'land', description: `Immobilienkauf: ${b.label}`, buildingId: b.id });
-  b.owner = 'player';
+  b.owner = state.playerId;
   b.investment = price;
   b.property = { purchasePrice: price, purchasedTick: state.tick, rentLevel: 1, condition: Math.round(55 + (100 - state.districts[b.districtId]!.stats.pollution) * 0.35), renovationUntilTick: 0, todayRent: 0, lifetimeRent: 0, tenants: tenantCount(state, b.id) };
   events.emit({ type: 'log', tick: state.tick, level: 'success', message: `${b.label} in ${state.districts[b.districtId]!.name} gekauft für ${price} ¢.`, buildingId: String(b.id) });
@@ -72,7 +73,7 @@ export function buyProperty(ctx: SimContext, buildingId: number): { ok: true } |
 export function sellProperty(ctx: SimContext, buildingId: number): { ok: true } | { ok: false; error: string } {
   const { state, events } = ctx;
   const b = state.buildings[buildingId];
-  if (!b || b.owner !== 'player' || !b.property) return { ok: false, error: 'Keine eigene Immobilie.' };
+  if (!b || b.owner !== state.playerId || !b.property) return { ok: false, error: 'Keine eigene Immobilie.' };
   const value = Math.round(propertyPrice(state, { ...b, cityStyle: b.cityStyle }) * 0.85 * (0.7 + b.property.condition / 333));
   book(state, events, value, { category: 'land', description: `Immobilienverkauf: ${b.label}`, buildingId: b.id });
   b.owner = 'city';
@@ -84,7 +85,7 @@ export function sellProperty(ctx: SimContext, buildingId: number): { ok: true } 
 
 export function setRentLevel(state: GameState, buildingId: number, level: number): { ok: true } | { ok: false; error: string } {
   const b = state.buildings[buildingId];
-  if (!b || b.owner !== 'player' || !b.property) return { ok: false, error: 'Keine eigene Immobilie.' };
+  if (!b || b.owner !== state.playerId || !b.property) return { ok: false, error: 'Keine eigene Immobilie.' };
   if (!Number.isFinite(level)) return { ok: false, error: 'Ungültige Miete.' };
   const cap = state.politics?.laws?.rentCap ?? 1.6;
   b.property.rentLevel = Math.max(0.6, Math.min(cap, Math.round(level * 20) / 20));
@@ -94,7 +95,7 @@ export function setRentLevel(state: GameState, buildingId: number, level: number
 export function renovate(ctx: SimContext, buildingId: number): { ok: true } | { ok: false; error: string } {
   const { state, events } = ctx;
   const b = state.buildings[buildingId];
-  if (!b || b.owner !== 'player' || !b.property) return { ok: false, error: 'Keine eigene Immobilie.' };
+  if (!b || b.owner !== state.playerId || !b.property) return { ok: false, error: 'Keine eigene Immobilie.' };
   if (b.property.renovationUntilTick > state.tick) return { ok: false, error: 'Die Renovierung läuft bereits.' };
   if (b.property.condition >= 95) return { ok: false, error: 'Das Gebäude ist in bestem Zustand.' };
   const difficulty = DIFFICULTIES[state.player.difficulty];
@@ -118,7 +119,7 @@ export function takeoverCompetitor(ctx: SimContext, buildingId: number): { ok: t
   book(state, events, -price, { category: 'land', description: `Übernahme: ${c.name}`, buildingId: b.id });
   delete state.competitors[buildingId];
   const def = BUILDING_DEFINITIONS.diner!;
-  b.owner = 'player';
+  b.owner = state.playerId;
   b.defId = 'diner';
   b.label = c.name;
   b.investment = price;
@@ -139,7 +140,7 @@ export function closePropertyDay(ctx: SimContext): void {
   for (const id in state.buildings) {
     const b = state.buildings[id]!;
     const p = b.property;
-    if (!p || b.owner !== 'player') continue;
+    if (!p || b.owner !== state.playerId) continue;
     const rent = dailyRent(state, b);
     if (rent > 0) {
       book(state, events, rent, { category: 'rent', description: `Mieteinnahmen: ${b.label}`, buildingId: b.id });

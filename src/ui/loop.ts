@@ -51,7 +51,7 @@ export function stopLoop(): void {
 
 function onVisibility(): void {
   if (document.hidden) {
-    void useGameStore.getState().autosave();
+    if (!session.online) void useGameStore.getState().autosave();
   } else {
     lastTime = performance.now();
     accumulator = 0;
@@ -68,7 +68,18 @@ function frame(now: number): void {
   const speed = sim.state.speed;
   let structural = false;
   let dayEnded = false;
-  if (speed > 0) {
+  const online = session.online;
+  if (online) {
+    // Lockstep: only advance to ticks the server announced, applying its command stream at the right ticks.
+    let steps = 0;
+    if (online.applyDue(sim)) structural = true;
+    while (sim.world.tick < online.serverTick && steps < MAX_TICKS_PER_FRAME) {
+      sim.step();
+      steps++;
+      online.checkHash(sim);
+      if (online.applyDue(sim)) structural = true;
+    }
+  } else if (speed > 0) {
     accumulator += dt * speed * MINUTES_PER_SECOND;
     let ticks = Math.floor(accumulator);
     if (ticks > MAX_TICKS_PER_FRAME) {
@@ -121,7 +132,7 @@ function frame(now: number): void {
     }
   }
   if (structural) useGameStore.getState().bumpStructure();
-  if (dayEnded) void useGameStore.getState().autosave();
+  if (dayEnded && !online) void useGameStore.getState().autosave();
   if (now - lastPublish > UI_PUBLISH_INTERVAL && sim.state.tick !== lastPublishedTick) {
     lastPublish = now;
     lastPublishedTick = sim.state.tick;
