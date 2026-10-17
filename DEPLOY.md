@@ -18,6 +18,14 @@ Der Einzelspieler-Modus läuft komplett im Browser (Spielstände in IndexedDB) u
 
 Empfehlung: Online-Welt auf einem netcup-VPS, der auch den Client ausliefert. Wer nur den Einzelspieler-Modus veröffentlichen will, nimmt Vercel oder GitHub Pages.
 
+## netcup Webhosting 4000 (Plesk)
+
+Webhosting 4000 ist ein Shared-Hosting-Paket mit Plesk, kein eigener Server. Was dort geht:
+
+- **Einzelspieler-Version:** `npm run build` lokal ausführen und den Inhalt von `dist/` per Plesk-Dateimanager oder SFTP nach `httpdocs/` hochladen. Fertig; keine weiteren Einstellungen nötig.
+- **Client auf dem Webspace, Online-Welt woanders:** vor dem Build `VITE_ONLINE_SERVER=https://spiel.example.de` setzen, dann trägt das Hauptmenü diese Server-Adresse vor. Der Server lässt Anfragen von fremden Ursprüngen zu.
+- **Online-Welt direkt auf Webhosting 4000:** nur mit Einschränkungen. Plesk startet Node-Anwendungen über Phusion Passenger erst bei einer Anfrage und beendet sie nach einer Leerlaufzeit wieder; die Weltuhr steht dann still, bis jemand die Seite öffnet (die Welt lädt aus dem Autospeicher, es gehen höchstens 30 Sekunden verloren). WebSockets funktionieren unter Plesk nur im reinen nginx-Modus ohne Proxy-Modus, was im Shared Hosting meist nicht einstellbar ist. Wer es versuchen will: `npm run build && npm run build:server` lokal, das Projekt mit `dist/`, `dist-server/` und `package.json` hochladen, in Plesk unter „Node.js“ als Anwendungsstamm das Projektverzeichnis und als Startdatei `dist-server/index.js` eintragen, Umgebungsvariable `NEON_DATA` auf ein beschreibbares Verzeichnis (z. B. `/var/www/vhosts/…/neon-data`) setzen; den Port vergibt Passenger über `PORT`. Ein Cron-Job, der jede Minute `/api/status` aufruft, hält die Anwendung meist am Leben. Für eine Welt, die wirklich rund um die Uhr läuft, ist ein kleiner netcup-VPS (siehe unten) die verlässliche Lösung; Client und Server passen zusammen auf die kleinste Stufe.
+
 ## Client allein (Vercel / Netlify / Pages)
 
 ```bash
@@ -41,6 +49,8 @@ npm run build
 # 2. Probelauf (liefert dist/ und die API auf Port 8787)
 PORT=8787 NEON_DATA=/var/lib/neon npm run server
 ```
+
+Ohne TypeScript-Laufzeit auf dem Server: `npm run build:server` erzeugt `dist-server/index.js` (ein einzelnes Bundle), das mit `node dist-server/index.js` läuft; `NEON_STATIC` zeigt bei Bedarf auf ein anderes `dist/`.
 
 Umgebungsvariablen des Servers:
 
@@ -67,7 +77,7 @@ After=network.target
 WorkingDirectory=/opt/neon
 Environment=PORT=8787
 Environment=NEON_DATA=/var/lib/neon
-ExecStart=/usr/bin/npx tsx server/index.ts
+ExecStart=/usr/bin/node dist-server/index.js
 Restart=always
 RestartSec=3
 User=neon
@@ -108,4 +118,4 @@ docker run -d --name neon -p 8787:8787 -v neon-data:/data -e NEON_DATA=/data neo
 - Die Welt läuft weiter, auch wenn niemand verbunden ist. Wer die Uhr anhalten will, stoppt den Dienst (die Welt wird gespeichert).
 - `GET /api/status` zeigt Spieltag, Spielerzahl und Verbundene; für Monitoring geeignet.
 - Backups: `world.json` und `accounts.json` kopieren. Passwörter liegen nur als salted scrypt-Hashes vor.
-- Updates: `git pull && npm ci && npm run build && systemctl restart neon`. Ändert ein Update das Spielstandformat, migriert der Server die Welt beim Start.
+- Updates: `git pull && npm ci && npm run build && npm run build:server && systemctl restart neon`. Ändert ein Update das Spielstandformat, migriert der Server die Welt beim Start.

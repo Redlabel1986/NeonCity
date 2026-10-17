@@ -3,8 +3,7 @@
  * WebSocket feed that keeps every client in lockstep. Serves the built
  * client from dist/ when present.
  *
- *   npm run server            (env: PORT, NEON_DATA, NEON_SEED, NEON_SPEED,
- *                              NEON_DIFFICULTY, NEON_CITY_SIZE, NEON_AUTOSAVE)
+ *   npm run server   (entry: server/main.ts; env variables in DEPLOY.md)
  */
 
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
@@ -13,7 +12,7 @@ import { extname, join, normalize, resolve } from 'node:path';
 import { WebSocketServer, type WebSocket } from 'ws';
 import { Accounts } from './accounts';
 import { WorldHost } from './world';
-import { BACKGROUNDS, DIFFICULTIES, type BackgroundId, type DifficultyId } from '../src/sim/data/difficulty';
+import { BACKGROUNDS, type BackgroundId, type DifficultyId } from '../src/sim/data/difficulty';
 import type { AuthResponse, ClientMessage, LoginRequest, OnlinePlayer, RegisterRequest, ServerMessage, StatusResponse } from '../src/net/protocol';
 
 export interface ServerOptions {
@@ -200,27 +199,4 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
         httpServer.close(() => resolvePromise());
       }),
   };
-}
-
-const isMain = process.argv[1] && /server[\\/]index\.ts$/.test(process.argv[1]);
-if (isMain) {
-  const difficulty = (process.env.NEON_DIFFICULTY ?? 'standard') as DifficultyId;
-  const staticDir = existsSync(resolve('dist')) ? resolve('dist') : null;
-  void startServer({
-    port: Number(process.env.PORT ?? 8787),
-    dataDir: resolve(process.env.NEON_DATA ?? 'data'),
-    seed: process.env.NEON_SEED ?? 'nova-eclipse-online',
-    citySize: Number(process.env.NEON_CITY_SIZE ?? 96),
-    difficulty: difficulty in DIFFICULTIES ? difficulty : 'standard',
-    speed: Number(process.env.NEON_SPEED ?? 1),
-    autosaveSeconds: Number(process.env.NEON_AUTOSAVE ?? 30),
-    staticDir,
-  }).then((server) => {
-    const shutdown = (): void => {
-      console.log('Speichere Welt und beende …');
-      void server.close().then(() => process.exit(0));
-    };
-    process.on('SIGINT', shutdown);
-    process.on('SIGTERM', shutdown);
-  });
 }

@@ -34,7 +34,7 @@ function remember(value: Remembered | null): void {
 /** Account form and server status for the shared online world. */
 export function OnlineSection({ background }: { background: BackgroundId }) {
   const connectOnline = useGameStore((s) => s.connectOnline);
-  const [url, setUrl] = useState(() => remembered()?.url ?? (typeof window !== 'undefined' ? window.location.origin : ''));
+  const [url, setUrl] = useState(() => remembered()?.url ?? (import.meta.env.VITE_ONLINE_SERVER as string | undefined) ?? (typeof window !== 'undefined' ? window.location.origin : ''));
   const [name, setName] = useState(() => remembered()?.name ?? '');
   const [password, setPassword] = useState('');
   const [status, setStatus] = useState<StatusResponse | null>(null);

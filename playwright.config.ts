@@ -17,7 +17,7 @@ export default defineConfig({
     },
     {
       // Online world for tests/e2e/online.spec.ts: a fresh data directory per run, small city, 1× speed.
-      command: 'npx tsx server/index.ts',
+      command: 'npx tsx server/main.ts',
       url: 'http://localhost:8787/api/status',
       reuseExistingServer: false,
       timeout: 120_000,

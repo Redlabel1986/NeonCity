@@ -12,8 +12,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "server": "tsx server/index.ts",
-    "server:dev": "tsx watch server/index.ts"
+    "server": "tsx server/main.ts",
+    "server:dev": "tsx watch server/main.ts",
+    "build:server": "esbuild server/main.ts --bundle --platform=node --format=esm --target=node20 --outfile=dist-server/index.js --banner:js=\"import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);\""
   },
   "dependencies": {
     "dexie": "^4.4.6",
