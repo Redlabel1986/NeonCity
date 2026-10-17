@@ -18,6 +18,49 @@ Der Einzelspieler-Modus läuft komplett im Browser (Spielstände in IndexedDB) u
 
 Empfehlung: Online-Welt auf einem netcup-VPS, der auch den Client ausliefert. Wer nur den Einzelspieler-Modus veröffentlichen will, nimmt Vercel oder GitHub Pages.
 
+## Von GitHub auf netcup Webhosting 4000, Schritt für Schritt
+
+Drei Wege, vom einfachsten zum automatischen. In allen Fällen landet der Client (Inhalt von `dist/`) im Ordner `httpdocs/` der Domain.
+
+### Weg 1: lokal bauen, hochladen (5 Minuten)
+
+```bash
+git clone https://github.com/Redlabel1986/NeonCity.git
+cd NeonCity
+npm ci
+npm run build            # erzeugt dist/
+```
+
+Dann in Plesk „Websites & Domains → Dateimanager“ (oder per SFTP mit WinSCP/FileZilla, Zugangsdaten unter „FTP-Zugang“) den **Inhalt** von `dist/` nach `httpdocs/` kopieren, alte Dateien vorher löschen. Aufruf der Domain im Browser, fertig. Bei jeder neuen Version: `git pull`, `npm run build`, erneut hochladen.
+
+### Weg 2: Plesk zieht selbst aus GitHub
+
+1. Plesk → Websites & Domains → **Git** → „Repository hinzufügen“, URL `https://github.com/Redlabel1986/NeonCity.git`, Branch `main`, Bereitstellungspfad z. B. `/neon` (nicht `httpdocs`, das Repository enthält kein fertiges `dist/`).
+2. Unter „Bereitstellungsaktionen“ eintragen (Node liegt bei Plesk unter `/opt/plesk/node/<Version>/bin`, die Version steht unter „Node.js“):
+
+   ```bash
+   export PATH=/opt/plesk/node/22/bin:$PATH
+   npm ci && npm run build
+   rm -rf ../httpdocs/* && cp -r dist/. ../httpdocs/
+   ```
+
+3. „Jetzt bereitstellen“ klicken; danach bei jedem Push auf `main` über den Webhook (Plesk zeigt die Adresse an, in GitHub unter Settings → Webhooks eintragen).
+
+Falls `npm` auf dem Webspace nicht ausführbar ist (abhängig vom Tarif), bleibt Weg 1 oder 3.
+
+### Weg 3: GitHub baut und lädt hoch (empfohlen)
+
+Die Action `.github/workflows/deploy-webspace.yml` baut den Client bei jedem Push und lädt `dist/` per FTPS nach `httpdocs/`. Einmalig in GitHub unter Settings → Secrets and variables → Actions anlegen:
+
+| Name | Wert |
+|---|---|
+| `FTP_SERVER` (Secret) | FTP-Host aus Plesk „FTP-Zugang“, z. B. `hosting123456.a2f4b.netcup.net` |
+| `FTP_USERNAME` (Secret) | FTP-Benutzer |
+| `FTP_PASSWORD` (Secret) | FTP-Passwort |
+| `ONLINE_SERVER` (Variable, optional) | Adresse der Online-Welt, z. B. `https://spiel.example.de` |
+
+Danach genügt `git push`; der Lauf ist unter „Actions“ sichtbar, bei Bedarf auch von Hand über „Run workflow“.
+
 ## netcup Webhosting 4000 (Plesk)
 
 Webhosting 4000 ist ein Shared-Hosting-Paket mit Plesk, kein eigener Server. Was dort geht:
