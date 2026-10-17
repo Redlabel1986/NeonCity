@@ -139,7 +139,7 @@
 - [ ] Online: Chat, Rangliste, Admin-Befehle (Geschwindigkeit, Spieler entfernen), Übernahme fremder Spielerbetriebe, Passwort ändern
 - [ ] Casino: Teilen und Versicherung beim Blackjack, Tischlimits je Bezirk, ein eigenes Casino als Betrieb (Hausvorteil als Einnahme)
 - [ ] Mobil: Sheets per Wischgeste schließen, Querformat-Layout für Tablets, Service Worker für Offline-Start
-- [ ] Cloud: mehrere Slots je Konto, Konfliktwarnung bei älterem Stand, Passwort ändern, Konto löschen
+- [ ] Cloud: mehrere Slots je Konto, Konfliktwarnung bei älterem Stand, Passwort-Zurücksetzen per E-Mail
 - [ ] Weiterlaufen: Nachholen auch auf dem Node-Server beim Cloud-Upload (Welt serverseitig fortschreiben), Zusammenfassung per Push-Benachrichtigung
 - [ ] Online: Verbindungsabbruch automatisch wieder aufnehmen (derzeit Hinweis und manuelles Neuanmelden)
 - [ ] Fahrzeuge mit Abbiegeanimation und Wartezeit an Kreuzungen (derzeit Richtungswechsel ohne Übergang)

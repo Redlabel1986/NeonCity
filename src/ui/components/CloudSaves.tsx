@@ -4,6 +4,7 @@ import { cloudLogin, cloudLogout, cloudMeta, cloudRegister, cloudSession, type C
 import type { CloudMeta } from '../../net/cloudProtocol';
 import { credits, relativeTime } from '../format';
 import { tickToDate } from '../../sim/core/clock';
+import { CloudAccount } from './CloudAccount';
 
 /**
  * Account box for cloud saves: log in once per device, then the save
@@ -21,6 +22,7 @@ export function CloudSaves({ mode, onLoaded }: { mode: 'menu' | 'game'; onLoaded
   const [meta, setMeta] = useState<CloudMeta | null | 'loading'>('loading');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [manage, setManage] = useState(false);
   const cloudSavedAt = useGameStore((s) => s.cloudSavedAt);
 
   useEffect(() => {
@@ -140,17 +142,22 @@ export function CloudSaves({ mode, onLoaded }: { mode: 'menu' | 'game'; onLoaded
             >
               {mode === 'game' ? 'Cloud-Spielstand laden' : 'Weiter aus der Cloud'}
             </button>
+            <button type="button" className="btn" onClick={() => setManage((m) => !m)} aria-expanded={manage}>
+              Konto verwalten
+            </button>
             <button
               type="button"
               className="btn btn-ghost"
               onClick={() => {
                 cloudLogout();
                 setCloud(null);
+                setManage(false);
               }}
             >
               Abmelden
             </button>
           </div>
+          {manage && <CloudAccount cloud={cloud} onClose={() => setManage(false)} />}
           <label className="mt-2 flex items-start gap-2 text-xs">
             <input type="checkbox" className="mt-0.5 h-4 w-4 accent-[#19e6ff]" checked={settings.cloudSync} onChange={(e) => updateSettings({ cloudSync: e.target.checked })} />
             <span>

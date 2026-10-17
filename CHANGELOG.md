@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.17.0 – Cloud-Konto verwalten (2026-10-17)
+
+### Hinzugefügt
+
+- „Konto verwalten“ im Cloud-Bereich (Hauptmenü und Spielstände-Dialog): Passwort ändern (aktuelles Passwort nötig, mindestens 6 Zeichen), Cloud-Spielstand löschen und Konto löschen (mit Passwort-Bestätigung, entfernt auch den Cloud-Spielstand; lokale Spielstände bleiben). Zeigt Kontoname, Anlagedatum, letzte Passwortänderung und Gültigkeit der Anmeldung auf diesem Gerät.
+- Endpunkte auf Node-Server und Vercel-Funktion: `GET /api/cloud/account`, `POST /api/cloud/password`, `DELETE /api/cloud/save`, `DELETE /api/cloud/account`.
+- Tokens tragen jetzt eine Konto-Epoche: Nach einer Passwortänderung sind alle anderen Geräte abgemeldet und müssen sich mit dem neuen Passwort anmelden. Bestehende Anmeldungen aus 0.15/0.16 verfallen einmalig (neu anmelden, Konten und Spielstände bleiben).
+- Tests: Unit (Dienst und HTTP) und E2E (Passwort am PC ändern, Handy wird abgemeldet und meldet sich neu an, Konto löschen).
+- Cheat: Eine Ramen-Bar namens „McNoodle6969“ bucht jede Spielstunde 2.500 ¢ Umsatz als Verkauf „Stammkundschaft“, auch bei geschlossener Bar.
+
 ## 0.16.2 – Cheat „McNoodle69“ (2026-10-17)
 
 ### Hinzugefügt

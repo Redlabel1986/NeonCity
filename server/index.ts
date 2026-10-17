@@ -95,12 +95,12 @@ export async function startServer(options: ServerOptions): Promise<RunningServer
       if (req.method === 'OPTIONS') return json(res, 204, {});
       if (url.pathname.startsWith('/api/cloud/')) {
         const action = url.pathname.slice('/api/cloud/'.length);
-        const body = req.method === 'POST' || req.method === 'PUT' ? await readBody(req, 10 * 1024 * 1024) : null;
+        const body = req.method === 'POST' || req.method === 'PUT' || req.method === 'DELETE' ? await readBody(req, 10 * 1024 * 1024) : null;
         const result = await handleCloudRequest(cloud, action, req.method ?? 'GET', req.headers.authorization, body);
         return json(res, result.status, result.body);
       }
       if (url.pathname === '/api/status') {
-        const body: StatusResponse = { tick: host.tick, speed: host.sim.world.speed, players: host.sim.playerIds.length, online: sockets.size, cityName: host.sim.world.meta.cityName, version: '0.16.2' };
+        const body: StatusResponse = { tick: host.tick, speed: host.sim.world.speed, players: host.sim.playerIds.length, online: sockets.size, cityName: host.sim.world.meta.cityName, version: '0.17.0' };
         return json(res, 200, body);
       }
       if (url.pathname === '/api/register' && req.method === 'POST') {

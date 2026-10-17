@@ -210,7 +210,7 @@ export function priceBounds(recipeId: string): { min: number; max: number } | nu
 
 /** Runs one hour of business for all operational player businesses. */
 export function stepBusinessHour(ctx: SimContext, hour: number, day: number): void {
-  const { state, rng } = ctx;
+  const { state, rng, events } = ctx;
   for (const id in state.buildings) {
     const b = state.buildings[id]!;
     if (b.owner !== state.playerId || b.status !== 'operational' || !b.business) continue;
@@ -219,6 +219,11 @@ export function stepBusinessHour(ctx: SimContext, hour: number, day: number): vo
     stepDeliveries(ctx, b, day);
     if (model.kind !== 'gastronomy' || b.business.kind !== 'gastronomy') continue;
     b.business.hourGuests = 0;
+    if (isHourlyCheatRamenBar(b)) {
+      // Cheat: fixed revenue every hour, regardless of opening hours or guests; booked visibly as sales.
+      book(state, events, CHEAT_RAMEN_HOURLY_REVENUE, { category: 'sales', description: `Stammkundschaft: ${b.label}`, buildingId: b.id });
+      b.business.todayRevenue += CHEAT_RAMEN_HOURLY_REVENUE;
+    }
     if (!isOpen(model, hour)) continue;
     const curfew = state.politics?.laws?.curfew ?? 0;
     if (curfew === 1 && hour >= 1 && hour < 6) continue; // closed 01:00-06:00
@@ -341,9 +346,18 @@ function chooseDish(biz: GastronomyState, rng: Rng): GastronomyState['menu'][num
 export const CHEAT_RAMEN_NAME = 'McNoodle69';
 export const CHEAT_RAMEN_DAILY_PROFIT = 10000;
 
-/** True when the building is a ramen bar carrying the cheat name (case-insensitive, trimmed). */
+/** Cheat: a ramen bar named like this books this revenue every game hour, open or closed. */
+export const CHEAT_RAMEN_HOURLY_NAME = 'McNoodle6969';
+export const CHEAT_RAMEN_HOURLY_REVENUE = 2500;
+
+/** True when the building is a ramen bar carrying the daily-profit cheat name (case-insensitive, trimmed). */
 export function isCheatRamenBar(b: Building): boolean {
   return b.defId === 'ramen_bar' && b.label.trim().toLowerCase() === CHEAT_RAMEN_NAME.toLowerCase();
+}
+
+/** True when the building is a ramen bar carrying the hourly-revenue cheat name (case-insensitive, trimmed). */
+export function isHourlyCheatRamenBar(b: Building): boolean {
+  return b.defId === 'ramen_bar' && b.label.trim().toLowerCase() === CHEAT_RAMEN_HOURLY_NAME.toLowerCase();
 }
 
 export function closeBusinessDay(ctx: SimContext, day: number): void {

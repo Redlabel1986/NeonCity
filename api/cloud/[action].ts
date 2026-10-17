@@ -1,11 +1,11 @@
 /**
- * Vercel function for cloud saves: /api/cloud/register | login | meta | save.
+ * Vercel function for cloud saves: /api/cloud/register | login | meta | save | account | password.
  * Storage: a private Vercel Blob store (BLOB_READ_WRITE_TOKEN is injected
  * once the store is connected to the project). CLOUD_SECRET signs tokens
  * and must be set in the project's environment variables.
  */
 
-import { get, put } from '@vercel/blob';
+import { del, get, put } from '@vercel/blob';
 import { CloudService, handleCloudRequest, type CloudSaveRecord, type CloudStore, type CloudUser } from '../../server/cloud';
 
 class BlobCloudStore implements CloudStore {
@@ -40,6 +40,23 @@ class BlobCloudStore implements CloudStore {
   writeSave(userId: string, record: CloudSaveRecord): Promise<void> {
     return this.writeJson(`cloud/saves/${userId}.json`, record);
   }
+
+  private async remove(pathname: string): Promise<void> {
+    try {
+      await del(pathname);
+    } catch (err) {
+      if ((err as { statusCode?: number }).statusCode === 404) return;
+      throw err;
+    }
+  }
+
+  deleteUser(key: string): Promise<void> {
+    return this.remove(`cloud/users/${key}.json`);
+  }
+
+  deleteSave(userId: string): Promise<void> {
+    return this.remove(`cloud/saves/${userId}.json`);
+  }
 }
 
 let service: CloudService | null = null;
@@ -53,7 +70,7 @@ function getService(): CloudService | { error: string } {
   return service;
 }
 
-const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type, Authorization', 'Access-Control-Allow-Methods': 'GET, POST, PUT, OPTIONS' };
+const CORS = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': 'Content-Type, Authorization', 'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS' };
 
 export default async function handler(request: Request): Promise<Response> {
   if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
@@ -62,9 +79,10 @@ export default async function handler(request: Request): Promise<Response> {
   const svc = getService();
   if ('error' in svc) return Response.json({ error: svc.error }, { status: 503, headers: CORS });
   let body: unknown = null;
-  if (request.method === 'POST' || request.method === 'PUT') {
+  if (request.method === 'POST' || request.method === 'PUT' || request.method === 'DELETE') {
     try {
-      body = await request.json();
+      const text = await request.text();
+      body = text ? JSON.parse(text) : {};
     } catch {
       return Response.json({ error: 'Ungültiges JSON.' }, { status: 400, headers: CORS });
     }

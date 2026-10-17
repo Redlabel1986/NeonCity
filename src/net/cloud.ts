@@ -3,7 +3,7 @@
  * and download of the single-player save through /api/cloud/*.
  */
 
-import type { CloudAuthResponse, CloudMeta, CloudMetaResponse, CloudPutRequest, CloudSaveResponse } from './cloudProtocol';
+import type { CloudAccountResponse, CloudAuthResponse, CloudMeta, CloudMetaResponse, CloudPasswordRequest, CloudPutRequest, CloudSaveResponse } from './cloudProtocol';
 
 const STORAGE_KEY = 'neon-dynasty.cloud';
 /** Developer override of the cloud base URL (used by the e2e tests against the preview build). */
@@ -55,7 +55,7 @@ export function deviceName(): string {
   return `${phone ? 'Handy' : 'PC'} · ${browser}`;
 }
 
-async function request<T>(path: string, method: 'GET' | 'POST' | 'PUT', body?: unknown, token?: string): Promise<T> {
+async function request<T>(path: string, method: 'GET' | 'POST' | 'PUT' | 'DELETE', body?: unknown, token?: string): Promise<T> {
   const response = await fetch(`${cloudBaseUrl()}/api/cloud/${path}`, {
     method,
     headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
@@ -95,4 +95,27 @@ export async function cloudDownload(session: CloudSession): Promise<CloudSaveRes
 export async function cloudUpload(session: CloudSession, data: string, name: string): Promise<CloudMeta> {
   const body: CloudPutRequest = { data, name, device: deviceName() };
   return (await request<{ meta: CloudMeta }>('save', 'PUT', body, session.token)).meta;
+}
+
+export async function cloudAccount(session: CloudSession): Promise<CloudAccountResponse> {
+  return request<CloudAccountResponse>('account', 'GET', undefined, session.token);
+}
+
+/** Changes the password; the server issues a fresh token and signs every other device out. */
+export async function cloudChangePassword(session: CloudSession, current: string, next: string): Promise<CloudSession> {
+  const body: CloudPasswordRequest = { current, next };
+  const auth = await request<CloudAuthResponse>('password', 'POST', body, session.token);
+  const renewed = { token: auth.token, name: auth.name, expiresAt: auth.expiresAt };
+  storeSession(renewed);
+  return renewed;
+}
+
+export async function cloudDeleteSave(session: CloudSession): Promise<void> {
+  await request<{ ok: true }>('save', 'DELETE', {}, session.token);
+}
+
+/** Deletes save and account; the local session is cleared afterwards. */
+export async function cloudDeleteAccount(session: CloudSession, password: string): Promise<void> {
+  await request<{ ok: true }>('account', 'DELETE', { password }, session.token);
+  storeSession(null);
 }

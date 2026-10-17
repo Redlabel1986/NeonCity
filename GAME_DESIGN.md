@@ -26,6 +26,8 @@ Die Stadt steht nicht still, wenn der Browser zu ist: Beim nächsten Laden (auch
 
 Wer eine Ramen-Bar in „McNoodle69“ umbenennt (Inspektor → Umbenennen, Groß-/Kleinschreibung egal), bekommt beim Tagesabschluss den Tagesgewinn dieser Bar auf genau +10.000 ¢ aufgefüllt: Die Differenz zu Umsatz minus Löhnen, Betriebskosten, Einkäufen und Strafen wird als Verkauf „Geheimrezept“ gebucht und erscheint in Finanzen und Betriebshistorie. Umbenennen zurück schaltet den Cheat ab. In der Online-Welt gilt er für jeden, der die Bar so nennt.
 
+Zweiter Cheat: Eine Ramen-Bar namens „McNoodle6969“ bucht jede Spielstunde 2.500 ¢ Umsatz (Verkauf „Stammkundschaft“), auch außerhalb der Öffnungszeiten, also 60.000 ¢ am Tag zusätzlich zum normalen Geschäft. Die beiden Namen sind getrennte Cheats; eine Bar hat immer nur einen Namen.
+
 ## Casino
 
 Das Royal Nova Casino im Neon Market steht jedem Spieler offen (`J`): Slots, Roulette und Blackjack um die eigenen Credits, Einsätze von 10 bis 5.000 ¢. Das Haus hat einen Vorteil (Slots 12,5 %, Roulette 2,7 %, Blackjack je nach Spielweise wenige Prozent), die Ergebnisse kommen aus dem Zufallsgenerator der Simulation und sind online für alle gleich. Gewinne und Verluste erscheinen als Buchungen in den Finanzen.

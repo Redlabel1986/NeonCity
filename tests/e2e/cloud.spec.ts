@@ -84,4 +84,35 @@ test('a game started on the phone continues on the PC through the cloud save', a
   await cloudBox.getByRole('button', { name: 'Cloud-Spielstand laden' }).tap();
   await expect.poll(() => phone.evaluate(() => window.__neon.session.sim!.state.tick), { timeout: 20000 }).toBeGreaterThanOrEqual(pcTick2);
   expect(await phone.evaluate(() => window.__neon.session.sim!.state.tick)).toBeLessThan(pcTick2 + 120);
+
+  // Account management on the PC: change the password; the phone is signed out and logs in again with the new one.
+  const pcDialog = pc.getByRole('dialog');
+  await pcDialog.getByRole('button', { name: 'Konto verwalten' }).click();
+  const manage = pcDialog.getByTestId('cloud-account');
+  await expect(manage).toContainText(`Konto ${account}`);
+  await manage.getByLabel('Aktuelles Passwort').fill('geheim123');
+  await manage.getByLabel('Neues Passwort', { exact: true }).fill('neues456');
+  await manage.getByLabel('Neues Passwort wiederholen').fill('neues456');
+  await manage.getByRole('button', { name: 'Passwort ändern' }).click();
+  await expect(manage).toContainText('Passwort geändert', { timeout: 15000 });
+  await pc.screenshot({ path: 'tests/e2e/output/cloud-account.png' });
+  // The phone's token is stale now: its next cloud action fails and asks for a new login.
+  // (Loading from the cloud closed the saves sheet on the phone; open it again.)
+  await phone.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('button', { name: 'Mehr' }).tap();
+  await phone.getByTestId('mobile-sheet').getByRole('button', { name: 'Spielstände' }).tap();
+  await cloudBox.getByRole('button', { name: 'Jetzt in die Cloud speichern' }).tap();
+  await expect(cloudBox.getByRole('alert')).toContainText('neu anmelden', { timeout: 15000 });
+  await cloudBox.getByRole('button', { name: 'Abmelden' }).tap();
+  await cloudBox.getByLabel('Cloud-Kontoname').fill(account);
+  await cloudBox.getByLabel('Cloud-Passwort').fill('neues456');
+  await cloudBox.getByRole('button', { name: 'Anmelden' }).tap();
+  await expect(cloudBox).toContainText(`Angemeldet als ${account}`);
+  await expect(cloudBox.getByTestId('cloud-meta')).toContainText('PC', { timeout: 15000 });
+  // Delete the account from the PC with the new password.
+  await manage.getByRole('button', { name: 'Konto löschen' }).click();
+  await manage.getByLabel('Passwort zur Bestätigung').fill('neues456');
+  await manage.getByRole('button', { name: 'Konto endgültig löschen' }).click();
+  await expect(pcDialog.getByRole('region', { name: 'Cloud-Spielstand' })).toContainText('Mit einem Konto wandert dein Spielstand', { timeout: 15000 });
+  const gone = await pc.request.post(`${CLOUD}/api/cloud/login`, { data: { name: account, password: 'neues456' } });
+  expect(gone.status()).toBe(401);
 });

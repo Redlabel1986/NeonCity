@@ -39,6 +39,16 @@ export interface CloudSaveResponse {
   data: string;
 }
 
+export interface CloudAccountResponse {
+  account: { name: string; createdAt: number; passwordChangedAt: number | null; expiresAt: number };
+  meta: CloudMeta | null;
+}
+
+export interface CloudPasswordRequest {
+  current: string;
+  next: string;
+}
+
 export interface CloudPutRequest {
   data: string;
   name: string;

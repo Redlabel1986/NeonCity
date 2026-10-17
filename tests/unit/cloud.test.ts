@@ -47,6 +47,45 @@ describe('Cloud saves: service', () => {
     expect(other.verify(token)).toBeNull();
   });
 
+  it('changes the password (signing other devices out), deletes the save and deletes the account', async () => {
+    const store = new MemoryCloudStore();
+    const service = new CloudService(store, SECRET);
+    const reg = await service.register('Eve', 'geheim1');
+    const phoneToken = reg.ok ? reg.value.token : '';
+    const phone = await service.authenticate(phoneToken);
+    expect(phone?.user.name).toBe('Eve');
+    const { text } = sampleSave();
+    expect((await service.save(phone!.user.id, text, 'Spiel', 'Handy')).ok).toBe(true);
+    // Wrong current password, too short or unchanged new password are refused.
+    expect((await service.changePassword(phone!.user, 'falsch!', 'neues-pw')).ok).toBe(false);
+    expect((await service.changePassword(phone!.user, 'geheim1', 'kurz')).ok).toBe(false);
+    expect((await service.changePassword(phone!.user, 'geheim1', 'geheim1')).ok).toBe(false);
+    const changed = await service.changePassword(phone!.user, 'geheim1', 'neues-pw');
+    expect(changed.ok).toBe(true);
+    const pcToken = changed.ok ? changed.value.token : '';
+    // The old token still has a valid signature but a stale epoch: signed out everywhere else.
+    expect(service.verify(phoneToken)).not.toBeNull();
+    expect(await service.authenticate(phoneToken)).toBeNull();
+    const pc = await service.authenticate(pcToken);
+    expect(pc?.user.id).toBe(phone!.user.id);
+    expect((await service.login('eve', 'geheim1')).ok).toBe(false);
+    expect((await service.login('eve', 'neues-pw')).ok).toBe(true);
+    expect(service.account(pc!.user, pc!.expiresAt).passwordChangedAt).not.toBeNull();
+    // Delete the save only: account stays.
+    await service.deleteSave(pc!.user.id);
+    expect(await service.meta(pc!.user.id)).toBeNull();
+    expect(await service.authenticate(pcToken)).not.toBeNull();
+    // Delete the account: needs the password, then login and tokens fail.
+    expect((await service.deleteAccount(pc!.user, 'geheim1')).ok).toBe(false);
+    expect((await service.deleteAccount(pc!.user, 'neues-pw')).ok).toBe(true);
+    expect(await service.authenticate(pcToken)).toBeNull();
+    expect((await service.login('eve', 'neues-pw')).ok).toBe(false);
+    expect(store.users.size).toBe(0);
+    expect(store.saves.size).toBe(0);
+    // The name is free again.
+    expect((await service.register('Eve', 'geheim1')).ok).toBe(true);
+  });
+
   it('stores one validated save per user and refuses garbage or oversized uploads', async () => {
     const service = new CloudService(new MemoryCloudStore(), SECRET);
     const reg = await service.register('Bo', 'geheim2');
@@ -131,5 +170,22 @@ describe('Cloud saves: game server endpoints', () => {
     expect((await call('meta', 'GET', undefined, 'bad')).status).toBe(401);
     const login = await call('login', 'POST', { name: 'dee', password: 'geheim4' });
     expect(login.status).toBe(200);
+
+    // Account management over HTTP: info, password change, delete save, delete account.
+    const info = await call('account', 'GET', undefined, token);
+    expect(info.status).toBe(200);
+    expect((info.data as { account: { name: string } }).account.name).toBe('Dee');
+    expect((await call('password', 'POST', { current: 'falsch', next: 'geheim5' }, token)).status).toBe(401);
+    const pw = await call('password', 'POST', { current: 'geheim4', next: 'geheim5' }, token);
+    expect(pw.status).toBe(200);
+    const token2 = (pw.data as unknown as CloudAuthResponse).token;
+    expect((await call('meta', 'GET', undefined, token)).status).toBe(401); // old token signed out
+    expect((await call('meta', 'GET', undefined, token2)).status).toBe(200);
+    expect((await call('save', 'DELETE', {}, token2)).status).toBe(200);
+    expect((await call('save', 'GET', undefined, token2)).status).toBe(404);
+    expect((await call('account', 'DELETE', { password: 'geheim4' }, token2)).status).toBe(401);
+    expect((await call('account', 'DELETE', { password: 'geheim5' }, token2)).status).toBe(200);
+    expect((await call('meta', 'GET', undefined, token2)).status).toBe(401);
+    expect((await call('login', 'POST', { name: 'dee', password: 'geheim5' })).status).toBe(401);
   });
 });
