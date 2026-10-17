@@ -71,6 +71,14 @@ Webhosting 4000 ist ein Shared-Hosting-Paket mit Plesk, kein eigener Server. Was
 
 ## Client allein (Vercel / Netlify / Pages)
 
+### Vercel in drei Schritten
+
+1. Auf [vercel.com](https://vercel.com) mit GitHub anmelden, „Add New → Project“, das Repository `Redlabel1986/NeonCity` importieren.
+2. Die Einstellungen kommen aus `vercel.json` (Framework Vite, `npm run build`, Ausgabe `dist`); nichts ändern, auf „Deploy“ klicken. Der erste Build dauert etwa eine Minute.
+3. Fertig: Die Einzelspieler-Version läuft unter `https://<projekt>.vercel.app`, jeder Push auf `main` erzeugt automatisch eine neue Version, andere Branches bekommen Vorschau-Adressen.
+
+Optional: unter Project → Settings → Environment Variables `VITE_ONLINE_SERVER` auf die Adresse einer Online-Welt setzen, sobald es eine gibt. Ohne Server zeigt das Hauptmenü unter „Online spielen“ nur „Kein Server erreichbar“.
+
 ```bash
 npm ci
 npm run build          # erzeugt dist/
