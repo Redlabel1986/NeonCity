@@ -8,6 +8,7 @@ import { session } from './session';
 import { useGameStore } from './store/gameStore';
 import { daylightFactor, tickToDate } from '../sim/core/clock';
 import { lockedDistrictIds } from '../sim/systems/progression';
+import { regionOfArchetype } from '../sim/data/regions';
 import { audio } from './audio';
 import { DISTRICT_ARCHETYPES } from '../sim/data/districts';
 
@@ -145,7 +146,11 @@ function frame(now: number): void {
       const corners = renderer.getViewTiles();
       const cx = Math.round(corners.reduce((s, c) => s + c.x, 0) / corners.length);
       const cy = Math.round(corners.reduce((s, c) => s + c.y, 0) / corners.length);
-      if (sim.state.grid.inBounds(cx, cy)) audio.setDistrict(DISTRICT_ARCHETYPES[sim.state.districts[sim.state.grid.districtAt(cx, cy)]!.archetype].style);
+      if (sim.state.grid.inBounds(cx, cy)) {
+        const archetype = sim.state.districts[sim.state.grid.districtAt(cx, cy)]!.archetype;
+        audio.setDistrict(DISTRICT_ARCHETYPES[archetype].style);
+        audio.setRegion(regionOfArchetype(archetype));
+      }
       if (sim.state.weather.kind === 'storm' && Math.random() < 0.08) audio.thunder();
     }
   }

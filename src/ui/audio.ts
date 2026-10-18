@@ -1,9 +1,19 @@
 /**
- * Procedural audio with the Web Audio API. No sample files: ambience is
- * filtered noise and detuned oscillators, UI sounds are short envelopes.
+ * Audio with the Web Audio API. Ambience is filtered noise and detuned
+ * oscillators, UI sounds are short envelopes. Music: one track per region
+ * (public/music, crossfaded when the camera crosses into another region);
+ * the generative pad plays underneath while a track loads or when it fails.
  * Audio starts only after a user gesture and every category has its own
  * volume.
  */
+
+/** Music track per region; Neon Central and Nova Eclipse share the city track. */
+export const REGION_TRACKS: Record<string, string> = {
+  greenhaven: 'music/greenhaven.mp3',
+  silverbrook: 'music/silverbrook.mp3',
+  neon_central: 'music/city.mp3',
+  nova_eclipse: 'music/city.mp3',
+};
 
 export interface AudioSettings {
   master: number;
@@ -130,6 +140,7 @@ class AudioManager {
     this.musicFilter.Q.value = 2;
     const padGain = ctx.createGain();
     padGain.gain.value = 0.08;
+    this.padGain = padGain;
     this.musicFilter.connect(padGain).connect(this.musicGain!);
     const base = 110; // A2
     for (const ratio of [1, 1.498, 2.0, 1.189]) {
@@ -166,6 +177,47 @@ class AudioManager {
   }
 
   private districtStyle = '';
+  private padGain: GainNode | null = null;
+  private tracks = new Map<string, { el: HTMLAudioElement; gain: GainNode }>();
+  private currentTrack = '';
+
+  /** Crossfades to the region's track. Missing or blocked files leave the generative pad playing. */
+  setRegion(region: string): void {
+    const ctx = this.ctx;
+    const url = REGION_TRACKS[region];
+    if (!ctx || !this.musicGain || !url || url === this.currentTrack) return;
+    this.currentTrack = url;
+    const t = ctx.currentTime;
+    let track = this.tracks.get(url);
+    if (!track) {
+      const el = new Audio(url);
+      el.loop = true;
+      el.preload = 'auto';
+      const gain = ctx.createGain();
+      gain.gain.value = 0;
+      try {
+        ctx.createMediaElementSource(el).connect(gain).connect(this.musicGain);
+      } catch {
+        return;
+      }
+      track = { el, gain };
+      this.tracks.set(url, track);
+    }
+    for (const [key, other] of this.tracks) {
+      if (key === url) continue;
+      other.gain.gain.setTargetAtTime(0, t, 1.2);
+      const el = other.el;
+      setTimeout(() => {
+        if (this.currentTrack !== key) el.pause();
+      }, 6000);
+    }
+    track.gain.gain.setTargetAtTime(0.55, t, 1.5);
+    const playing = track.el.play();
+    // The pad steps back while a track plays and comes back if it cannot.
+    if (playing) {
+      playing.then(() => this.padGain?.gain.setTargetAtTime(0.015, ctx.currentTime, 2)).catch(() => this.padGain?.gain.setTargetAtTime(0.08, ctx.currentTime, 1));
+    }
+  }
 
   /** District under the camera shifts the pad's base pitch and brightness. */
   setDistrict(style: string): void {

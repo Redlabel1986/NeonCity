@@ -141,4 +141,6 @@ Isometrisches 2,5D, prozedural gezeichnet: Straßen mit Bordsteinen, Markierunge
 
 ## Audio
 
+Jede Region hat ein eigenes Musikstück (Greenhaven: Village Progress, Silverbrook: Leafy Suburb Pulse, Neon Central und Nova Eclipse: Futuristic City Pulse). Die Region unter der Kameramitte wählt das Stück; Wechsel blenden über etwa drei Sekunden. Darunter liegt der generative Klangteppich, der bei fehlender Datei die Musik übernimmt.
+
 Prozedural erzeugt: Regenrauschen, Stadtbrummen nach Verkehr und Tageszeit, Donner, ein generativer Synth-Pad als Musik, Bedienklänge und Benachrichtigungstöne. Getrennte Lautstärken, Start erst nach Benutzereingabe.

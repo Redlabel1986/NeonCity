@@ -20,8 +20,15 @@ async function start(page: Page): Promise<void> {
 test('starts in Greenhaven, locks the other regions, levels up through XP and opens Silverbrook', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
+  const musicRequests: string[] = [];
+  page.on('request', (r) => {
+    if (r.url().includes('/music/')) musicRequests.push(r.url());
+  });
   await start(page);
+  await expect.poll(() => musicRequests.length, { timeout: 15000 }).toBeGreaterThan(0);
   await expect(page.getByTestId('level-stat')).toContainText('1 · Greenhaven');
+  // Region music: the Greenhaven track was requested once audio started with the first click.
+  expect(musicRequests.some((u) => u.endsWith('/music/greenhaven.mp3'))).toBe(true);
   const home = await page.evaluate(() => {
     const s = window.__neon.session.sim!.state as unknown as { districts: { id: number; archetype: string; cx: number; cy: number }[]; player: { homeDistrictId: number } };
     return s.districts[s.player.homeDistrictId]!.archetype;
