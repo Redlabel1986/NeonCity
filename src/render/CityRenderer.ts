@@ -8,13 +8,13 @@
 
 import { Application, Assets, Container, Graphics, Sprite, Text, type Texture } from 'pixi.js';
 import { loadSpriteCatalog, pickCitySprite, SPRITE_BASE, type SpriteCatalog } from './spriteCatalog';
-import { regionOfArchetype } from '../sim/data/regions';
+import { regionOfArchetype, type RegionId } from '../sim/data/regions';
 import { ArtCache, roadLamp, SEED_VARIANTS, type ArtStyle, type BuildingArtKey, type GeneratedTexture } from './art';
 import { TrafficLayer } from './traffic';
 import { WeatherLayer } from './weather';
 import { InteriorRenderer } from './interior/InteriorRenderer';
 import type { DashboardTab } from './interior/layouts';
-import { depthOf, HALF_H, HALF_W, isoToScreen, screenToTile, TILE_H, TILE_W } from './iso';
+import { depthOf, HALF_H, HALF_W, isoToScreen, screenToTile, TILE_H } from './iso';
 import type { Building, Facing, GameState } from '../sim/state';
 import { TileKind } from '../sim/world/grid';
 import { DISTRICT_ARCHETYPES } from '../sim/data/districts';
@@ -25,6 +25,8 @@ export interface RendererCallbacks {
   onTileClick: (x: number, y: number, button: number, pointerType: string) => void;
   onTileHover: (tile: { x: number; y: number } | null) => void;
   onCameraChange?: () => void;
+  /** The shown map (region) changed. */
+  onMapChange?: (region: RegionId) => void;
   /** A zone inside the interior view was clicked. */
   onInteriorTab?: (tab: DashboardTab) => void;
 }
@@ -53,6 +55,15 @@ export interface Selection {
 
 interface Cullable {
   sprite: Sprite;
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+  /** District the sprite belongs to (only the active map's districts are shown). */
+  district: number;
+}
+
+export interface MapRect {
   x0: number;
   y0: number;
   x1: number;
@@ -118,6 +129,11 @@ export class CityRenderer {
   private spriteTextures = new Map<string, Texture>();
   /** Name of the sprite a city building shows (for the inspector). */
   private spriteNames = new Map<number, string>();
+  /** The map (region) on screen; other maps stay simulated but hidden. */
+  activeRegion: RegionId | null = null;
+  private activeDistricts: Set<number> | null = null;
+  private activeRect: MapRect | null = null;
+  private gridRef: GameState['grid'] | null = null;
   private groundCull: Cullable[] = [];
   private cullDirty = true;
   private citySize = 0;
@@ -231,6 +247,7 @@ export class CityRenderer {
   loadWorld(state: GameState): void {
     if (!this.art) return;
     this.clearWorld();
+    this.gridRef = state.grid;
     const { grid } = state;
     this.citySize = Math.max(grid.width, grid.height);
     this.seed = state.seed;
@@ -266,7 +283,49 @@ export class CityRenderer {
     this.worldGeneration += 1;
     this.lockedDistricts = new Set();
     this.cullDirty = true;
+    // Keep the shown map across reloads of the same world; otherwise start on the player's home map.
+    const home = state.districts[state.player.homeDistrictId];
+    this.setActiveMap(state, this.activeRegion ?? (home ? regionOfArchetype(home.archetype) : 'greenhaven'));
     void this.loadSprites(state, this.worldGeneration);
+  }
+
+  /** Shows only one map (region): culling, camera bounds, labels, traffic and clicks follow it. */
+  setActiveMap(state: GameState, region: RegionId): void {
+    const districts = new Set(state.districts.filter((d) => regionOfArchetype(d.archetype) === region).map((d) => d.id));
+    if (districts.size === 0) return;
+    const { grid } = state;
+    let x0 = grid.width;
+    let y0 = grid.height;
+    let x1 = 0;
+    let y1 = 0;
+    for (let y = 0; y < grid.height; y++)
+      for (let x = 0; x < grid.width; x++)
+        if (districts.has(grid.districtAt(x, y))) {
+          x0 = Math.min(x0, x);
+          y0 = Math.min(y0, y);
+          x1 = Math.max(x1, x);
+          y1 = Math.max(y1, y);
+        }
+    const changed = region !== this.activeRegion;
+    this.activeRegion = region;
+    this.activeDistricts = districts;
+    this.activeRect = { x0, y0, x1, y1 };
+    this.traffic.setTileFilter((x, y) => districts.has(grid.districtAt(x, y)));
+    this.cullDirty = true;
+    this.clampCamera();
+    if (changed) this.callbacks.onMapChange?.(region);
+  }
+
+  /** Tile rectangle of the shown map. */
+  get mapRect(): MapRect | null {
+    return this.activeRect;
+  }
+
+  /** Whether a tile belongs to the shown map. */
+  isTileShown(x: number, y: number): boolean {
+    if (!this.activeDistricts || !this.gridRef) return true;
+    if (!this.gridRef.inBounds(x, y)) return false;
+    return this.activeDistricts.has(this.gridRef.districtAt(x, y));
   }
 
   /** Loads the catalog and the sprites this world needs, then swaps them in for the procedural city buildings. */
@@ -479,7 +538,8 @@ export class CityRenderer {
 
   private cullEntry(sprite: Sprite, x: number, y: number, tex: GeneratedTexture): Cullable {
     const { sx, sy } = isoToScreen(x, y);
-    return { sprite, x0: sx + tex.ox, y0: sy + tex.oy, x1: sx + tex.ox + tex.texture.width, y1: sy + tex.oy + tex.texture.height };
+    const district = this.gridRef && this.gridRef.inBounds(x, y) ? this.gridRef.districtAt(x, y) : -1;
+    return { sprite, x0: sx + tex.ox, y0: sy + tex.oy, x1: sx + tex.ox + tex.texture.width, y1: sy + tex.oy + tex.texture.height, district };
   }
 
   private buildLabels(state: GameState): void {
@@ -653,16 +713,20 @@ export class CityRenderer {
   private clampCamera(): void {
     if (this.citySize === 0) return;
     const s = this.world.scale.x;
-    const halfW = (this.citySize * TILE_W) / 2;
-    const worldH = this.citySize * TILE_H;
     const sw = this.app.screen.width;
     const sh = this.app.screen.height;
     const margin = 120;
-    // world x range: [-halfW, halfW], y range: [0, worldH]
-    const minX = sw - (halfW + margin) * s;
-    const maxX = (halfW + margin) * s;
-    const minY = sh - (worldH + margin) * s;
-    const maxY = margin * s;
+    // World-space bounds of the shown map (or the whole city).
+    const r = this.activeRect ?? { x0: 0, y0: 0, x1: this.citySize - 1, y1: this.citySize - 1 };
+    const corners = [isoToScreen(r.x0, r.y0), isoToScreen(r.x1 + 1, r.y0), isoToScreen(r.x0, r.y1 + 1), isoToScreen(r.x1 + 1, r.y1 + 1)];
+    const left = Math.min(...corners.map((c) => c.sx));
+    const right = Math.max(...corners.map((c) => c.sx));
+    const top = Math.min(...corners.map((c) => c.sy));
+    const bottom = Math.max(...corners.map((c) => c.sy));
+    const minX = sw - (right + margin) * s;
+    const maxX = -(left - margin) * s;
+    const minY = sh - (bottom + margin) * s;
+    const maxY = -(top - margin) * s;
     this.world.position.x = clamp(this.world.position.x, Math.min(minX, maxX), Math.max(minX, maxX));
     this.world.position.y = clamp(this.world.position.y, Math.min(minY, maxY), Math.max(minY, maxY));
   }
@@ -728,11 +792,11 @@ export class CityRenderer {
     }
     const zoom = this.world.scale.x;
     const labelAlpha = clamp((0.75 - zoom) / 0.3, 0, 1);
-    for (const label of this.labels) {
+    this.labels.forEach((label, i) => {
       label.alpha = labelAlpha;
       label.scale.set(1 / zoom);
-      label.visible = labelAlpha > 0.02;
-    }
+      label.visible = labelAlpha > 0.02 && (!this.activeDistricts || this.activeDistricts.has(i));
+    });
   }
 
   private cull(): void {
@@ -742,8 +806,9 @@ export class CityRenderer {
     const vx1 = (this.app.screen.width - this.world.position.x) / s + 64;
     const vy1 = (this.app.screen.height - this.world.position.y) / s + 64;
     const dark = this.lastNightAlpha > 0.01;
+    const active = this.activeDistricts;
     const test = (c: Cullable): void => {
-      c.sprite.visible = c.x1 >= vx0 && c.x0 <= vx1 && c.y1 >= vy0 && c.y0 <= vy1 && (dark || !this.lit.has(c.sprite));
+      c.sprite.visible = c.x1 >= vx0 && c.x0 <= vx1 && c.y1 >= vy0 && c.y0 <= vy1 && (dark || !this.lit.has(c.sprite)) && (!active || active.has(c.district));
     };
     for (const c of this.groundCull) test(c);
     for (const v of this.buildings.values()) for (const c of v.cull) test(c);
@@ -808,7 +873,7 @@ export class CityRenderer {
     }
     if (e.pointerType === 'touch') return; // no hover on touch screens
     const tile = this.screenToTile(px, py);
-    const inside = tile.x >= 0 && tile.y >= 0 && tile.x < this.citySize && tile.y < this.citySize;
+    const inside = tile.x >= 0 && tile.y >= 0 && tile.x < this.citySize && tile.y < this.citySize && this.isTileShown(tile.x, tile.y);
     const next = inside ? tile : null;
     if (next?.x !== this.lastHover?.x || next?.y !== this.lastHover?.y) {
       this.lastHover = next;
@@ -832,7 +897,7 @@ export class CityRenderer {
     if (!down || down.dragging) return;
     const rect = this.app.canvas.getBoundingClientRect();
     const tile = this.screenToTile(e.clientX - rect.left, e.clientY - rect.top);
-    if (tile.x >= 0 && tile.y >= 0 && tile.x < this.citySize && tile.y < this.citySize) {
+    if (tile.x >= 0 && tile.y >= 0 && tile.x < this.citySize && tile.y < this.citySize && this.isTileShown(tile.x, tile.y)) {
       this.callbacks.onTileClick(tile.x, tile.y, down.button, down.pointerType);
     } else if (down.button === 0) {
       this.callbacks.onTileClick(-1, -1, 0, down.pointerType);

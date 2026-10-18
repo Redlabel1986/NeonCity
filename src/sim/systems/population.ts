@@ -41,7 +41,7 @@ export function createPopulation(): PopulationState {
 }
 
 /** Generates citizens for all districts (called once per new game / migration). */
-export function generateCitizens(state: GameState, rng: Rng): void {
+export function generateCitizens(state: GameState, rng: Rng, onlyDistricts?: ReadonlySet<number>): void {
   const pop = state.population;
   const residentialByDistrict = new Map<number, Building[]>();
   const workplacesByDistrict = new Map<number, Building[]>();
@@ -49,13 +49,14 @@ export function generateCitizens(state: GameState, rng: Rng): void {
     const b = state.buildings[id]!;
     if (b.owner !== 'city') continue;
     const style = b.cityStyle ?? '';
-    const residential = style === 'old' || style === 'undercity' || style === 'skyline' || style === 'ghost' || (style === 'market' && b.floors >= 3);
+    const residential = style === 'rural' || style === 'suburb' || style === 'old' || style === 'undercity' || style === 'skyline' || style === 'ghost' || (style === 'market' && b.floors >= 3);
     if (residential) push(residentialByDistrict, b.districtId, b);
     push(workplacesByDistrict, b.districtId, b);
   }
   const total = state.districts.reduce((s, d) => s + d.stats.population, 0);
   const scale = Math.min(1, MAX_CITIZENS / ((total / 1000) * AGENTS_PER_THOUSAND));
   for (const d of state.districts) {
+    if (onlyDistricts && !onlyDistricts.has(d.id)) continue;
     const count = Math.round(((d.stats.population / 1000) * AGENTS_PER_THOUSAND) * scale);
     const homes = residentialByDistrict.get(d.id) ?? workplacesByDistrict.get(d.id) ?? [];
     if (homes.length === 0) continue;

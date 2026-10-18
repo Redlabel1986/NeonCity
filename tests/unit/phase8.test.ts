@@ -54,7 +54,7 @@ describe('Weather', () => {
 });
 
 describe('Balancing', () => {
-  const options: NewGameOptions = { progression: false, seed: 'balance', playerName: 'Avg', difficulty: 'standard', background: 'restaurateur', citySize: 64 };
+  const options: NewGameOptions = { progression: false, seed: 'balance', playerName: 'Avg', difficulty: 'standard', background: 'restaurateur', citySize: 96 };
 
   it('a standard ramen bar run is viable over 12 days without micro-management', () => {
     const sim = new Simulation(createNewGame(options));

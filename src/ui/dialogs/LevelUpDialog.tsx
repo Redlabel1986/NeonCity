@@ -1,14 +1,13 @@
 import { Dialog } from './Dialog';
 import { useGameStore, useSimState } from '../store/gameStore';
-import { session } from '../session';
 import { REGIONS, levelDef } from '../../sim/data/regions';
 import { BUILDING_DEFINITIONS } from '../../sim/data/buildings';
-import { regionCentre } from '../../sim/systems/progression';
 
 /** Shown once per level-up: the new region, what it offers, and a button to fly there. */
 export function LevelUpDialog({ onClose }: { onClose: () => void }) {
   const state = useSimState();
   const dispatch = useGameStore((s) => s.dispatch);
+  const switchMap = useGameStore((s) => s.switchMap);
   const pending = state?.progression.pendingLevelUp;
   if (!state || !pending) return null;
   const region = REGIONS[pending.region];
@@ -46,9 +45,8 @@ export function LevelUpDialog({ onClose }: { onClose: () => void }) {
             className="btn btn-primary"
             autoFocus
             onClick={() => {
-              const c = regionCentre(state, pending.region);
-              session.renderer?.flyTo(c.x, c.y, 0.9, 1.2);
               finish();
+              switchMap(pending.region);
             }}
           >
             Neuen Bezirk entdecken

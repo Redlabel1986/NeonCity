@@ -12,6 +12,7 @@ import { SettingsDialog } from '../dialogs/SettingsDialog';
 import { HelpDialog } from '../dialogs/HelpDialog';
 import { CareerDialog } from '../dialogs/CareerDialog';
 import { CatchUpDialog } from '../dialogs/CatchUpDialog';
+import { MapTabs } from '../components/MapTabs';
 import { LevelUpDialog } from '../dialogs/LevelUpDialog';
 import { useHotkeys } from '../hooks/useHotkeys';
 import { useState } from 'react';
@@ -58,7 +59,12 @@ export function GameScreen() {
         <div className="flex min-h-0 flex-1">
           <LeftRail />
           <PanelHost />
-          <div className="relative flex-1">{interiorBuildingId !== null && <InteriorCanvas key={interiorBuildingId} buildingId={interiorBuildingId} />}</div>
+          <div className="relative flex-1">
+            {interiorBuildingId !== null && <InteriorCanvas key={interiorBuildingId} buildingId={interiorBuildingId} />}
+            <div className="absolute left-1/2 top-2 -translate-x-1/2">
+              <MapTabs />
+            </div>
+          </div>
           <div className="flex w-80 shrink-0 flex-col items-end justify-end">
             <Inspector />
             {showMinimap && <Minimap />}

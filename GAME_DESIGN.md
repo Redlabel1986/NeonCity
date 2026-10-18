@@ -34,6 +34,14 @@ Logistik: Lieferanten sitzen in Neon Central, jede Region dazwischen kostet zwei
 
 „Aufstieg“ lässt sich im Hauptmenü abschalten: freies Spiel mit allen Regionen und Stufen; dann startet der Hintergrund in seinem eigenen Bezirk.
 
+## Vier Karten
+
+Jede Region ist eine eigene Karte nach ihrem Stadtplan: Greenhaven (Umland mit Waldsee, Seeufer und Feldern), Silverbrook (Vorstadt mit Fluss, Seepark, Einkaufszentrum, Gewerbegebiet und Businesspark), Neon Central (Großstadt am Fluss mit Insel) und Nova Eclipse (Megacity an der Lagune mit Hafen). Die Städte haben die Umrisse ihrer Pläne, ringsum Wald und Wasser; Straßen gibt es nur in den Bauzonen (Abstand 7 im Umland, 6 in Vorstadt und Megacity, 5 in der Großstadt). Über Reiter, Weltkarte und Level-Up wechselt man zwischen den freigeschalteten Karten; alle laufen in derselben Simulation weiter.
+
+## Personal entwickeln
+
+Schulungen: Tageskurs (1 Tag, +7 Fähigkeit bei 0, +4 Moral), Fachseminar (3 Tage, +16, +8, ab Fähigkeit 25), Meisterkurs (7 Tage, +28, +12, ab Fähigkeit 50). Der Zuwachs sinkt mit (1 − Fähigkeit/120); die Kosten steigen mit der Fähigkeit. Während der Schulung arbeitet der Mitarbeiter nicht, bekommt aber Lohn. Von selbst lernt nur, wer motiviert ist: bei Moral über 50 täglich 0,1 bis 0,5 Punkte, mit Manager 20 % mehr. Da die Lohnerwartung mit der Fähigkeit steigt, muss der Lohn mitwachsen, sonst sinkt die Moral.
+
 ## Entwicklungsbaum
 
 Jeder Betriebstyp besitzt einen gerichteten Graphen aus Entwicklungsstufen (`src/sim/data/evolution.ts`, stabile IDs wie `asia.izakaya`). Eine Stufe hat Level 1 bis 6, eine Spezialisierung, Kosten, Umbauzeit, Voraussetzungen (Ruf, Zufriedenheit, Tagesumsatz, Betriebsalter, Mitarbeiter mit Fähigkeit, Forschung, Raumausbau, Spielerlevel), Freischaltungen (Rezepte, Rollen, Räume), Mechaniken und Effekte. Effekte wirken in der Wirtschaft: Kapazität (Plätze, Zimmer, Maschinen, Bankbilanz), Durchsatz (Koch-, Verkaufs-, Fahr-, Forschungsleistung), Anziehung, Qualität, Preisniveau (verschiebt die Preisakzeptanz und die Preisgrenzen), Betriebskosten, Lohnerwartung, Öffnungszeiten, Zusatzumsatz je Nacht, Radius, Produktionslinien, Bankhebel. Mechaniken: Lieferdienst, Reservierungen, Kritiker und Sterne, Franchise, Automatisierung, Nachtgeschäft, VIP, Wellness, Casino, Konferenzen, fahrerlos, Flugtaxi, gesicherte Transporte, Disposition, Gruppe. Prestige ist nicht Gewinn: Luxusstufen haben weniger Plätze, höhere Kosten, höhere Lohnerwartung und anspruchsvollere Voraussetzungen; eine Fastfood-Kette verdient über Masse und Lizenzgebühren.

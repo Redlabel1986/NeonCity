@@ -18,6 +18,8 @@ import { audio } from '../audio';
 import { OnlineClient } from '../../net/client';
 import { cloudDownload, cloudSession, cloudUpload, type CloudSession } from '../../net/cloud';
 import { collectEvents, emptyReport, ticksForElapsed, type CatchUpReport } from '../../sim/catchup';
+import { REGIONS, type RegionId } from '../../sim/data/regions';
+import { isRegionUnlocked, regionCentre } from '../../sim/systems/progression';
 import { serialize, deserialize } from '../../persistence/serializer';
 import type { OnlinePlayer } from '../../net/protocol';
 
@@ -165,6 +167,8 @@ export interface GameStore {
   cloud: CloudSession | null;
   /** Real time of the last successful cloud upload (drives UI refresh). */
   cloudSavedAt: number;
+  /** Map (region) currently shown. */
+  activeMap: RegionId | null;
   /** Progress of a running catch-up simulation. */
   catchUp: { done: number; total: number } | null;
   /** Report of the last catch-up, shown in the 'catchup' dialog. */
@@ -174,6 +178,8 @@ export interface GameStore {
   loadFromState: (state: WorldState, name: string, playerId?: string) => void;
   connectOnline: (auth: { url: string; token: string; playerId: string; name: string }) => Promise<void>;
   setCloud: (session: CloudSession | null) => void;
+  /** Shows another map, if the player has unlocked it. */
+  switchMap: (region: RegionId) => boolean;
   /** Simulates the real time since `since` (ms) at the game's speed, capped by the setting; shows the report. */
   catchUpFrom: (since: number) => Promise<void>;
   /** Uploads the current world to the cloud account; throws on failure. */
@@ -284,6 +290,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   cloudSavedAt: 0,
   catchUp: null,
   catchUpReport: null,
+  activeMap: null,
 
   newGame: (options) => {
     const world = createNewGame(options);
@@ -349,6 +356,25 @@ export const useGameStore = create<GameStore>((set, get) => ({
   },
 
   setCloud: (session) => set({ cloud: session }),
+
+  switchMap: (region) => {
+    const sim = session.sim;
+    const renderer = session.renderer;
+    if (!sim || !renderer) return false;
+    if (!isRegionUnlocked(sim.state, region)) {
+      get().notify('warning', `${REGIONS[region].name} ist noch gesperrt (ab Level ${REGIONS[region].requiredLevel}).`);
+      return false;
+    }
+    if (get().interiorBuildingId !== null) get().leaveInterior();
+    get().cancelPlacement();
+    get().selectBuilding(null);
+    renderer.setActiveMap(sim.state, region);
+    const c = regionCentre(sim.state, region);
+    renderer.focusTile(c.x, c.y, 0.9);
+    set({ activeMap: region });
+    get().bumpStructure();
+    return true;
+  },
 
   catchUpFrom: async (since) => {
     const sim = session.sim;

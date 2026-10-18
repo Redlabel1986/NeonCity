@@ -82,7 +82,7 @@ test('sandbox: build, rename, demolish and return to menu with autosave', async 
   await test.step('rename', async () => {
     await inspector.getByRole('button', { name: 'Umbenennen' }).click({ timeout: 5000 });
     await page.getByLabel('Neuer Name').fill('Nudel-Nomade');
-    await page.getByRole('button', { name: 'OK' }).click({ timeout: 5000 });
+    await page.getByRole('button', { name: 'OK', exact: true }).click({ timeout: 5000 });
     await expect(inspector).toContainText('Nudel-Nomade');
   });
   await test.step('demolish', async () => {

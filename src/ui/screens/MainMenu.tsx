@@ -74,7 +74,7 @@ export function MainMenu() {
           <div className="hidden lg:block">
             <OnlineSection background={background} />
           </div>
-          <p className="mt-10 hidden text-xs text-muted lg:block">Version 0.18.1 – Level und Regionen, Entwicklungsbaum, Banken.</p>
+          <p className="mt-10 hidden text-xs text-muted lg:block">Version 0.19.0 – Vier Karten, Schulungen, Entwicklungsbaum.</p>
         </section>
 
         <form
@@ -164,7 +164,7 @@ export function MainMenu() {
         </form>
         <div className="lg:hidden">
           <OnlineSection background={background} />
-          <p className="mt-6 text-xs text-muted">Version 0.18.1 – Level und Regionen, Entwicklungsbaum, Banken.</p>
+          <p className="mt-6 text-xs text-muted">Version 0.19.0 – Vier Karten, Schulungen, Entwicklungsbaum.</p>
         </div>
       </main>
       {showSaves && <SavesDialog onClose={() => setShowSaves(false)} mode="menu" />}

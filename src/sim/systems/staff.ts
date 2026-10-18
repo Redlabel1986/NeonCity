@@ -8,8 +8,10 @@ import type { Rng } from '../core/rng';
 import type { Building, Employee, EmployeeRole, GastronomyState, StaffedBusiness } from '../state';
 import { randomName } from '../data/names';
 import { upgradeEffects } from '../data/upgrades';
+import { TRAINING_COURSES, dailySelfImprovement, trainingCost, trainingGain } from '../data/training';
 import { stageEffects, unlockedAlongPath } from '../data/evolution';
-import { book } from '../economy/finance';
+import { book, canAfford } from '../economy/finance';
+import { DIFFICULTIES } from '../data/difficulty';
 
 export const ROLE_LABELS: Record<EmployeeRole, string> = {
   cook: 'Koch',
@@ -101,6 +103,26 @@ export function fire(ctx: SimContext, b: Building, employeeId: number): { ok: tr
   return { ok: true };
 }
 
+/** Sends an employee to a paid course; skill and morale rise when it ends. */
+export function trainEmployee(ctx: SimContext, b: Building, employeeId: number, courseId: string): { ok: true } | { ok: false; error: string } {
+  const { state, events } = ctx;
+  const biz = b.business as StaffedBusiness | undefined;
+  const e = biz?.employees.find((x) => x.id === employeeId);
+  const course = TRAINING_COURSES[courseId];
+  if (!biz || !e) return { ok: false, error: 'Mitarbeiter nicht gefunden.' };
+  if (!course) return { ok: false, error: 'Unbekannte Schulung.' };
+  if (e.training) return { ok: false, error: `${e.name} ist schon in einer Schulung.` };
+  if (e.skill >= 99) return { ok: false, error: `${e.name} kann nichts mehr lernen.` };
+  if (e.skill < course.minSkill) return { ok: false, error: `${course.name} braucht Fähigkeit ${course.minSkill} (${e.name}: ${Math.round(e.skill)}).` };
+  const cost = Math.round(trainingCost(course, e.skill) * DIFFICULTIES[state.player.difficulty].costMultiplier);
+  if (!canAfford(state, cost)) return { ok: false, error: `Nicht genug Credits für ${course.name} (${cost} ¢).` };
+  book(state, events, -cost, { category: 'wages', description: `Schulung ${course.name}: ${e.name}`, buildingId: b.id });
+  const gain = trainingGain(course, e.skill);
+  e.training = { courseId: course.id, untilTick: state.tick + course.days * 1440, gain, morale: course.morale };
+  events.emit({ type: 'log', tick: state.tick, level: 'info', message: `${b.label}: ${e.name} besucht ${course.name} (${course.days} ${course.days === 1 ? 'Tag' : 'Tage'}, ${cost} ¢, Fähigkeit +${gain}).`, buildingId: String(b.id) });
+  return { ok: true };
+}
+
 export function setWage(b: Building, employeeId: number, wage: number): { ok: true } | { ok: false; error: string } {
   const biz = b.business as StaffedBusiness | undefined;
   const e = biz?.employees.find((x) => x.id === employeeId);
@@ -126,6 +148,7 @@ export const laborState = { strike: false, blockade: false, wageFactor: 1, candi
 
 /** Morale-weighted effort of an employee (0.7 .. 1.1), halved during a strike. */
 export function effortOf(e: Employee): number {
+  if (e.training) return 0; // away at a course
   const effort = 0.7 + (e.morale / 100) * 0.4;
   return laborState.strike ? effort * 0.5 : effort;
 }
@@ -155,6 +178,7 @@ export function staffCapacity(biz: GastronomyState, cookRate: number, serviceRat
   let serviceSkillSum = 0;
   let managerSkill = 0;
   for (const e of biz.employees) {
+    if (e.training) continue; // away at a course
     const effort = effortOf(e);
     if (e.role === 'cook') {
       cooks++;
@@ -202,8 +226,16 @@ export function closeStaffDay(ctx: SimContext, b: Building, utilization: number)
     let target = 50 + (payFactor - 1) * 80 + bonus + (hasManager ? 6 : 0) - Math.max(0, utilization - 0.9) * 60 + (hygiene < 40 ? -10 : 0);
     target = Math.max(0, Math.min(100, target));
     e.morale = Math.max(0, Math.min(100, e.morale + (target - e.morale) * 0.25 + rng.gaussian() * 2));
-    // Skill grows slowly with experience.
-    e.skill = Math.min(100, e.skill + 0.15);
+    // Experience: only motivated staff (morale above 50) get better on their own.
+    if (!e.training) e.skill = Math.min(100, Math.round((e.skill + dailySelfImprovement(e.skill, e.morale, hasManager)) * 100) / 100);
+    // Finished courses pay off now.
+    if (e.training && ctx.state.tick >= e.training.untilTick) {
+      const t = e.training;
+      e.skill = Math.min(100, Math.round((e.skill + t.gain) * 10) / 10);
+      e.morale = Math.min(100, e.morale + t.morale);
+      e.training = undefined;
+      events.emit({ type: 'log', tick: state.tick, level: 'success', message: `${b.label}: ${e.name} hat ${TRAINING_COURSES[t.courseId]?.name ?? 'die Schulung'} abgeschlossen, Fähigkeit jetzt ${Math.round(e.skill)}.`, buildingId: String(b.id) });
+    }
     if (e.morale < 18) e.lowMoraleDays++;
     else e.lowMoraleDays = 0;
     if (e.lowMoraleDays >= 3 && rng.chance(0.5)) quitters.push(e);

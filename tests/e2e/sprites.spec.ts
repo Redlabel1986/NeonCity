@@ -30,20 +30,21 @@ test('city buildings show pre-rendered sprites in every region, by day and night
   await expect.poll(coverage, { timeout: 30000 }).toBeGreaterThan(0.8);
   expect(failed).toEqual([]);
   await page.evaluate(() => window.__neon.store.getState().dispatch({ type: 'setSpeed', speed: 0 }));
-  const shots: [string, string][] = [
-    ['greenhaven', 'p17-sprites-greenhaven'],
-    ['silverbrook', 'p17-sprites-silverbrook'],
-    ['neon_market', 'p17-sprites-neon'],
-    ['corporate_heights', 'p17-sprites-nova'],
-  ];
-  for (const [archetype, file] of shots) {
-    await page.evaluate((a) => {
-      const s = window.__neon.session.sim!.state as unknown as { districts: { archetype: string; cx: number; cy: number }[] };
-      const d = s.districts.find((x) => x.archetype === a)!;
-      window.__neon.session.renderer!.focusTile(d.cx, d.cy, 1.4);
-    }, archetype);
+  // Four separate maps: switch through them with the tabs; each shows only its own map.
+  for (const region of ['greenhaven', 'silverbrook', 'neon_central', 'nova_eclipse']) {
+    await page.getByTestId(`map-tab-${region}`).click();
+    await expect(page.getByTestId(`map-tab-${region}`)).toHaveAttribute('aria-pressed', 'true');
     await page.waitForTimeout(700);
-    await page.screenshot({ path: `tests/e2e/output/${file}.png` });
+    await page.screenshot({ path: `tests/e2e/output/p17-map-${region}.png` });
+    const zoomOut = await page.evaluate(() => {
+      const r = window.__neon.session.renderer as unknown as { focusTile: (x: number, y: number, z: number) => void; mapRect: { x0: number; y0: number; x1: number; y1: number } };
+      const m = r.mapRect;
+      r.focusTile((m.x0 + m.x1) / 2, (m.y0 + m.y1) / 2, 0.42);
+      return m;
+    });
+    expect(zoomOut.x1 - zoomOut.x0).toBeGreaterThan(20);
+    await page.waitForTimeout(500);
+    await page.screenshot({ path: `tests/e2e/output/p17-map-${region}-overview.png` });
   }
   // Night: advance to 22:00 and shoot the city again.
   await page.evaluate(() => {

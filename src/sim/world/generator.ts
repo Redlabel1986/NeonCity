@@ -2,10 +2,11 @@
  * Procedural generation of NOVA ECLIPSE from a seed.
  *
  * Steps:
- *  1. Assign every tile to one of the ten district archetypes (weighted, noisy
- *     Voronoi) laid out west to east: the countryside of Greenhaven, the suburb
- *     Silverbrook, the city districts and the megacity towers at the harbour.
- *  2. Carve the water front on the eastern edge (Rust Docks) and lakes in Greenhaven.
+ *  1. Split the city into four separate maps (quadrants divided by a strip of
+ *     blocked land), one per region: Greenhaven (countryside), Silverbrook
+ *     (suburb), Neon Central (city) and Nova Eclipse (megacity and harbour).
+ *     Within a map, tiles go to the region's districts (noisy Voronoi).
+ *  2. Carve the harbour on Nova Eclipse's eastern edge and lakes in Greenhaven.
  *  3. Lay a road grid; split blocks into smaller ones depending on district.
  *  4. Fill blocks with city-owned buildings, parks and empty lots.
  */
@@ -14,6 +15,8 @@ import { Rng } from '../core/rng';
 import { CityGrid, TileKind } from './grid';
 import { DISTRICT_ARCHETYPES, DISTRICT_ORDER, type DistrictArchetype, type DistrictArchetypeId } from '../data/districts';
 import { CITY_BUILDING_LABELS } from '../data/buildings';
+import { regionOfArchetype, type RegionId } from '../data/regions';
+import { MAP_TEMPLATES, MAP_TEMPLATE_SIZE } from '../data/mapTemplates';
 import type { Building, District } from '../state';
 
 export interface GeneratedCity {
@@ -23,81 +26,145 @@ export interface GeneratedCity {
   nextBuildingId: number;
 }
 
-export const DEFAULT_CITY_SIZE = 96;
-const ROAD_SPACING = 7;
-const WATER_WIDTH = 4;
+export const DEFAULT_CITY_SIZE = 128;
 /** Extra share of lots left as plazas or green so blocks do not fill up completely. */
 const OPEN_SPACE = 0.06;
 
 /** Park tile variants (stored in grid.variant for park tiles). */
 export const ParkVariant = { Green: 0, Plaza: 1, Courtyard: 2, Field: 3, Forest: 4, Meadow: 5 } as const;
 
-/** Relative district centres (fractions of width / height) and a size weight (smaller = larger area). */
-const DISTRICT_LAYOUT: Record<DistrictArchetypeId, readonly [number, number, number]> = {
-  greenhaven: [0.09, 0.5, 0.5],
-  silverbrook: [0.3, 0.3, 0.85],
-  old_city: [0.3, 0.72, 0.9],
-  chrome_district: [0.47, 0.25, 1],
-  neon_market: [0.5, 0.62, 1],
-  undercity: [0.58, 0.9, 1.1],
-  ghost_quarter: [0.62, 0.08, 1.1],
-  corporate_heights: [0.78, 0.45, 0.95],
-  skyline_gardens: [0.8, 0.15, 1],
-  rust_docks: [0.9, 0.78, 1],
+/** Map (quadrant) of each region: column and row in a 2x2 layout. */
+export const MAP_QUADRANT: Record<RegionId, readonly [number, number]> = {
+  greenhaven: [0, 0],
+  silverbrook: [1, 0],
+  neon_central: [0, 1],
+  nova_eclipse: [1, 1],
 };
 
-const SPLIT_CHANCE: Record<DistrictArchetype['style'], number> = {
-  rural: 0.05,
-  suburb: 0.5,
-  corporate: 0.25,
-  market: 0.8,
-  docks: 0.35,
-  ghost: 0.65,
-  old: 0.75,
-  chrome: 0.4,
-  undercity: 0.85,
-  skyline: 0.2,
+/** District centres within their map (fractions of the map) and a size weight (smaller = larger area). */
+const DISTRICT_LAYOUT: Record<DistrictArchetypeId, readonly [number, number, number]> = {
+  greenhaven: [0.5, 0.5, 1],
+  silverbrook: [0.35, 0.38, 1],
+  old_city: [0.68, 0.72, 1],
+  chrome_district: [0.28, 0.28, 1],
+  neon_market: [0.32, 0.72, 1],
+  ghost_quarter: [0.75, 0.25, 1.05],
+  undercity: [0.74, 0.76, 1.05],
+  corporate_heights: [0.35, 0.4, 0.95],
+  skyline_gardens: [0.3, 0.82, 1],
+  rust_docks: [0.78, 0.62, 1],
 };
+
+/** Tile rectangle of a region's map in the new four-map layout. */
+export function mapRect(size: number, region: RegionId): { x0: number; y0: number; x1: number; y1: number } {
+  const half = Math.floor(size / 2);
+  const [qx, qy] = MAP_QUADRANT[region];
+  return { x0: qx * half + (qx ? 1 : 0), y0: qy * half + (qy ? 1 : 0), x1: qx ? size - 1 : half - 2, y1: qy ? size - 1 : half - 2 };
+}
+
+function quadrantRegion(size: number, x: number, y: number): RegionId {
+  const half = Math.floor(size / 2);
+  const qx = x >= half ? 1 : 0;
+  const qy = y >= half ? 1 : 0;
+  return (Object.keys(MAP_QUADRANT) as RegionId[]).find((r) => MAP_QUADRANT[r][0] === qx && MAP_QUADRANT[r][1] === qy)!;
+}
 
 export function generateCity(seed: number, size = DEFAULT_CITY_SIZE): GeneratedCity {
   const rng = new Rng(seed).fork('city');
   const grid = new CityGrid(size, size);
-  const districts = assignDistricts(grid, rng.fork('districts'));
-  carveWater(grid);
-  carveLakes(grid, districts, rng.fork('lakes'));
-  layRoads(grid, districts, rng.fork('roads'));
+  const zones = new Uint8Array(size * size); // template class per tile (0 = none)
+  // Everything starts as the blocked strip between maps; each map paints its own land.
+  grid.kind.fill(TileKind.Blocked);
+  for (const region of Object.keys(MAP_QUADRANT) as RegionId[]) paintTemplate(grid, zones, region);
+  const districts = assignDistricts(grid, zones, rng.fork('districts'));
+  layZoneRoads(grid, zones, districts);
   grid.recomputeRoadMasks();
   const { buildings, nextBuildingId } = fillBlocks(grid, districts, rng.fork('blocks'));
   finalizeDistricts(grid, districts, rng.fork('stats'));
   return { grid, districts, buildings, nextBuildingId };
 }
 
-function assignDistricts(grid: CityGrid, rng: Rng): District[] {
+const ZONE_CODE: Record<string, number> = { Z: 1, S: 2, B: 3, I: 4 };
+
+/** Paints a region's map from its template: water, forest and building zones (scaled to the map's size). */
+function paintTemplate(grid: CityGrid, zones: Uint8Array, region: RegionId): void {
+  const rect = mapRect(grid.width, region);
+  const rows = MAP_TEMPLATES[region];
+  const w = rect.x1 - rect.x0 + 1;
+  const h = rect.y1 - rect.y0 + 1;
+  for (let y = rect.y0; y <= rect.y1; y++) {
+    for (let x = rect.x0; x <= rect.x1; x++) {
+      const tx = Math.min(MAP_TEMPLATE_SIZE - 1, Math.floor(((x - rect.x0) / w) * MAP_TEMPLATE_SIZE));
+      const ty = Math.min(MAP_TEMPLATE_SIZE - 1, Math.floor(((y - rect.y0) / h) * MAP_TEMPLATE_SIZE));
+      const c = rows[ty]![tx]!;
+      const i = grid.index(x, y);
+      if (c === 'W') grid.kind[i] = TileKind.Water;
+      else if (c === 'F') {
+        grid.kind[i] = TileKind.Park;
+        grid.variant[i] = ParkVariant.Forest;
+      } else {
+        grid.kind[i] = TileKind.Lot;
+        zones[i] = ZONE_CODE[c] ?? 1;
+      }
+    }
+  }
+}
+
+/** Template classes a district prefers: its centre moves to the centroid of those zones. */
+const DISTRICT_ZONES: Partial<Record<DistrictArchetypeId, readonly number[]>> = {
+  silverbrook: [1],
+  old_city: [2, 3, 4],
+  skyline_gardens: [1],
+  corporate_heights: [3, 2],
+  rust_docks: [4, 2],
+};
+
+function assignDistricts(grid: CityGrid, zones: Uint8Array, rng: Rng): District[] {
   const districts: District[] = DISTRICT_ORDER.map((archetype, id) => {
     const [fx, fy] = DISTRICT_LAYOUT[archetype];
+    const region = regionOfArchetype(archetype);
+    const rect = mapRect(grid.width, region);
     const jitter = 0.04;
+    let cx = Math.round(rect.x0 + (fx + rng.range(-jitter, jitter)) * (rect.x1 - rect.x0));
+    let cy = Math.round(rect.y0 + (fy + rng.range(-jitter, jitter)) * (rect.y1 - rect.y0));
+    const preferred = DISTRICT_ZONES[archetype];
+    if (preferred) {
+      let sx = 0;
+      let sy = 0;
+      let n = 0;
+      for (let y = rect.y0; y <= rect.y1; y++)
+        for (let x = rect.x0; x <= rect.x1; x++)
+          if (preferred.includes(zones[grid.index(x, y)]!)) {
+            sx += x;
+            sy += y;
+            n++;
+          }
+      if (n > 20) {
+        cx = Math.round(sx / n);
+        cy = Math.round(sy / n);
+      }
+    }
     return {
       id,
       archetype,
       name: DISTRICT_ARCHETYPES[archetype].name,
-      cx: Math.round((fx + rng.range(-jitter, jitter)) * grid.width),
-      cy: Math.round((fy + rng.range(-jitter, jitter)) * grid.height),
+      cx,
+      cy,
       tileCount: 0,
       stats: { ...DISTRICT_ARCHETYPES[archetype].stats },
       economy: { citizens: 0, employed: 0, dailyWages: 0, dailyRent: 0, dailySpending: 0, dailyVisits: 0, venues: 0 },
     };
   });
-
   const noise = new ValueNoise(rng.fork('noise'), 12);
   for (let y = 0; y < grid.height; y++) {
     for (let x = 0; x < grid.width; x++) {
-      let best = 0;
-      let bestDist = Infinity;
+      const region = quadrantRegion(grid.width, x, y);
       const n = noise.sample(x, y);
+      let best = -1;
+      let bestDist = Infinity;
       for (const d of districts) {
-        const dx = x - d.cx;
-        const dy = y - d.cy;
-        const dist = Math.sqrt(dx * dx + dy * dy) * DISTRICT_LAYOUT[d.archetype][2] + (n - 0.5) * 14;
+        if (regionOfArchetype(d.archetype) !== region) continue;
+        const dist = Math.hypot(x - d.cx, y - d.cy) * DISTRICT_LAYOUT[d.archetype][2] + (n - 0.5) * 10;
         if (dist < bestDist) {
           bestDist = dist;
           best = d.id;
@@ -109,78 +176,53 @@ function assignDistricts(grid: CityGrid, rng: Rng): District[] {
   return districts;
 }
 
-function carveWater(grid: CityGrid): void {
-  const docks = DISTRICT_ORDER.indexOf('rust_docks');
-  for (let y = 0; y < grid.height; y++) {
-    const wobble = Math.round(Math.sin(y * 0.35) * 1.2);
-    for (let x = grid.width - WATER_WIDTH - wobble; x < grid.width; x++) {
-      if (x < 0) continue;
-      const i = grid.index(x, y);
-      grid.kind[i] = TileKind.Water;
-      grid.district[i] = docks;
+/** Road spacing per map: the countryside has few lanes, the city a dense grid. */
+const ROAD_SPACING_BY_REGION: Record<RegionId, number> = { greenhaven: 7, silverbrook: 6, neon_central: 5, nova_eclipse: 6 };
+
+/** Roads run only through building zones, so each city keeps the outline of its plan. */
+function layZoneRoads(grid: CityGrid, zones: Uint8Array, districts: District[]): void {
+  void districts;
+  for (const region of Object.keys(MAP_QUADRANT) as RegionId[]) {
+    const rect = mapRect(grid.width, region);
+    const sp = ROAD_SPACING_BY_REGION[region];
+    for (let y = rect.y0; y <= rect.y1; y++) {
+      for (let x = rect.x0; x <= rect.x1; x++) {
+        const i = grid.index(x, y);
+        if (!zones[i]) continue;
+        if ((x - rect.x0) % sp === 0 || (y - rect.y0) % sp === 0) grid.kind[i] = TileKind.Road;
+      }
     }
   }
 }
 
-/** Ponds and small lakes in the countryside. */
-function carveLakes(grid: CityGrid, districts: District[], rng: Rng): void {
+export function carveLakes(grid: CityGrid, districts: District[], rng: Rng, only?: (i: number) => boolean): void {
   const rural = new Set(districts.filter((d) => DISTRICT_ARCHETYPES[d.archetype].style === 'rural').map((d) => d.id));
   if (rural.size === 0) return;
   const noise = new ValueNoise(rng, 9);
   for (let y = 2; y < grid.height - 2; y++) {
     for (let x = 2; x < grid.width - 2; x++) {
       const i = grid.index(x, y);
-      if (!rural.has(grid.district[i]!)) continue;
+      if (!rural.has(grid.district[i]!) || (only && !only(i))) continue;
+      if (grid.kind[i] === TileKind.Road) continue;
       if (noise.sample(x * 1.6, y * 1.6) > 0.8) grid.kind[i] = TileKind.Water;
     }
   }
 }
 
-function layRoads(grid: CityGrid, districts: District[], rng: Rng): void {
-  const w = grid.width;
-  const h = grid.height;
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const i = grid.index(x, y);
-      if (grid.kind[i] === TileKind.Water) continue;
-      if (x % ROAD_SPACING === 0 || y % ROAD_SPACING === 0) grid.kind[i] = TileKind.Road;
-    }
-  }
-  // Split blocks with a mid-block street depending on district style.
-  for (let by = 0; by < h - 1; by += ROAD_SPACING) {
-    for (let bx = 0; bx < w - 1; bx += ROAD_SPACING) {
-      const cx = bx + Math.floor(ROAD_SPACING / 2);
-      const cy = by + Math.floor(ROAD_SPACING / 2);
-      if (!grid.inBounds(cx, cy)) continue;
-      const district = districts[grid.districtAt(cx, cy)]!;
-      const style = DISTRICT_ARCHETYPES[district.archetype].style;
-      if (!rng.chance(SPLIT_CHANCE[style])) continue;
-      const vertical = rng.chance(0.5);
-      const split = bx + 1 + rng.int(2, 3);
-      const splitY = by + 1 + rng.int(2, 3);
-      for (let k = 1; k < ROAD_SPACING; k++) {
-        const x = vertical ? split : bx + k;
-        const y = vertical ? by + k : splitY;
-        if (!grid.inBounds(x, y)) continue;
-        const i = grid.index(x, y);
-        if (grid.kind[i] === TileKind.Water) break;
-        grid.kind[i] = TileKind.Road;
-      }
-    }
-  }
-}
-
-function fillBlocks(
+/** Fills free lots with city buildings, parks and vacant plots (optionally only tiles `only` allows, ids from `startId`). */
+export function fillBlocks(
   grid: CityGrid,
   districts: District[],
   rng: Rng,
+  only?: (i: number) => boolean,
+  startId = 1,
 ): { buildings: Record<number, Building>; nextBuildingId: number } {
   const buildings: Record<number, Building> = {};
-  let nextId = 1;
+  let nextId = startId;
 
   const reserved = new Set<number>();
   const isFreeLot = (x: number, y: number): boolean =>
-    grid.inBounds(x, y) && grid.kind[grid.index(x, y)] === TileKind.Lot && grid.occupant[grid.index(x, y)] === 0 && !reserved.has(grid.index(x, y));
+    grid.inBounds(x, y) && grid.kind[grid.index(x, y)] === TileKind.Lot && grid.occupant[grid.index(x, y)] === 0 && !reserved.has(grid.index(x, y)) && (!only || only(grid.index(x, y)));
 
   for (let y = 0; y < grid.height; y++) {
     for (let x = 0; x < grid.width; x++) {

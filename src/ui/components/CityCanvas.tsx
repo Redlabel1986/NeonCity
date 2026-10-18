@@ -18,6 +18,10 @@ export function CityCanvas() {
       onTileClick: (x, y, button, pointerType) => useGameStore.getState().handleTileClick(x, y, button, pointerType),
       onTileHover: (tile) => useGameStore.getState().setHover(tile),
       onCameraChange: () => cameraListeners.forEach((l) => l()),
+      onMapChange: (region) => {
+        useGameStore.setState({ activeMap: region });
+        useGameStore.getState().bumpStructure();
+      },
       onInteriorTab: (tab) => useGameStore.getState().setDashboardTab(tab),
     });
     let cancelled = false;

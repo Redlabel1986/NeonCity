@@ -47,6 +47,20 @@ export class TrafficLayer {
   private container: Container = new Container();
   /** Daylight tint applied on top of each mover's own colour. */
   private tint = 0xffffff;
+  /** Only tiles of the shown map get traffic. */
+  private tileFilter: ((x: number, y: number) => boolean) | null = null;
+
+  setTileFilter(filter: ((x: number, y: number) => boolean) | null): void {
+    this.tileFilter = filter;
+    for (const m of this.movers) {
+      if (filter && !filter(Math.round(m.x), Math.round(m.y))) {
+        m.sprite.destroy();
+        m.light?.destroy();
+        m.x = -9999;
+      }
+    }
+    this.movers = this.movers.filter((m) => m.x !== -9999);
+  }
   private movers: Mover[] = [];
   private walkerTex: Texture | null = null;
   private walkerAnchor = { x: 0.5, y: 1 };
@@ -146,6 +160,7 @@ export class TrafficLayer {
     const targetCars = Math.min(110, Math.round(area * 0.045 * (0.4 + density * 0.8)));
     const rand = mulberry(rngSeed + Math.floor(this.time * 7));
     const visibleRoads = this.roads.filter((r) => {
+      if (this.tileFilter && !this.tileFilter(r.x, r.y)) return false;
       if (r.x < view.x0 || r.x > view.x1 || r.y < view.y0 || r.y > view.y1) return false;
       const p = isoToScreen(r.x + 0.5, r.y + 0.5);
       return onScreen(p.sx, p.sy);
@@ -180,7 +195,7 @@ export class TrafficLayer {
         m.y += (dy / dist) * step;
       }
       const screen = isoToScreen(m.x + 0.5, m.y + 0.5);
-      const outside = !onScreen(screen.sx, screen.sy);
+      const outside = !onScreen(screen.sx, screen.sy) || (this.tileFilter !== null && !this.tileFilter(Math.round(m.x), Math.round(m.y)));
       const over = (m.kind === 'walker' && walkerCount >= targetWalkers) || (m.kind === 'car' && carCount >= targetCars);
       if (outside || over) {
         m.sprite.destroy();

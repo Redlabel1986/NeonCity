@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.19.0 – Vier eigene Karten nach den Stadtplänen, Mitarbeiterschulung (2026-10-18)
+
+### Hinzugefügt
+
+- Vier getrennte Karten, eine je Level: Greenhaven, Silverbrook, Neon Central, Nova Eclipse. Jede Karte übernimmt Wasser, Wald und Bauzonen aus dem jeweiligen Stadtplan in `assets/` (ausgewertet von `tools/maps/extract_maps.py` nach `src/sim/data/mapTemplates.ts`): Waldsee und Seeufer in Greenhaven, Fluss und Seepark in Silverbrook, Fluss mit Insel in Neon Central, Lagune und Hafen in Nova Eclipse. Keine quadratischen Städte mehr: Straßen entstehen nur in den Bauzonen, ringsum Wald und Wasser. Bezirke liegen dort, wo der Plan ihre Zonen hat (Wohnen, Einkauf, Gewerbe, Industrie).
+- Kartenwechsel: Reiter über der Stadt (am Handy kompakt), Weltkarte „Zur Karte wechseln“, Level-Up „Neuen Bezirk entdecken“. Gesperrte Karten zeigen ihr Level. Es ist immer nur eine Karte sichtbar und anklickbar; Kamera, Verkehr, Beschriftungen und Minikarte folgen ihr. Alle Karten laufen in derselben Simulation weiter.
+- Alte Spielstände (Format 14 und älter) bekommen beim Laden das Umland Greenhaven am Westrand: Dörfer, Felder, Wälder, Seen, neue Bewohner. Gebäude, Geld und Level des Spielers bleiben. Spielstandformat 15.
+- Mitarbeiterschulung: Tageskurs (1 Tag), Fachseminar (3 Tage, ab Fähigkeit 25) und Meisterkurs (7 Tage, ab Fähigkeit 50) kosten Geld, der Mitarbeiter fehlt in der Zeit bei vollem Lohn, danach steigen Fähigkeit und Moral; der Zuwachs sinkt zur Spitze hin. Im Dashboard unter Personal.
+- Mitarbeiter lernen selbst dazu, aber nur bei Moral über 50: 0,1 bis 0,5 Fähigkeitspunkte pro Tag je nach Moral, mit Manager 20 % mehr, langsamer nahe 100. Bessere Leute erwarten mehr Lohn; wer nicht nachzieht, verliert Moral und damit das Lernen.
+- Neue Städte haben 128 × 128 Felder (vier Karten zu je rund 63 × 63); der Online-Server ebenfalls.
+- Tests: `countryside.test.ts`, `training.test.ts`; E2E prüft die Kartenreiter und Kartenwechsel nach dem Level-Up.
+
 ## 0.18.1 – Gebäudegrafiken für alle vier Regionen (2026-10-18)
 
 ### Hinzugefügt

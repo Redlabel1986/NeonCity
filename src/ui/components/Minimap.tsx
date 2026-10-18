@@ -29,7 +29,15 @@ function heatColor(value: number): string {
 }
 
 /** Isometric overview map drawn with Canvas 2D; click to move the camera. */
+/** The square of tiles the minimap shows: the shown map's rectangle (or the whole city). */
+function mapView(width: number, height: number): { x0: number; y0: number; n: number } {
+  const r = session.renderer?.mapRect;
+  if (!r) return { x0: 0, y0: 0, n: Math.max(width, height) };
+  return { x0: r.x0, y0: r.y0, n: Math.max(r.x1 - r.x0 + 1, r.y1 - r.y0 + 1) };
+}
+
 export function Minimap() {
+  const activeMap = useGameStore((s) => s.activeMap);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const overlayRef = useRef<HTMLCanvasElement>(null);
   const structureVersion = useGameStore((s) => s.structureVersion);
@@ -53,16 +61,20 @@ export function Minimap() {
       const v = d.stats[heat];
       return heat === 'rentIndex' ? Math.min(1, v / 60) : v / 100;
     };
-    const n = Math.max(grid.width, grid.height);
+    const view = mapView(grid.width, grid.height);
+    const n = view.n;
     const s = WIDTH / (2 * n);
     canvas.width = WIDTH;
     canvas.height = Math.ceil(n * s) + 2;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-    for (let y = 0; y < grid.height; y++) {
-      for (let x = 0; x < grid.width; x++) {
-        const i = grid.index(x, y);
+    for (let gy = view.y0; gy < view.y0 + n && gy < grid.height; gy++) {
+      for (let gx = view.x0; gx < view.x0 + n && gx < grid.width; gx++) {
+        if (!(session.renderer?.isTileShown(gx, gy) ?? true)) continue;
+        const x = gx - view.x0;
+        const y = gy - view.y0;
+        const i = grid.index(gx, gy);
         const kind = grid.kind[i]!;
         let color = '#15131c';
         const hv = heatValue(grid.district[i]!);
@@ -95,7 +107,7 @@ export function Minimap() {
         ctx.fillRect(mx - s, my, s * 2, s);
       }
     }
-  }, [structureVersion, heat, heatTick]);
+  }, [structureVersion, heat, heatTick, activeMap]);
 
   useEffect(() => {
     const draw = (): void => {
@@ -103,7 +115,8 @@ export function Minimap() {
       const renderer = session.renderer;
       const canvas = overlayRef.current;
       if (!sim || !renderer || !canvas) return;
-      const n = Math.max(sim.state.grid.width, sim.state.grid.height);
+      const view = mapView(sim.state.grid.width, sim.state.grid.height);
+      const n = view.n;
       const s = WIDTH / (2 * n);
       canvas.width = WIDTH;
       canvas.height = Math.ceil(n * s) + 2;
@@ -113,8 +126,8 @@ export function Minimap() {
       const corners = renderer.getViewTiles();
       ctx.beginPath();
       corners.forEach((c, i) => {
-        const mx = (c.x - c.y) * s + WIDTH / 2;
-        const my = ((c.x + c.y) * s) / 2;
+        const mx = (c.x - view.x0 - (c.y - view.y0)) * s + WIDTH / 2;
+        const my = ((c.x - view.x0 + c.y - view.y0) * s) / 2;
         if (i === 0) ctx.moveTo(mx, my);
         else ctx.lineTo(mx, my);
       });
@@ -130,7 +143,7 @@ export function Minimap() {
     return () => {
       cameraListeners.delete(draw);
     };
-  }, [structureVersion]);
+  }, [structureVersion, activeMap]);
 
   const onClick = (e: React.MouseEvent<HTMLCanvasElement>): void => {
     const sim = session.sim;
@@ -141,10 +154,10 @@ export function Minimap() {
     const scale = canvas.width / rect.width;
     const mx = (e.clientX - rect.left) * scale - WIDTH / 2;
     const my = (e.clientY - rect.top) * scale;
-    const n = Math.max(sim.state.grid.width, sim.state.grid.height);
-    const s = WIDTH / (2 * n);
-    const x = (mx / s + (2 * my) / s) / 2;
-    const y = ((2 * my) / s - mx / s) / 2;
+    const view = mapView(sim.state.grid.width, sim.state.grid.height);
+    const s = WIDTH / (2 * view.n);
+    const x = (mx / s + (2 * my) / s) / 2 + view.x0;
+    const y = ((2 * my) / s - mx / s) / 2 + view.y0;
     renderer.focusTile(Math.round(x), Math.round(y));
   };
 

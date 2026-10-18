@@ -7,7 +7,7 @@ import { stockOf } from '../../src/sim/systems/inventory';
 import { serialize } from '../../src/persistence/serializer';
 import { BACKGROUNDS, type BackgroundId } from '../../src/sim/data/difficulty';
 
-const options: NewGameOptions = { progression: false, seed: 'audit', playerName: 'Auditor', difficulty: 'sandbox', background: 'restaurateur', citySize: 48 };
+const options: NewGameOptions = { progression: false, seed: 'audit', playerName: 'Auditor', difficulty: 'sandbox', background: 'restaurateur', citySize: 96 };
 
 function build(sim: Simulation, defId: string): Building {
   const { grid } = sim.state;

@@ -32,7 +32,7 @@ import { closeSecurityDay, assignPatrol, startInvestigation } from './systems/se
 import { createFactions, closeFactionsSharedDay, closeFactionsPlayerDay, supportFaction, activeEffect } from './systems/factions';
 import { createPolitics, closePoliticsSharedDay, closePoliticsPlayerDay, proposeLaw, districtInitiative } from './systems/politics';
 import { resolveDecision, expireDecisions } from './systems/decisions';
-import { laborState } from './systems/staff';
+import { laborState, trainEmployee } from './systems/staff';
 import { startResearch, closeLabsDay } from './systems/research';
 import { closeIndustryDay, setLine, removeLine, setSurplusPolicy } from './systems/industry';
 import { createCorporateState, closeCorporateDay, takeLoan, repayLoan, sellShares, buyBackShares, setInsurance, chainTakeover, sellCompany, stepMegacorp } from './systems/corporate';
@@ -48,7 +48,7 @@ import type { FactionId } from './data/factions';
 import { wantedLevelFor } from './data/underworld';
 import { LOG_LIMIT, LOCAL_PLAYER_ID, type Facing, type GameState, type WorldState } from './state';
 
-export const SAVE_FORMAT_VERSION = 14;
+export const SAVE_FORMAT_VERSION = 15;
 export const SPEEDS = [0, 1, 3, 8] as const;
 export type Speed = (typeof SPEEDS)[number];
 
@@ -74,6 +74,7 @@ export type Command =
   | { type: 'hire'; buildingId: number; candidateId: number }
   | { type: 'fire'; buildingId: number; employeeId: number }
   | { type: 'setWage'; buildingId: number; employeeId: number; wage: number }
+  | { type: 'trainEmployee'; buildingId: number; employeeId: number; courseId: string }
   | { type: 'startUpgrade'; buildingId: number; upgradeId: string }
   | { type: 'setRoomPrice'; buildingId: number; price: number }
   | { type: 'setFare'; buildingId: number; fare: number }
@@ -414,6 +415,11 @@ export class Simulation {
         const b = this.ownBusiness(command.buildingId);
         if (!b) return { ok: false, error: 'Kein eigenes Unternehmen.' };
         return fire(this.ctx, b, command.employeeId);
+      }
+      case 'trainEmployee': {
+        const b = this.ownBusiness(command.buildingId);
+        if (!b) return { ok: false, error: 'Kein eigenes Unternehmen.' };
+        return trainEmployee(this.ctx, b, command.employeeId, command.courseId);
       }
       case 'setWage': {
         const b = this.ownBusiness(command.buildingId);

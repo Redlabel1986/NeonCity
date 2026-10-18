@@ -88,7 +88,7 @@ export function fleetCapacity(b: Building, state?: GameState): { drivers: number
   if (!model || model.kind !== 'transport' || !biz || biz.kind !== 'transport') return null;
   const fx = upgradeEffects(biz.upgrades);
   const available = biz.vehicles.filter((v) => v.repairUntilTick === 0 && v.condition > 10).length;
-  const drivers = biz.employees.filter((e) => e.role === 'driver');
+  const drivers = biz.employees.filter((e) => e.role === 'driver' && !e.training);
   let rides = 0;
   const active = Math.min(drivers.length, available);
   drivers.slice(0, active).forEach((d) => {

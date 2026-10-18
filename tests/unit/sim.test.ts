@@ -95,7 +95,7 @@ describe('City generator', () => {
   });
 
   it('creates ten districts, roads, water and buildable lots', () => {
-    const city = generateCity(555, 64);
+    const city = generateCity(555, 96);
     expect(city.districts).toHaveLength(10);
     const counts = new Map<number, number>();
     for (const k of city.grid.kind) counts.set(k, (counts.get(k) ?? 0) + 1);

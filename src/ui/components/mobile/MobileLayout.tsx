@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from 'react';
+import { MapTabs } from '../MapTabs';
 import { useGameStore, useSimState } from '../../store/gameStore';
 import { session } from '../../session';
 import { RAIL_ENTRIES } from '../../navigation';
@@ -51,6 +52,9 @@ export function MobileLayout() {
       <div className="relative min-h-0 flex-1">
         <div className="absolute inset-x-0 top-0" style={{ height: view || inspector ? '44%' : '100%' }}>
           {interiorBuildingId !== null && <InteriorCanvas key={interiorBuildingId} buildingId={interiorBuildingId} />}
+          <div className="absolute inset-x-0 top-1 flex justify-center">
+            <MapTabs compact />
+          </div>
         </div>
         {placementDefId && <PlacementBar />}
       </div>

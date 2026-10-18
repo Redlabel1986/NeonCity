@@ -5,6 +5,7 @@
 
 import { levelDef, REGION_ORDER, REGIONS, regionOfArchetype, type RegionId } from '../sim/data/regions';
 import type { DistrictArchetypeId } from '../sim/data/districts';
+import { addCountryside } from '../sim/world/countryside';
 import { Rng } from '../sim/core/rng';
 import { BUILDING_DEFINITIONS } from '../sim/data/buildings';
 import { createBusinessState } from '../sim/systems/business';
@@ -282,6 +283,14 @@ const migrateV13toV14: Migration = (raw) => {
   return raw;
 };
 
+/** v15: cities from before the regions get the countryside of Greenhaven on their western edge. */
+const migrateV14toV15: Migration = (raw) => {
+  const world = stateFromJSON(raw as unknown as GameStateJSON);
+  addCountryside(world);
+  world.version = 15;
+  return stateToJSON(world) as unknown as Record<string, unknown>;
+};
+
 export const MIGRATIONS: Record<number, Migration> = {
   1: migrateV1toV2,
   2: migrateV2toV3,
@@ -296,4 +305,5 @@ export const MIGRATIONS: Record<number, Migration> = {
   11: migrateV11toV12,
   12: migrateV12toV13,
   13: migrateV13toV14,
+  14: migrateV14toV15,
 };

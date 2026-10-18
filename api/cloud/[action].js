@@ -772,6 +772,15 @@ var BUILDING_DEFINITIONS = {
 };
 var PLAYER_BUILDING_IDS = Object.keys(BUILDING_DEFINITIONS);
 
+// src/sim/data/regions.ts
+var PLAYER_LEVELS = [
+  { level: 1, name: "Greenhaven", xp: 0, region: "greenhaven", maxBusinessTier: 2 },
+  { level: 2, name: "Silverbrook", xp: 1e3, region: "silverbrook", maxBusinessTier: 3 },
+  { level: 3, name: "Neon Central", xp: 5e3, region: "neon_central", maxBusinessTier: 5 },
+  { level: 4, name: "Nova Eclipse", xp: 2e4, region: "nova_eclipse", maxBusinessTier: 6 }
+];
+var MAX_PLAYER_LEVEL = PLAYER_LEVELS.length;
+
 // src/sim/data/difficulty.ts
 var DIFFICULTIES = {
   story: {
@@ -1152,15 +1161,6 @@ var LAWS = {
   }
 };
 var LAW_IDS = Object.keys(LAWS);
-
-// src/sim/data/regions.ts
-var PLAYER_LEVELS = [
-  { level: 1, name: "Greenhaven", xp: 0, region: "greenhaven", maxBusinessTier: 2 },
-  { level: 2, name: "Silverbrook", xp: 1e3, region: "silverbrook", maxBusinessTier: 3 },
-  { level: 3, name: "Neon Central", xp: 5e3, region: "neon_central", maxBusinessTier: 5 },
-  { level: 4, name: "Nova Eclipse", xp: 2e4, region: "nova_eclipse", maxBusinessTier: 6 }
-];
-var MAX_PLAYER_LEVEL = PLAYER_LEVELS.length;
 
 // src/sim/data/evolution.ts
 var MAX_LEVEL = 6;
@@ -1627,6 +1627,14 @@ UPGRADES.conference_rooms = {
     { cost: 26e3, hours: 30, effect: "+10 % Nachfrage" }
   ]
 };
+
+// src/sim/data/training.ts
+var TRAINING_COURSES = {
+  workshop: { id: "workshop", name: "Tageskurs", description: "Ein Tag Praxisschulung im Haus.", days: 1, baseCost: 250, costPerSkill: 6, gain: 7, morale: 4, minSkill: 0 },
+  seminar: { id: "seminar", name: "Fachseminar", description: "Drei Tage externes Seminar mit Zertifikat.", days: 3, baseCost: 900, costPerSkill: 18, gain: 16, morale: 8, minSkill: 25 },
+  master: { id: "master", name: "Meisterkurs", description: "Eine Woche Intensivkurs bei den Besten der Stadt.", days: 7, baseCost: 3200, costPerSkill: 40, gain: 28, morale: 12, minSkill: 50 }
+};
+var TRAINING_IDS = Object.keys(TRAINING_COURSES);
 
 // src/sim/data/recipes.ts
 var RECIPES = {

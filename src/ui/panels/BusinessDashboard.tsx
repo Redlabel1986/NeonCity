@@ -9,6 +9,8 @@ import { UPGRADES, upgradeEffects } from '../../sim/data/upgrades';
 import { effectiveCapacity, explainDemand, isOpen, openingHours, priceBounds } from '../../sim/systems/business';
 import { quoteOrder, servingsPossible, stockOf, storageCapacity, totalUnits } from '../../sim/systems/inventory';
 import { ROLE_LABELS, expectedWage } from '../../sim/systems/staff';
+import { TRAINING_COURSES, TRAINING_IDS, dailySelfImprovement, trainingCost, trainingGain } from '../../sim/data/training';
+import { DIFFICULTIES } from '../../sim/data/difficulty';
 import { credits, decimal, duration, integer, signedCredits } from '../format';
 import { tickToDate } from '../../sim/core/clock';
 import { Meter, Row } from '../components/Inspector';
@@ -360,6 +362,48 @@ function SupplyTab({ b, biz }: { b: Building; biz: GastronomyState }) {
   );
 }
 
+/** Courses for one employee, or the running course; plus how the employee improves on their own. */
+function TrainingRow({ b, e }: { b: Building; e: StaffedBusiness['employees'][number] }) {
+  const state = useSimState();
+  const dispatch = useGameStore((s) => s.dispatch);
+  if (!state) return null;
+  if (e.training) {
+    const course = TRAINING_COURSES[e.training.courseId];
+    return (
+      <p className="mt-1 text-amber" data-testid="training-status">
+        In Schulung: {course?.name}, noch {duration(Math.max(0, e.training.untilTick - state.tick))}. Danach Fähigkeit +{e.training.gain}, Moral +{e.training.morale}.
+      </p>
+    );
+  }
+  const hasManager = (b.business as StaffedBusiness).employees.some((x) => x.role === 'manager');
+  const daily = dailySelfImprovement(e.skill, e.morale, hasManager);
+  const multiplier = DIFFICULTIES[state.player.difficulty].costMultiplier;
+  return (
+    <div className="mt-1">
+      <div className="flex flex-wrap gap-1">
+        {TRAINING_IDS.map((id) => {
+          const c = TRAINING_COURSES[id]!;
+          const cost = Math.round(trainingCost(c, e.skill) * multiplier);
+          const locked = e.skill < c.minSkill || e.skill >= 99;
+          return (
+            <button
+              key={id}
+              type="button"
+              className="btn px-2 py-0.5"
+              disabled={locked}
+              title={locked ? `Braucht Fähigkeit ${c.minSkill}` : `${c.description} ${c.days} ${c.days === 1 ? 'Tag' : 'Tage'} abwesend.`}
+              onClick={() => dispatch({ type: 'trainEmployee', buildingId: b.id, employeeId: e.id, courseId: id })}
+            >
+              {c.name} · {credits(cost)} · +{trainingGain(c, e.skill)}
+            </button>
+          );
+        })}
+      </div>
+      <p className="mt-0.5 text-muted">{daily > 0 ? `Lernt selbst dazu: +${daily.toFixed(2)} Fähigkeit pro Tag (Moral über 50${hasManager ? ', Manager hilft' : ''}).` : 'Lernt nichts dazu: Moral 50 oder darunter. Fairer Lohn und ein Personalraum helfen.'}</p>
+    </div>
+  );
+}
+
 function StaffTab({ b, biz }: { b: Building; biz: StaffedBusiness }) {
   const dispatch = useGameStore((s) => s.dispatch);
   const [confirmFire, setConfirmFire] = useState<number | null>(null);
@@ -402,6 +446,7 @@ function StaffTab({ b, biz }: { b: Building; biz: StaffedBusiness }) {
                   <span className="block text-muted">erwartet {credits(expectedWage(e.role, e.skill))}</span>
                 </label>
               </div>
+              <TrainingRow b={b} e={e} />
             </li>
           ))}
         </ul>

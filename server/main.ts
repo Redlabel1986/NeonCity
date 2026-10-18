@@ -17,7 +17,7 @@ void startServer({
   port: Number(process.env.PORT ?? 8787),
   dataDir: resolve(process.env.NEON_DATA ?? 'data'),
   seed: process.env.NEON_SEED ?? 'nova-eclipse-online',
-  citySize: Number(process.env.NEON_CITY_SIZE ?? 96),
+  citySize: Number(process.env.NEON_CITY_SIZE ?? 128),
   difficulty: difficulty in DIFFICULTIES ? difficulty : 'standard',
   speed: Number(process.env.NEON_SPEED ?? 1),
   autosaveSeconds: Number(process.env.NEON_AUTOSAVE ?? 30),

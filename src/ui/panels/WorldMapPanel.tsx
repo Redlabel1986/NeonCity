@@ -1,14 +1,15 @@
 import { useGameStore, useSimState } from '../store/gameStore';
-import { session } from '../session';
 import { REGION_ORDER, REGIONS, XP_MILESTONES, PLAYER_LEVELS } from '../../sim/data/regions';
 import { BUILDING_DEFINITIONS } from '../../sim/data/buildings';
-import { progressionStatus, regionCentre, regionOfDistrict } from '../../sim/systems/progression';
+import { progressionStatus, regionOfDistrict } from '../../sim/systems/progression';
 import { integer } from '../format';
 
 /** World map: the four regions from the countryside to the megacity, the player's level and XP, milestones. */
 export function WorldMapPanel() {
   const state = useSimState();
   const setPanel = useGameStore((s) => s.setPanel);
+  const switchMap = useGameStore((s) => s.switchMap);
+  const activeMap = useGameStore((s) => s.activeMap);
   if (!state) return null;
   const status = progressionStatus(state);
   const p = state.progression;
@@ -48,7 +49,6 @@ export function WorldMapPanel() {
           const owned = mine.filter((b) => regionOfDistrict(state, b.districtId) === id).length;
           const districts = state.districts.filter((d) => regionOfDistrict(state, d.id) === id);
           const exclusive = Object.values(BUILDING_DEFINITIONS).filter((d) => d.regions?.includes(id) && d.id !== 'city');
-          const centre = regionCentre(state, id);
           return (
             <section key={id} className={`rounded-sm border p-3 ${unlocked ? 'border-line' : 'border-line/60 opacity-80'}`} aria-label={region.name} data-testid={`region-${id}`}>
               <div className="flex items-start gap-2">
@@ -63,13 +63,13 @@ export function WorldMapPanel() {
                 {unlocked ? (
                   <button
                     type="button"
-                    className="btn px-2 py-0.5 text-xs"
+                    className={`btn px-2 py-0.5 text-xs ${activeMap === id ? 'btn-primary' : ''}`}
                     onClick={() => {
-                      session.renderer?.flyTo(centre.x, centre.y, 0.9, 0.8);
-                      setPanel(null);
+                      if (switchMap(id)) setPanel(null);
                     }}
+                    aria-pressed={activeMap === id}
                   >
-                    Hinfliegen
+                    {activeMap === id ? 'Aktuelle Karte' : 'Zur Karte wechseln'}
                   </button>
                 ) : (
                   <span className="rounded-sm border border-line px-2 py-0.5 text-xs text-muted">Level {region.requiredLevel}</span>

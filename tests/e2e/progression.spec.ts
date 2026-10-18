@@ -63,8 +63,16 @@ test('starts in Greenhaven, locks the other regions, levels up through XP and op
   await expect(dialog).toBeVisible({ timeout: 10000 });
   await expect(dialog).toContainText('Silverbrook ist jetzt offen');
   await page.screenshot({ path: 'tests/e2e/output/p17-levelup.png' });
+  await expect(page.getByTestId('map-tab-greenhaven')).toHaveAttribute('aria-pressed', 'true');
   await dialog.getByRole('button', { name: 'Neuen Bezirk entdecken' }).click();
   await expect(dialog).toHaveCount(0);
+  // The new map is shown; Neon Central's tab stays locked.
+  await expect(page.getByTestId('map-tab-silverbrook')).toHaveAttribute('aria-pressed', 'true');
+  await page.getByTestId('map-tab-neon_central').click();
+  await expect(page.getByTestId('map-tab-silverbrook')).toHaveAttribute('aria-pressed', 'true');
+  await page.getByTestId('map-tab-greenhaven').click();
+  await expect(page.getByTestId('map-tab-greenhaven')).toHaveAttribute('aria-pressed', 'true');
+  await page.getByTestId('map-tab-silverbrook').click();
   await expect(page.getByTestId('level-stat')).toContainText('2 · Silverbrook');
   await page.waitForTimeout(1400);
   await page.screenshot({ path: 'tests/e2e/output/p17-silverbrook.png' });

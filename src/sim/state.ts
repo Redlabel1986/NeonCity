@@ -28,6 +28,8 @@ export interface Employee {
   morale: number; // 0-100
   hiredTick: number;
   lowMoraleDays: number;
+  /** Running training course (data/training.ts); the employee does not work meanwhile. */
+  training?: { courseId: string; untilTick: number; gain: number; morale: number };
 }
 
 export interface Candidate {
