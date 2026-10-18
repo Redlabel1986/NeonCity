@@ -14,7 +14,7 @@ import { Rng } from '../../src/sim/core/rng';
 import { effectiveCapacity } from '../../src/sim/systems/business';
 import { effortOf, laborState } from '../../src/sim/systems/staff';
 
-const options: NewGameOptions = { seed: 'phase6', playerName: 'Senator', difficulty: 'sandbox', background: 'ex_corporate', citySize: 48 };
+const options: NewGameOptions = { progression: false, seed: 'phase6', playerName: 'Senator', difficulty: 'sandbox', background: 'ex_corporate', citySize: 48 };
 
 function build(sim: Simulation, defId: string): Building {
   const { grid } = sim.state;

@@ -2,8 +2,10 @@
  * Procedural generation of NOVA ECLIPSE from a seed.
  *
  * Steps:
- *  1. Assign every tile to one of the eight district archetypes (noisy Voronoi).
- *  2. Carve the water front on the eastern edge (Rust Docks).
+ *  1. Assign every tile to one of the ten district archetypes (weighted, noisy
+ *     Voronoi) laid out west to east: the countryside of Greenhaven, the suburb
+ *     Silverbrook, the city districts and the megacity towers at the harbour.
+ *  2. Carve the water front on the eastern edge (Rust Docks) and lakes in Greenhaven.
  *  3. Lay a road grid; split blocks into smaller ones depending on district.
  *  4. Fill blocks with city-owned buildings, parks and empty lots.
  */
@@ -28,21 +30,25 @@ const WATER_WIDTH = 4;
 const OPEN_SPACE = 0.06;
 
 /** Park tile variants (stored in grid.variant for park tiles). */
-export const ParkVariant = { Green: 0, Plaza: 1, Courtyard: 2 } as const;
+export const ParkVariant = { Green: 0, Plaza: 1, Courtyard: 2, Field: 3, Forest: 4, Meadow: 5 } as const;
 
-/** Relative district centres (fractions of width / height). */
-const DISTRICT_LAYOUT: Record<DistrictArchetypeId, readonly [number, number]> = {
-  corporate_heights: [0.5, 0.42],
-  skyline_gardens: [0.72, 0.22],
-  chrome_district: [0.27, 0.28],
-  neon_market: [0.52, 0.7],
-  old_city: [0.2, 0.6],
-  rust_docks: [0.86, 0.58],
-  ghost_quarter: [0.76, 0.88],
-  undercity: [0.18, 0.9],
+/** Relative district centres (fractions of width / height) and a size weight (smaller = larger area). */
+const DISTRICT_LAYOUT: Record<DistrictArchetypeId, readonly [number, number, number]> = {
+  greenhaven: [0.09, 0.5, 0.5],
+  silverbrook: [0.3, 0.3, 0.85],
+  old_city: [0.3, 0.72, 0.9],
+  chrome_district: [0.47, 0.25, 1],
+  neon_market: [0.5, 0.62, 1],
+  undercity: [0.58, 0.9, 1.1],
+  ghost_quarter: [0.62, 0.08, 1.1],
+  corporate_heights: [0.78, 0.45, 0.95],
+  skyline_gardens: [0.8, 0.15, 1],
+  rust_docks: [0.9, 0.78, 1],
 };
 
 const SPLIT_CHANCE: Record<DistrictArchetype['style'], number> = {
+  rural: 0.05,
+  suburb: 0.5,
   corporate: 0.25,
   market: 0.8,
   docks: 0.35,
@@ -58,6 +64,7 @@ export function generateCity(seed: number, size = DEFAULT_CITY_SIZE): GeneratedC
   const grid = new CityGrid(size, size);
   const districts = assignDistricts(grid, rng.fork('districts'));
   carveWater(grid);
+  carveLakes(grid, districts, rng.fork('lakes'));
   layRoads(grid, districts, rng.fork('roads'));
   grid.recomputeRoadMasks();
   const { buildings, nextBuildingId } = fillBlocks(grid, districts, rng.fork('blocks'));
@@ -90,7 +97,7 @@ function assignDistricts(grid: CityGrid, rng: Rng): District[] {
       for (const d of districts) {
         const dx = x - d.cx;
         const dy = y - d.cy;
-        const dist = Math.sqrt(dx * dx + dy * dy) + (n - 0.5) * 14;
+        const dist = Math.sqrt(dx * dx + dy * dy) * DISTRICT_LAYOUT[d.archetype][2] + (n - 0.5) * 14;
         if (dist < bestDist) {
           bestDist = dist;
           best = d.id;
@@ -111,6 +118,20 @@ function carveWater(grid: CityGrid): void {
       const i = grid.index(x, y);
       grid.kind[i] = TileKind.Water;
       grid.district[i] = docks;
+    }
+  }
+}
+
+/** Ponds and small lakes in the countryside. */
+function carveLakes(grid: CityGrid, districts: District[], rng: Rng): void {
+  const rural = new Set(districts.filter((d) => DISTRICT_ARCHETYPES[d.archetype].style === 'rural').map((d) => d.id));
+  if (rural.size === 0) return;
+  const noise = new ValueNoise(rng, 9);
+  for (let y = 2; y < grid.height - 2; y++) {
+    for (let x = 2; x < grid.width - 2; x++) {
+      const i = grid.index(x, y);
+      if (!rural.has(grid.district[i]!)) continue;
+      if (noise.sample(x * 1.6, y * 1.6) > 0.8) grid.kind[i] = TileKind.Water;
     }
   }
 }
@@ -183,7 +204,15 @@ function fillBlocks(
       }
       if (roll < arch.greenery + OPEN_SPACE) {
         grid.kind[grid.index(x, y)] = TileKind.Park;
-        grid.variant[grid.index(x, y)] = rng.chance(arch.greenery > 0.05 ? 0.7 : 0.35) ? ParkVariant.Green : ParkVariant.Plaza;
+        if (arch.style === 'rural') {
+          // Countryside: fields, forests and flower meadows instead of plazas.
+          const r = rng.next();
+          grid.variant[grid.index(x, y)] = r < 0.45 ? ParkVariant.Field : r < 0.75 ? ParkVariant.Forest : ParkVariant.Meadow;
+        } else if (arch.style === 'suburb') {
+          grid.variant[grid.index(x, y)] = rng.chance(0.8) ? ParkVariant.Green : ParkVariant.Plaza;
+        } else {
+          grid.variant[grid.index(x, y)] = rng.chance(arch.greenery > 0.05 ? 0.7 : 0.35) ? ParkVariant.Green : ParkVariant.Plaza;
+        }
         continue;
       }
       if (roll < arch.greenery + OPEN_SPACE + arch.vacancy) {

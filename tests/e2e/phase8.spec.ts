@@ -4,6 +4,7 @@ async function start(page: Page): Promise<void> {
   await page.goto('/');
   await page.getByLabel('Dein Name').fill('P8 Tester');
   await page.getByLabel('Stadt-Seed').fill('visual-seed');
+  await page.getByLabel('Aufstieg durch Regionen').uncheck();
   await page.getByRole('button', { name: 'Stadt betreten' }).click();
   await page.waitForFunction(() => !!window.__neon?.session.renderer && !!window.__neon.session.sim);
   await page.keyboard.press('0');
@@ -42,14 +43,14 @@ test('intro, weather, heatmap, contrast mode and remappable keys', async ({ page
   await dialog.getByLabel('Hoher Kontrast').check();
   await expect(page.locator('html')).toHaveClass(/high-contrast/);
   await dialog.getByRole('button', { name: 'Taste für Bauen ändern' }).click();
-  await page.keyboard.press('g');
-  await expect(dialog.getByRole('button', { name: 'Taste für Bauen ändern' })).toHaveText('G');
+  await page.keyboard.press('n');
+  await expect(dialog.getByRole('button', { name: 'Taste für Bauen ändern' })).toHaveText('N');
   await dialog.getByRole('button', { name: 'Taste für Bauen ändern' }).click();
   await page.keyboard.press('w');
   await expect(page.getByText(/ist für Kamera oder System reserviert/)).toBeVisible();
   await page.keyboard.press('Escape');
   await page.keyboard.press('Escape');
-  await page.keyboard.press('g');
+  await page.keyboard.press('n');
   await expect(page.getByRole('region', { name: 'Bauen' })).toBeVisible();
   await page.keyboard.press('Escape');
   await page.keyboard.press('b');

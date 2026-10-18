@@ -16,6 +16,7 @@ import { depthOf, HALF_H, HALF_W, isoToScreen, screenToTile, TILE_H, TILE_W } fr
 import type { Building, Facing, GameState } from '../sim/state';
 import { TileKind } from '../sim/world/grid';
 import { DISTRICT_ARCHETYPES } from '../sim/data/districts';
+import { stageOf, treeOf } from '../sim/data/evolution';
 import { BUILDING_DEFINITIONS } from '../sim/data/buildings';
 
 export interface RendererCallbacks {
@@ -60,6 +61,9 @@ interface BuildingVisual {
   day: Sprite;
   night: Sprite | null;
   status: Building['status'];
+  /** Evolution stage the sprites were drawn for. */
+  stageId: string | undefined;
+  floors: number;
   cull: Cullable[];
 }
 
@@ -101,6 +105,12 @@ export class CityRenderer {
   private seed = 1;
 
   private buildings = new Map<number, BuildingVisual>();
+  /** Ground sprites per district, for dimming locked regions. */
+  private groundByDistrict = new Map<number, Sprite[]>();
+  private lockedDistricts = new Set<number>();
+  private labelNames: string[] = [];
+  /** Increments on every loadWorld, so callers can re-apply per-world state. */
+  worldGeneration = 0;
   private groundCull: Cullable[] = [];
   private cullDirty = true;
   private citySize = 0;
@@ -229,10 +239,14 @@ export class CityRenderer {
         const tex = this.art.ground(kind, variant, style);
         const sprite = this.placeSprite(this.groundLayer, tex, x, y);
         this.groundCull.push(this.cullEntry(sprite, x, y, tex));
-        const nightTex = this.settings.effects || kind === TileKind.Road ? this.art.groundNight(kind, variant, x, y) : null;
+        const perDistrict = this.groundByDistrict.get(district.id);
+        if (perDistrict) perDistrict.push(sprite);
+        else this.groundByDistrict.set(district.id, [sprite]);
+        const nightTex = this.settings.effects || kind === TileKind.Road ? this.art.groundNight(kind, variant, x, y, style) : null;
         if (nightTex) this.groundCull.push(this.placeNight(nightTex, x, y, depthOf(x, y, 1, 1) - 0.5));
         if (kind === TileKind.Road && roadLamp(variant, x, y) === 'lamp') {
-          const lampTex = this.art.lampPost();
+          // Country lanes get trees at the verge, streets get lamp posts.
+          const lampTex = style === 'rural' ? this.art.roadsideTree(x + y) : this.art.lampPost();
           const lamp = this.placeSprite(this.buildingLayer, lampTex, x, y);
           lamp.zIndex = depthOf(x, y, 1, 1) - 1;
           this.shade(lamp);
@@ -242,7 +256,27 @@ export class CityRenderer {
     }
     for (const id in state.buildings) this.addBuilding(state, state.buildings[id]!);
     this.buildLabels(state);
+    this.worldGeneration += 1;
+    this.lockedDistricts = new Set();
     this.cullDirty = true;
+  }
+
+  /** Dims the ground of districts the player may not use yet and marks their labels. */
+  setLockedDistricts(ids: number[]): void {
+    const next = new Set(ids);
+    this.lockedDistricts = next;
+    for (const [districtId, sprites] of this.groundByDistrict) {
+      const tint = next.has(districtId) ? 0x6a6a7c : 0xffffff;
+      for (const s of sprites) s.tint = tint;
+    }
+    this.labels.forEach((label, i) => {
+      const name = this.labelNames[i] ?? label.text;
+      label.text = next.has(i) ? `${name} · gesperrt` : name;
+    });
+  }
+
+  isDistrictLocked(id: number): boolean {
+    return this.lockedDistricts.has(id);
   }
 
   /** Reconciles building sprites with the simulation state. */
@@ -254,7 +288,7 @@ export class CityRenderer {
         this.removeBuildingVisual(id, visual);
         continue;
       }
-      if (b.status !== visual.status) {
+      if (b.status !== visual.status || b.stageId !== visual.stageId || b.floors !== visual.floors) {
         this.removeBuildingVisual(id, visual);
         this.addBuilding(state, b);
       }
@@ -287,7 +321,7 @@ export class CityRenderer {
         const tex = this.art.ground(kind, state.grid.variant[i]!, style);
         const sprite = this.placeSprite(this.groundLayer, tex, tx, ty);
         this.groundCull.push(this.cullEntry(sprite, tx, ty, tex));
-        const nightTex = this.art.groundNight(kind, state.grid.variant[i]!, tx, ty);
+        const nightTex = this.art.groundNight(kind, state.grid.variant[i]!, tx, ty, style);
         if (nightTex) this.groundCull.push(this.placeNight(nightTex, tx, ty, depthOf(tx, ty, 1, 1) - 0.5));
       }
     }
@@ -302,8 +336,10 @@ export class CityRenderer {
     this.lit.clear();
     this.labelLayer.removeChildren().forEach((c) => c.destroy());
     this.buildings.clear();
+    this.groundByDistrict.clear();
     this.groundCull = [];
     this.labels = [];
+    this.labelNames = [];
   }
 
   private addBuilding(state: GameState, b: Building): void {
@@ -317,7 +353,7 @@ export class CityRenderer {
     const nightTex = this.art.building(key, true);
     const nightEntry = this.placeNight(nightTex, b.x, b.y, day.zIndex + 0.5);
     cull.push(nightEntry);
-    this.buildings.set(b.id, { day, night: nightEntry.sprite, status: b.status, cull });
+    this.buildings.set(b.id, { day, night: nightEntry.sprite, status: b.status, stageId: b.stageId, floors: b.floors, cull });
   }
 
   private removeBuildingVisual(id: number, visual: BuildingVisual): void {
@@ -383,6 +419,7 @@ export class CityRenderer {
       text.alpha = 0;
       this.labelLayer.addChild(text);
       this.labels.push(text);
+      this.labelNames.push(d.name);
     }
   }
 
@@ -811,6 +848,9 @@ export function artKeyFor(state: GameState, b: Building): BuildingArtKey {
     return { art: 'city', style, w: b.w, h: b.h, floors: bucketFloors(b.floors), seed: b.variant % SEED_VARIANTS, facing: b.facing, construction: false };
   }
   const def = BUILDING_DEFINITIONS[b.defId];
+  const stage = stageOf(b);
+  // From level 3 on (or when the stage names a style) the business outgrows its small drawer.
+  const evolved = stage && stage.id !== treeOf(b.defId)?.initialStageId && (stage.level >= 3 || stage.art.style) ? stage : null;
   return {
     art: def?.art ?? 'city',
     style: 'player',
@@ -820,6 +860,7 @@ export function artKeyFor(state: GameState, b: Building): BuildingArtKey {
     seed: b.variant % SEED_VARIANTS,
     facing: b.facing,
     construction: b.status === 'construction',
+    stage: evolved ? { style: (evolved.art.style ?? 'chrome') as ArtStyle, sign: evolved.art.sign ?? stage!.name.toUpperCase(), color: evolved.art.color ?? 0xff2bd6 } : null,
   };
 }
 

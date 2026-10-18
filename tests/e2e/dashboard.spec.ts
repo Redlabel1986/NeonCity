@@ -28,7 +28,7 @@ test('dashboard: order supplies, hire staff, start an upgrade, adjust menu', asy
   const errors: string[] = [];
   page.on('pageerror', (e) => errors.push(e.message));
   await startWithBar(page);
-  const panel = page.getByRole('region', { name: 'Ramenbar' });
+  const panel = page.getByRole('region', { name: 'Asia-Imbiss' });
   await expect(panel).toContainText('Kapazität');
   await page.screenshot({ path: 'tests/e2e/output/d-overview.png' });
 

@@ -6,7 +6,7 @@ import { RECIPES } from '../../sim/data/recipes';
 import { INGREDIENTS, INGREDIENT_IDS } from '../../sim/data/ingredients';
 import { SUPPLIERS } from '../../sim/data/suppliers';
 import { UPGRADES, upgradeEffects } from '../../sim/data/upgrades';
-import { effectiveCapacity, explainDemand, isOpen, priceBounds } from '../../sim/systems/business';
+import { effectiveCapacity, explainDemand, isOpen, openingHours, priceBounds } from '../../sim/systems/business';
 import { quoteOrder, servingsPossible, stockOf, storageCapacity, totalUnits } from '../../sim/systems/inventory';
 import { ROLE_LABELS, expectedWage } from '../../sim/systems/staff';
 import { credits, decimal, duration, integer, signedCredits } from '../format';
@@ -14,7 +14,10 @@ import { tickToDate } from '../../sim/core/clock';
 import { Meter, Row } from '../components/Inspector';
 import { HotelOverview, RetailOverview, TransportOverview, StockTab, SecurityOverview } from './KindDashboards';
 import { LabOverview, IndustryOverview } from './IndustryDashboards';
-import type { HotelState, RetailState, TransportState, StaffedBusiness, SecurityState, ResearchLabState, IndustryState } from '../../sim/state';
+import { BankOverview } from './BankDashboard';
+import { EvolutionTab } from './EvolutionTab';
+import { stageEffects, unlockedAlongPath } from '../../sim/data/evolution';
+import type { HotelState, RetailState, TransportState, StaffedBusiness, SecurityState, ResearchLabState, IndustryState, BankState } from '../../sim/state';
 
 import type { DashboardTab as Tab } from '../../render/interior/layouts';
 
@@ -25,38 +28,51 @@ const TABS_BY_KIND: Record<string, { id: Tab; label: string }[]> = {
     { id: 'supply', label: 'Einkauf' },
     { id: 'staff', label: 'Personal' },
     { id: 'upgrades', label: 'Ausbau' },
+    { id: 'evolution', label: 'Entwicklung' },
   ],
   hotel: [
     { id: 'overview', label: 'Zimmer & Gäste' },
     { id: 'staff', label: 'Personal' },
     { id: 'upgrades', label: 'Ausbau' },
+    { id: 'evolution', label: 'Entwicklung' },
   ],
   transport: [
     { id: 'overview', label: 'Flotte & Fahrten' },
     { id: 'staff', label: 'Fahrer' },
     { id: 'upgrades', label: 'Ausbau' },
+    { id: 'evolution', label: 'Entwicklung' },
   ],
   retail: [
     { id: 'overview', label: 'Verkauf' },
     { id: 'supply', label: 'Einkauf' },
     { id: 'staff', label: 'Personal' },
     { id: 'upgrades', label: 'Ausbau' },
+    { id: 'evolution', label: 'Entwicklung' },
   ],
   security: [
     { id: 'overview', label: 'Streifen & Verträge' },
     { id: 'staff', label: 'Personal' },
     { id: 'upgrades', label: 'Ausbau' },
+    { id: 'evolution', label: 'Entwicklung' },
   ],
   lab: [
     { id: 'overview', label: 'Forschung' },
     { id: 'staff', label: 'Personal' },
     { id: 'upgrades', label: 'Ausbau' },
+    { id: 'evolution', label: 'Entwicklung' },
   ],
   industry: [
     { id: 'overview', label: 'Produktion' },
     { id: 'supply', label: 'Rohstoffe' },
     { id: 'staff', label: 'Personal' },
     { id: 'upgrades', label: 'Ausbau' },
+    { id: 'evolution', label: 'Entwicklung' },
+  ],
+  bank: [
+    { id: 'overview', label: 'Bilanz & Zinsen' },
+    { id: 'staff', label: 'Personal' },
+    { id: 'upgrades', label: 'Ausbau' },
+    { id: 'evolution', label: 'Entwicklung' },
   ],
 };
 
@@ -85,6 +101,8 @@ export function BusinessDashboard({ building }: { building: Building }) {
       {active === 'overview' && biz.kind === 'security' && <SecurityOverview b={building} biz={biz as SecurityState} />}
       {active === 'overview' && biz.kind === 'lab' && <LabOverview b={building} biz={biz as ResearchLabState} />}
       {active === 'overview' && biz.kind === 'industry' && <IndustryOverview b={building} biz={biz as IndustryState} />}
+      {active === 'overview' && biz.kind === 'bank' && <BankOverview b={building} biz={biz as BankState} />}
+      {active === 'evolution' && <EvolutionTab b={building} />}
       {active === 'supply' && biz.kind === 'industry' && model?.kind === 'industry' && <StockTab b={building} biz={biz as IndustryState} goods={Object.keys(model.startingStock)} />}
       {active === 'menu' && biz.kind === 'gastronomy' && <MenuTab b={building} biz={biz} />}
       {active === 'supply' && biz.kind === 'gastronomy' && <SupplyTab b={building} biz={biz} />}
@@ -119,7 +137,7 @@ function Overview({ b, biz }: { b: Building; biz: GastronomyState }) {
         <Kpi label="Gäste heute" value={integer(biz.todayGuests)} />
         <Kpi label="Umsatz heute" value={credits(biz.todayRevenue)} />
         <Kpi label="Bewertung" value={biz.reviewCount > 0 ? `${biz.rating.toFixed(1)} ★` : '–'} sub={`${biz.reviewCount} Bewertungen`} />
-        <Kpi label="Status" value={isOpen(model, hour) ? 'geöffnet' : 'geschlossen'} sub={`${pad(model.openHour)}–${pad(model.closeHour)} Uhr`} />
+        <Kpi label="Status" value={isOpen(model, hour, b) ? 'geöffnet' : 'geschlossen'} sub={`${pad(openingHours(model, b).open)}–${pad(openingHours(model, b).close % 24)} Uhr`} />
       </div>
       <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
         <Meter label="Ruf" value={biz.reputation} color="var(--color-magenta)" />
@@ -170,7 +188,7 @@ function MenuTab({ b, biz }: { b: Building; biz: GastronomyState }) {
       <p className="text-xs text-muted">Gäste wählen nach Beliebtheit und Preis. Gerichte ohne Zutaten können nicht verkauft werden.</p>
       {biz.menu.map((m) => {
         const r = RECIPES[m.recipeId]!;
-        const bounds = priceBounds(m.recipeId)!;
+        const bounds = priceBounds(m.recipeId, stageEffects(b).price)!;
         const possible = servingsPossible(biz, m.recipeId);
         const cost = Object.entries(r.ingredients).reduce((s, [ing, u]) => s + u * (INGREDIENTS[ing]?.basePrice ?? 1), 0);
         return (
@@ -432,7 +450,7 @@ function UpgradesTab({ b, biz }: { b: Building; biz: StaffedBusiness }) {
           Umbau läuft: {UPGRADES[biz.upgradeInProgress.id]?.name} Stufe {biz.upgradeInProgress.level}, noch {duration(biz.upgradeInProgress.readyTick - state.tick)}. Kapazität −20 %.
         </p>
       )}
-      {model.upgrades.map((id) => {
+      {[...model.upgrades, ...unlockedAlongPath(b).upgrades.filter((u) => !model.upgrades.includes(u))].map((id) => {
         const def = UPGRADES[id]!;
         const level = biz.upgrades[id] ?? 0;
         const next = def.levels[level];

@@ -10,11 +10,12 @@ import type { TransportModel } from '../data/buildings';
 import { BUILDING_DEFINITIONS } from '../data/buildings';
 import { BACKGROUNDS, DIFFICULTIES } from '../data/difficulty';
 import { upgradeEffects } from '../data/upgrades';
+import { effectiveUpkeep, hasFeature, stageEffects } from '../data/evolution';
 import { book, canAfford } from '../economy/finance';
 import type { Building, GameState, TransportState, Vehicle } from '../state';
 import { closeStaffDay, createEmployee, generateCandidates, effortOf, ROLES_BY_KIND } from './staff';
 import { techFactors } from './research';
-import { crisisFactors } from './crises';
+import { crisisFactors, regionDemandFactor } from './crises';
 import { insuranceClaim } from './corporate';
 import { weatherFactors } from './weather';
 
@@ -66,16 +67,16 @@ export function explainRideDemand(state: GameState, b: Building): RideDemand | n
   for (const d of state.districts) {
     const dist = Math.abs(d.cx - b.x) + Math.abs(d.cy - b.y);
     // District centres can be far from the depot; the depot's own district is always served well.
-    let reach = Math.max(0, 1 - dist / (model.radius * 2.2));
+    let reach = Math.max(0, 1 - dist / (model.radius * stageEffects(b).radius * 2.2));
     if (d.id === b.districtId) reach = Math.max(reach, 0.7);
     if (reach <= 0) continue;
     districtsScore += (d.stats.traffic / 100) * (0.4 + d.stats.purchasingPower / 120) * reach;
     citizens += d.economy.citizens * reach;
   }
-  const ratio = biz.fare / model.baseFare;
+  const ratio = biz.fare / model.baseFare / stageEffects(b).price;
   const price = Math.pow(Math.max(0.2, ratio), -1.3);
   const reputation = 0.6 + (biz.reputation / 100) * 0.8;
-  const expectedPeakRides = (6 * districtsScore + citizens * 0.02) * price * reputation * difficulty.demandMultiplier;
+  const expectedPeakRides = (6 * districtsScore + citizens * 0.02) * price * reputation * difficulty.demandMultiplier * regionDemandFactor(state, b.districtId, 'transport');
   return { citizens, districts: districtsScore, price, reputation, expectedPeakRides };
 }
 
@@ -91,8 +92,13 @@ export function fleetCapacity(b: Building, state?: GameState): { drivers: number
   let rides = 0;
   const active = Math.min(drivers.length, available);
   drivers.slice(0, active).forEach((d) => {
-    rides += model.ridesPerDriverHour * (0.6 + (d.skill / 100) * 0.8) * effortOf(d);
+    rides += model.ridesPerDriverHour * stageEffects(b).throughput * (0.6 + (d.skill / 100) * 0.8) * effortOf(d);
   });
+  // Driverless stages: vehicles without a driver still run, at 70 % of a skilled driver's rate.
+  if (hasFeature(b, 'driverless')) rides += Math.max(0, available - active) * model.ridesPerDriverHour * stageEffects(b).throughput * 0.7;
+  // Dispatchers route the fleet: +10 % each, up to three.
+  const dispatchers = biz.employees.filter((e) => e.role === 'dispatcher').length;
+  rides *= (1 + 0.1 * Math.min(3, dispatchers)) * (hasFeature(b, 'dispatch') ? 1.15 : 1);
   return { drivers: drivers.length, available, ridesPerHour: rides * fx.rides * (state ? techFactors(state).rides : 1) };
 }
 
@@ -177,8 +183,7 @@ export function closeTransportDay(ctx: SimContext, day: number): void {
     if (biz.todayMissed > biz.todayRides * 0.5 && biz.todayRides > 0) {
       events.emit({ type: 'log', tick: state.tick, level: 'warning', message: `${b.label}: ${biz.todayMissed} Fahrten verpasst. Mehr Fahrzeuge oder Fahrer nötig.`, buildingId: String(b.id) });
     }
-    const def = BUILDING_DEFINITIONS[b.defId]!;
-    const costs = wages + biz.todayCosts + maintenance + def.upkeepPerDay;
+    const costs = wages + biz.todayCosts + maintenance + effectiveUpkeep(b);
     biz.history.push({ day, rides: biz.todayRides, missed: biz.todayMissed, revenue: biz.todayRevenue, costs });
     if (biz.history.length > 30) biz.history.shift();
     biz.todayRides = 0;
@@ -216,10 +221,10 @@ export function sellVehicle(ctx: SimContext, b: Building, vehicleId: number): { 
   return { ok: true };
 }
 
-export function fareBounds(defId: string): { min: number; max: number } | null {
+export function fareBounds(defId: string, priceLevel = 1): { min: number; max: number } | null {
   const model = BUILDING_DEFINITIONS[defId]?.business;
   if (!model || model.kind !== 'transport') return null;
-  return { min: Math.ceil(model.baseFare * 0.5), max: Math.floor(model.baseFare * 2.5) };
+  return { min: Math.ceil(model.baseFare * 0.5), max: Math.floor(model.baseFare * 2.5 * priceLevel) };
 }
 
 function clamp(v: number, lo: number, hi: number): number {

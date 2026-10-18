@@ -13,7 +13,8 @@ export type SimEvent =
   | { type: 'building:removed'; tick: number; buildingId: string }
   | { type: 'finance:transaction'; tick: number; amount: number; category: string }
   | { type: 'day:ended'; tick: number; day: number; income: number; expenses: number }
-  | { type: 'task:completed'; tick: number; taskId: string };
+  | { type: 'task:completed'; tick: number; taskId: string }
+  | { type: 'level:up'; tick: number; level: number; region: string };
 
 export type SimEventType = SimEvent['type'];
 

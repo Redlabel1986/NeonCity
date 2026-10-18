@@ -2,7 +2,7 @@
 
 Browserbasierte Cyberpunk-Aufbau-, Wirtschafts- und Lebenssimulation. Nova Eclipse, 2187.
 
-**Entwicklungsstand: alle acht Phasen abgeschlossen, Audit 0.8.1, Phase 9 Konzern und Karriere, Phase 10 Grafik und Gebäudeausrichtung, Phase 11 Innenansicht, Phase 12 Online-Welt, Phase 13 Casino, Phase 14 Mobil, Phase 15 Cloud-Spielstand, Phase 16 Weiterlaufen (0.16.0).**
+**Entwicklungsstand: alle acht Phasen abgeschlossen, Audit 0.8.1, Phase 9 Konzern und Karriere, Phase 10 Grafik und Gebäudeausrichtung, Phase 11 Innenansicht, Phase 12 Online-Welt, Phase 13 Casino, Phase 14 Mobil, Phase 15 Cloud-Spielstand, Phase 16 Weiterlaufen, Phase 17 Level, Regionen, Entwicklungsbaum und Banken (0.18.0).**
 Die Stadt wird prozedural aus einem Seed erzeugt und von bis zu 2.400 simulierten Bürgern bevölkert. Du führst Lokale, Hotels, Taxiflotten, Läden, Sicherheitsfirmen, Labore und Fabriken, kaufst Immobilien, übernimmst Konkurrenten oder gründest eine kriminelle Organisation. Zwölf Fraktionen reagieren auf dich, der Stadtrat beschließt Gesetze, Forschung und Lieferketten senken Kosten, Kredite und Investoren hebeln das Wachstum, Krisen treffen die ganze Stadt. Jeder Credit entsteht aus einer Transaktion.
 
 ## Starten
@@ -45,8 +45,9 @@ npm run test:e2e   # Playwright: Spielstart, Bau, Betrieb, Speichern/Laden (ben�
 7. `K` Fraktionen und `O` Politik: Beziehungen pflegen, Anträge stellen, Initiativen finanzieren. Entscheidungen erscheinen in der Kopfleiste und im Dock.
 8. `R` Forschung (braucht ein Labor), Fabriken im Baumenü, Kredite, Investoren und Versicherungen unter Finanzen.
 9. Einstellungen: Effekte, Audio, Kontrastmodus, Tastenbelegung; Heatmaps über die Übersichtskarte. `J` öffnet das Royal Nova Casino (Slots, Roulette, Blackjack um eigene Credits).
-10. Die Stadt läuft weiter, wenn du weg bist: Beim nächsten Laden oder nach einem Hintergrund-Tab wird die vergangene Zeit nachgerechnet (bis zu 30 Spieltage, einstellbar) und ein Bericht zeigt Einnahmen und Ereignisse.
-11. `F5` / `F9` Schnellspeichern und -laden, Spielstände-Dialog für Slots, Export und Import. Mit einem Cloud-Konto (Hauptmenü oder Spielstände-Dialog) geht der Spielstand vom Handy am PC weiter und zurück; auf Vercel braucht das einen Blob-Speicher, siehe DEPLOY.md.
+10. Du startest in Greenhaven, dem grünen Umland, und steigst mit Erfahrungspunkten über Silverbrook und Neon Central bis zur Megacity Nova Eclipse auf (Weltkarte mit G). Jeder Betrieb hat einen Entwicklungsbaum mit Spezialisierungen, vom Asia-Imbiss bis zum Sternerestaurant oder zur Fastfood-Kette (Dashboard → Entwicklung). Ab Level 3 kannst du Banken gründen.
+11. Die Stadt läuft weiter, wenn du weg bist: Beim nächsten Laden oder nach einem Hintergrund-Tab wird die vergangene Zeit nachgerechnet (bis zu 30 Spieltage, einstellbar) und ein Bericht zeigt Einnahmen und Ereignisse.
+12. `F5` / `F9` Schnellspeichern und -laden, Spielstände-Dialog für Slots, Export und Import. Mit einem Cloud-Konto (Hauptmenü oder Spielstände-Dialog) geht der Spielstand vom Handy am PC weiter und zurück; auf Vercel braucht das einen Blob-Speicher, siehe DEPLOY.md.
 
 Alle Tastenkombinationen: `H` im Spiel. Auf dem Telefon: Bottom-Navigation, ein Finger schwenkt, zwei Finger zoomen, Platzieren per Tipp und „Hier bauen“; „Zum Startbildschirm hinzufügen“ startet das Spiel wie eine App.
 

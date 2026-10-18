@@ -35,9 +35,9 @@ test('phone layout: bottom navigation, sheets, two-step touch placement, pinch z
   // Build sheet → start placement → sheet closes, placement bar appears.
   await nav.getByRole('button', { name: 'Bauen' }).tap();
   const sheet = page.getByTestId('mobile-sheet');
-  await expect(sheet).toContainText('Ramenbar');
+  await expect(sheet).toContainText('Asia-Imbiss');
   await page.screenshot({ path: 'tests/e2e/output/m-build.png' });
-  await sheet.locator('li', { hasText: 'Ramenbar' }).getByRole('button', { name: 'Platzieren' }).tap();
+  await sheet.locator('li', { hasText: 'Asia-Imbiss' }).getByRole('button', { name: 'Platzieren' }).tap();
   await expect(sheet).toHaveCount(0);
   const bar = page.getByTestId('placement-bar');
   await expect(bar).toContainText('Tippe auf ein freies Grundstück');
@@ -60,7 +60,7 @@ test('phone layout: bottom navigation, sheets, two-step touch placement, pinch z
   await expect.poll(() => page.evaluate(() => Object.values(window.__neon.session.sim!.state.buildings).filter((b) => (b as { owner: string }).owner === 'player').length)).toBe(1);
   await expect(page.getByTestId('placement-bar')).toHaveCount(0);
   // The placed building is selected: inspector sheet with the bar.
-  await expect(page.getByRole('region', { name: 'Auswahl' })).toContainText('Ramenbar');
+  await expect(page.getByRole('region', { name: 'Auswahl' })).toContainText('Asia-Imbiss');
   await page.screenshot({ path: 'tests/e2e/output/m-inspector.png' });
   await page.getByRole('region', { name: 'Auswahl' }).getByRole('button', { name: 'Schließen' }).tap();
   await expect(page.getByRole('region', { name: 'Auswahl' })).toHaveCount(0);

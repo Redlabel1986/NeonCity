@@ -5,9 +5,10 @@ import { App } from './ui/App';
 import { session } from './ui/session';
 import { useGameStore } from './ui/store/gameStore';
 import { checkPlacement } from './sim/systems/construction';
+import { awardXp } from './sim/systems/progression';
 
 // Debug / test hook: lets end-to-end tests and the console inspect the live session.
-(window as unknown as { __neon: unknown }).__neon = { session, store: useGameStore, checkPlacement };
+(window as unknown as { __neon: unknown }).__neon = { session, store: useGameStore, checkPlacement, awardXp };
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

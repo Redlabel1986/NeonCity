@@ -6,7 +6,7 @@ import { serialize, deserialize } from '../../src/persistence/serializer';
 import { withPlayer } from '../../src/sim/players';
 import type { Building } from '../../src/sim/state';
 
-const options: NewGameOptions = { seed: 'shared-city', playerName: 'Solo', difficulty: 'standard', background: 'restaurateur', citySize: 48 };
+const options: NewGameOptions = { progression: false, seed: 'shared-city', playerName: 'Solo', difficulty: 'standard', background: 'restaurateur', citySize: 48 };
 
 function placeFor(sim: Simulation, playerId: string, defId: string, skip = 0): Building {
   const state = sim.view(playerId);

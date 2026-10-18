@@ -26,7 +26,7 @@ test('rotate a building during placement so the entrance faces the street', asyn
 
   await page.keyboard.press('b');
   const build = page.getByRole('region', { name: 'Bauen' });
-  await build.locator('li', { hasText: 'Ramenbar' }).getByRole('button', { name: 'Platzieren' }).click();
+  await build.locator('li', { hasText: 'Asia-Imbiss' }).getByRole('button', { name: 'Platzieren' }).click();
 
   // Find a lot where exactly one of the two back edges has no road, so rotating there must fail.
   const spot = await page.evaluate(() => {

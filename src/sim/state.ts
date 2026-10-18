@@ -17,7 +17,7 @@ export const LOCAL_PLAYER_ID = 'player';
 
 export type BuildingStatus = 'construction' | 'operational';
 
-export type EmployeeRole = 'cook' | 'service' | 'manager' | 'reception' | 'housekeeping' | 'driver' | 'clerk' | 'security' | 'guard' | 'investigator' | 'researcher' | 'worker' | 'technician';
+export type EmployeeRole = 'cook' | 'service' | 'manager' | 'reception' | 'housekeeping' | 'driver' | 'clerk' | 'security' | 'guard' | 'investigator' | 'researcher' | 'worker' | 'technician' | 'banker' | 'analyst' | 'sommelier' | 'concierge' | 'dispatcher';
 
 export interface Employee {
   id: number;
@@ -248,7 +248,29 @@ export interface IndustryState extends StaffedBusiness {
   history: { day: number; revenue: number; costs: number; produced: number; purchases?: number; energy?: number; internal?: number }[];
 }
 
-export type BusinessState = GastronomyState | HotelState | TransportState | RetailState | SecurityState | ResearchLabState | IndustryState;
+export interface BankState extends StaffedBusiness {
+  kind: 'bank';
+  /** The owner's capital locked in the bank. */
+  reserve: number;
+  /** Customer deposits (not the player's money). */
+  deposits: number;
+  /** Loans handed out to the district. */
+  loansOut: number;
+  /** Daily interest paid on deposits (fraction). */
+  depositRate: number;
+  /** Daily interest charged on loans (fraction). */
+  loanRate: number;
+  reputation: number;
+  /** The supervisor stopped new deposits (reserve too low). */
+  supervised: boolean;
+  todayRevenue: number;
+  todayCosts: number;
+  todayDefaults: number;
+  lifetimeProfit: number;
+  history: { day: number; deposits: number; loansOut: number; revenue: number; costs: number; defaults: number }[];
+}
+
+export type BusinessState = GastronomyState | HotelState | TransportState | RetailState | SecurityState | ResearchLabState | IndustryState | BankState;
 
 // ---------------------------------------------------------------- corporate finance
 
@@ -522,6 +544,16 @@ export interface Building {
   investment: number;
   business?: BusinessState;
   property?: PropertyState;
+  /** Current evolution stage (stable id, see data/evolution.ts); missing = the type's initial stage. */
+  stageId?: string;
+  /** Stages passed on the way here (unlocks accumulate once). */
+  stageHistory?: string[];
+  /** Running conversion to another stage; `paid` is refunded in part on cancel. */
+  stageUpgrade?: { toStageId: string; readyTick: number; paid: number };
+  /** Critics' stars 0-3 (stages with the critics mechanic). */
+  stars?: number;
+  /** Signed franchise contracts (stages with the franchise mechanic). */
+  franchises?: number;
 }
 
 export interface DistrictEconomy {
@@ -706,9 +738,25 @@ export interface CasinoState {
 }
 
 /** Everything that belongs to one player: finances, company, standing, log. */
+/** Player level, experience and the regions it opened (see data/regions.ts). */
+export interface ProgressionState {
+  /** Off = free play: every region open, every evolution level allowed. */
+  enabled: boolean;
+  level: number;
+  xp: number;
+  /** Ids of every XP source already granted (milestones, stage ids, research nodes, regions). */
+  milestones: string[];
+  unlockedRegions: import('./data/regions').RegionId[];
+  levelReachedTick: number;
+  /** Set by a level-up until the player acknowledges it (level-up dialog). */
+  pendingLevelUp: { level: number; region: import('./data/regions').RegionId } | null;
+  stats: { lifetimeIncome: number; lifetimeExpenses: number };
+}
+
 export interface PlayerSlice {
   id: string;
   player: PlayerProfile;
+  progression: ProgressionState;
   ledger: Ledger;
   log: LogEntry[];
   nextLogId: number;
@@ -770,6 +818,7 @@ export interface GameState extends Omit<WorldState, 'rivals' | 'factions' | 'pol
   world: WorldState;
   ledger: Ledger;
   player: PlayerProfile;
+  progression: ProgressionState;
   log: LogEntry[];
   nextLogId: number;
   tasks: TaskState[];

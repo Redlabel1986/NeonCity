@@ -10,11 +10,12 @@ import type { HotelModel } from '../data/buildings';
 import { BUILDING_DEFINITIONS } from '../data/buildings';
 import { DIFFICULTIES } from '../data/difficulty';
 import { upgradeEffects } from '../data/upgrades';
+import { effectiveUpkeep, hasFeature, stageEffects } from '../data/evolution';
 import { book } from '../economy/finance';
 import type { Building, GameState, HotelState } from '../state';
 import { closeStaffDay, createEmployee, generateCandidates, roleThroughput, ROLES_BY_KIND } from './staff';
 import { techFactors } from './research';
-import { crisisFactors } from './crises';
+import { crisisFactors, regionDemandFactor } from './crises';
 import { insuranceClaim } from './corporate';
 
 export function createHotelState(model: HotelModel, rng: Rng, day: number, tick: number, districtSkillBias: number): HotelState {
@@ -47,7 +48,7 @@ export function createHotelState(model: HotelModel, rng: Rng, day: number, tick:
 export function hotelRooms(b: Building): number {
   const model = BUILDING_DEFINITIONS[b.defId]?.business;
   if (!model || model.kind !== 'hotel' || b.business?.kind !== 'hotel') return 0;
-  return model.rooms + upgradeEffects(b.business.upgrades).rooms;
+  return Math.round((model.rooms + upgradeEffects(b.business.upgrades).rooms) * stageEffects(b).capacity);
 }
 
 export interface HotelDemand {
@@ -65,12 +66,13 @@ export function explainHotelDemand(state: GameState, b: Building): HotelDemand |
   const stats = state.districts[b.districtId]!.stats;
   const difficulty = DIFFICULTIES[state.player.difficulty];
   const district = (0.4 + stats.attractiveness / 100) * (0.5 + stats.traffic / 150) * (0.6 + stats.politicalInfluence / 200);
-  const ratio = biz.pricePerNight / model.basePricePerNight;
+  const tf = stageEffects(b);
+  const ratio = biz.pricePerNight / model.basePricePerNight / tf.price;
   const price = Math.pow(Math.max(0.2, ratio), -(1.5 - stats.purchasingPower / 150));
   const reputation = 0.55 + (biz.reputation / 100) * 0.9;
-  const comfort = 0.8 + ((model.comfort + upgradeEffects(biz.upgrades).comfort + techFactors(state).comfort) / 100) * 0.4;
-  const marketing = upgradeEffects(biz.upgrades).draw;
-  const expectedArrivals = model.baseDemand * district * price * reputation * comfort * marketing * difficulty.demandMultiplier * crisisFactors(state).demand;
+  const comfort = 0.8 + ((model.comfort + upgradeEffects(biz.upgrades).comfort + techFactors(state).comfort + tf.quality) / 100) * 0.4;
+  const marketing = upgradeEffects(biz.upgrades).draw * tf.draw * (hasFeature(b, 'conference') ? 1.15 : 1);
+  const expectedArrivals = model.baseDemand * district * price * reputation * comfort * marketing * difficulty.demandMultiplier * crisisFactors(state).demand * regionDemandFactor(state, b.districtId, 'hotel');
   return { district, price, reputation, comfort, expectedArrivals };
 }
 
@@ -92,13 +94,13 @@ export function stepHotelsHour(ctx: SimContext, hour: number, day: number): void
     const free = rooms - biz.stays.length;
     const serviceCap = reception.count > 0 ? Math.ceil(reception.throughput * 6) : 2; // self check-in is slow
     let accepted = Math.min(arrivals, free, serviceCap);
-    if (biz.upgradeInProgress) accepted = Math.floor(accepted * 0.8);
+    if (biz.upgradeInProgress || b.stageUpgrade) accepted = Math.floor(accepted * 0.8);
     biz.todayTurnedAway += arrivals - accepted;
     if (accepted <= 0) continue;
     const fx = upgradeEffects(biz.upgrades);
     for (let i = 0; i < accepted; i++) {
       const nights = rng.int(1, 3);
-      const vip = rng.chance(0.03 + (model.comfort + fx.comfort) / 2000);
+      const vip = rng.chance((0.03 + (model.comfort + fx.comfort) / 2000) * (hasFeature(b, 'vip') ? 2.5 : 1));
       biz.stays.push({ checkoutDay: day + nights, vip });
       const price = biz.pricePerNight * nights * (vip ? 1.6 : 1);
       biz.todayRevenue += price;
@@ -132,6 +134,14 @@ export function closeHotelsDay(ctx: SimContext, day: number): void {
     // Revenue for nights beyond the first was credited at check-in; book the remainder now so cash matches todayRevenue.
     const prepaid = biz.todayRevenue - biz.todayCheckIns * biz.pricePerNight;
     if (prepaid > 0.5) book(state, events, prepaid, { category: 'sales', description: `${b.label}: Vorauszahlungen weitere Nächte`, buildingId: b.id });
+    // Extra services (spa, casino floor, VIP packages) per occupied room-night.
+    const extraPerStay = stageEffects(b).extraPerStay + fx.extraPerStay;
+    if (occupied > 0 && extraPerStay > 0) {
+      const extra = Math.round(occupied * extraPerStay);
+      biz.todayRevenue += extra;
+      biz.lifetimeRevenue += extra;
+      book(state, events, extra, { category: 'sales', description: `${b.label}: Zusatzleistungen (${occupied} Zimmer)`, buildingId: b.id });
+    }
     const utilization = rooms > 0 ? occupied / rooms : 0;
     const wages = closeStaffDay(ctx, b, utilization);
     // Cleanliness: housekeeping restores, occupancy wears.
@@ -144,8 +154,10 @@ export function closeHotelsDay(ctx: SimContext, day: number): void {
     const comfort = model.comfort + fx.comfort;
     const value = Math.pow(model.basePricePerNight / Math.max(1, biz.pricePerNight), 0.6);
     const security = roleThroughput(biz, 'security', 1).count > 0 || (biz.upgrades.security ?? 0) > 0 ? 4 : 0;
-    const incidentChance = (state.districts[b.districtId]!.stats.crime / 100) * 0.08 * fx.security * (security ? 0.5 : 1);
-    let satisfaction = clamp(0.35 * comfort + 0.3 * biz.cleanliness + 22 * value + (reception.skill - 50) * 0.15 + security + rng.gaussian() * 3, 0, 100);
+    const incidentChance = (state.districts[b.districtId]!.stats.crime / 100) * 0.08 * fx.security * (security ? 0.5 : 1) * (hasFeature(b, 'casino') ? 1.5 : 1) * (hasFeature(b, 'armored') ? 0 : 1);
+    const concierge = roleThroughput(biz, 'concierge', 1);
+    const conciergeBonus = concierge.count > 0 ? Math.min(8, concierge.skill / 10) : 0;
+    let satisfaction = clamp(0.35 * (comfort + stageEffects(b).quality) + 0.3 * biz.cleanliness + 22 * value + (reception.skill - 50) * 0.15 + security + conciergeBonus + rng.gaussian() * 3, 0, 100);
     if (rng.chance(incidentChance)) {
       satisfaction -= 15;
       const loss = 600;
@@ -164,8 +176,7 @@ export function closeHotelsDay(ctx: SimContext, day: number): void {
     if (biz.todayTurnedAway > rooms * 0.3) {
       events.emit({ type: 'log', tick: state.tick, level: 'warning', message: `${b.label}: ${biz.todayTurnedAway} Gäste abgewiesen. Mehr Zimmer oder Rezeption nötig.`, buildingId: String(b.id) });
     }
-    const def = BUILDING_DEFINITIONS[b.defId]!;
-    const costs = wages + roomCosts + def.upkeepPerDay;
+    const costs = wages + roomCosts + effectiveUpkeep(b);
     biz.history.push({ day, occupancy: utilization, revenue: biz.todayRevenue, costs, checkIns: biz.todayCheckIns, satisfaction: departing > 0 ? satisfaction : undefined });
     if (biz.history.length > 30) biz.history.shift();
     biz.todayCheckIns = 0;
@@ -176,10 +187,10 @@ export function closeHotelsDay(ctx: SimContext, day: number): void {
   }
 }
 
-export function hotelPriceBounds(defId: string): { min: number; max: number } | null {
+export function hotelPriceBounds(defId: string, priceLevel = 1): { min: number; max: number } | null {
   const model = BUILDING_DEFINITIONS[defId]?.business;
   if (!model || model.kind !== 'hotel') return null;
-  return { min: Math.ceil(model.basePricePerNight * 0.5), max: Math.floor(model.basePricePerNight * 2.5) };
+  return { min: Math.ceil(model.basePricePerNight * 0.5), max: Math.floor(model.basePricePerNight * 2.5 * priceLevel) };
 }
 
 function clamp(v: number, lo: number, hi: number): number {

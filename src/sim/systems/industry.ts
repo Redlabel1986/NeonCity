@@ -12,6 +12,13 @@ import { BUILDING_DEFINITIONS } from '../data/buildings';
 import { INGREDIENTS } from '../data/ingredients';
 import { PRODUCTION } from '../data/production';
 import { upgradeEffects } from '../data/upgrades';
+import { effectiveUpkeep, stageEffects } from '../data/evolution';
+import { regionDistance } from '../data/regions';
+import { regionDemandFactor } from './crises';
+import { awardMilestone, regionOfDistrict } from './progression';
+
+/** Credits per unit and region crossed when a factory supplies an own venue. */
+export const TRANSPORT_PER_UNIT_REGION = 0.2;
 import { book } from '../economy/finance';
 import type { Building, GameState, IndustryState } from '../state';
 import { addLot, autoReorder, spoilInventory, stockOf, takeUnits, totalUnits, storageCapacity, type StockHolder } from './inventory';
@@ -59,10 +66,17 @@ export function factoryCapacity(state: GameState, b: Building): { workerHours: n
   const workers = roleThroughput(biz, 'worker', 8); // 8 productive hours per worker-day at skill 50
   const technicians = biz.employees.filter((e) => e.role === 'technician').length;
   const fx = upgradeEffects(biz.upgrades);
-  const machineUnits = model.baseMachineUnits * fx.machines * (1 + Math.min(0.4, technicians * 0.1));
+  const machineUnits = model.baseMachineUnits * fx.machines * stageEffects(b).capacity * (1 + Math.min(0.4, technicians * 0.1));
   const energy = state.districts[b.districtId]!.stats.energySupply / 100;
   const energyFactor = Math.min(1, 0.4 + energy * 0.7);
-  return { workerHours: workers.throughput, machineUnits: machineUnits * energyFactor * (biz.upgradeInProgress ? 0.8 : 1) };
+  return { workerHours: workers.throughput, machineUnits: machineUnits * energyFactor * (biz.upgradeInProgress || b.stageUpgrade ? 0.8 : 1) * regionDemandFactor(state, b.districtId, 'industry') };
+}
+
+/** Production lines a factory may run at its tier. */
+export function maxLines(b: Building): number {
+  const model = BUILDING_DEFINITIONS[b.defId]?.business;
+  if (!model || model.kind !== 'industry') return 0;
+  return model.maxLines + stageEffects(b).lines;
 }
 
 export function setLine(state: GameState, buildingId: number, lineId: number | null, recipeId: string, targetPerDay: number): { ok: true } | { ok: false; error: string } {
@@ -73,7 +87,7 @@ export function setLine(state: GameState, buildingId: number, lineId: number | n
   if (!PRODUCTION[recipeId] || !model.lines.includes(recipeId)) return { ok: false, error: 'Diese Fabrik kann das nicht herstellen.' };
   const target = Math.max(0, Math.min(2000, Math.round(targetPerDay)));
   if (lineId === null) {
-    if (biz.lines.length >= model.maxLines) return { ok: false, error: `Höchstens ${model.maxLines} Linien.` };
+    if (biz.lines.length >= maxLines(b)) return { ok: false, error: `Höchstens ${maxLines(b)} Linien.` };
     biz.lines.push({ id: biz.nextEntityId++, recipeId, targetPerDay: target });
     return { ok: true };
   }
@@ -146,7 +160,7 @@ export function closeIndustryDay(ctx: SimContext, day: number): void {
     if (energyCost > 0) book(state, events, -Math.round(energyCost), { category: 'upkeep', description: `${b.label}: Energie`, buildingId: b.id });
     biz.todayEnergy += energyCost;
     // Internal transfers: own venues pull finished goods at cost.
-    internalTransfers(state, b, biz);
+    internalTransfers(ctx, b, biz);
     // Surplus sale: megacorps hold supply contracts with competitors (95 % of base price) before the wholesale market (85 %).
     let revenue = 0;
     if (biz.sellSurplus && state.corporate.megacorp) {
@@ -193,8 +207,7 @@ export function closeIndustryDay(ctx: SimContext, day: number): void {
     if (produced === 0 && biz.lines.length > 0) {
       events.emit({ type: 'log', tick: state.tick, level: 'warning', message: `${b.label}: Keine Produktion. Rohstoffe, Arbeiter oder Energie fehlen.`, buildingId: String(b.id) });
     }
-    const def = BUILDING_DEFINITIONS[b.defId]!;
-    const costs = wages + def.upkeepPerDay + Math.round(energyCost) + biz.todayPurchases;
+    const costs = wages + effectiveUpkeep(b) + Math.round(energyCost) + biz.todayPurchases;
     biz.history.push({ day, revenue: biz.todayRevenue, costs, produced, purchases: biz.todayPurchases, energy: Math.round(energyCost), internal: biz.todayInternal ?? 0 });
     biz.todayInternal = 0;
     if (biz.history.length > 30) biz.history.shift();
@@ -209,25 +222,38 @@ export function closeIndustryDay(ctx: SimContext, day: number): void {
   }
 }
 
-/** Moves finished goods from the factory into own venues that are below their reorder targets. */
-function internalTransfers(state: GameState, factory: Building, biz: IndustryState): void {
+/**
+ * Moves finished goods from the factory into own venues that are below their
+ * reorder targets. Goods crossing regions pay transport (per unit and region
+ * crossed) and only half of the need moves per day two or more regions away.
+ */
+function internalTransfers(ctx: SimContext, factory: Building, biz: IndustryState): void {
+  const { state, events } = ctx;
+  let transportCost = 0;
+  let moved = 0;
   for (const id in state.buildings) {
     const venue = state.buildings[id]!;
     if (venue.id === factory.id || venue.owner !== state.playerId || venue.status !== 'operational') continue;
     const holder = venue.business;
     if (!holder || (holder.kind !== 'gastronomy' && holder.kind !== 'retail')) continue;
     const target = holder as StockHolder;
+    const distance = regionDistance(regionOfDistrict(state, factory.districtId), regionOfDistrict(state, venue.districtId));
     for (const [goodId, want] of Object.entries(target.reorderTargets)) {
       const have = stockOf(target, goodId);
-      const need = Math.floor(want - have);
+      let need = Math.floor(want - have);
+      if (distance >= 2) need = Math.floor(need / 2); // long haul: trucks arrive over two days
       if (need < 5) continue;
       const available = Math.floor(stockOf(biz, goodId));
       const units = Math.min(need, available);
       if (units <= 0) continue;
+      transportCost += units * TRANSPORT_PER_UNIT_REGION * distance;
+      moved += units;
       const taken = takeUnits(biz, goodId, units);
       if (!taken) continue;
       biz.todayInternal = (biz.todayInternal ?? 0) + units;
       addLot(target, { ingredientId: goodId, units, boughtDay: Math.floor((state.tick + 7 * 60) / 1440), quality: taken.quality, unitCost: Math.round((taken.cost / units) * 100) / 100 });
     }
   }
+  if (transportCost > 0) book(state, events, -Math.round(transportCost), { category: 'upkeep', description: `Transport zwischen Regionen: ${factory.label}`, buildingId: factory.id });
+  if (moved > 0) awardMilestone(state, events, 'supply_chain');
 }

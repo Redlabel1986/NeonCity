@@ -1,5 +1,24 @@
 # Aufgaben
 
+## Erledigt (Phase 17 – Level, Regionen, Entwicklungsbaum, Banken)
+
+- [x] Spielerlevel mit XP-Meilensteinen (einmalige IDs), Level-Up-Dialog, Weltkarte
+- [x] Vier Regionen auf einer Karte mit eigenem Aussehen und eigener Wirtschaft, regionale Ereignisse, Logistik zwischen Regionen
+- [x] Universelles Entwicklungsgraph-System für alle 15 Betriebstypen mit echten Mechaniken, Entwicklungsbaum-UI, sichtbare Gebäudevarianten
+- [x] Banken, Bauernhof, Landgasthof, Hofladen
+- [x] Tests und Dokumentation
+
+## Roadmap Entwicklungsbaum (Branchen ohne Simulation, Reihenfolge nach Nähe zur bestehenden Wirtschaft)
+
+- [ ] Lieferdienst, Spedition, Nahverkehr (Transport-Modell erweitern: Fracht statt Fahrgäste)
+- [ ] Werkstatt und Autohandel (Fahrzeugflotte als Kunden)
+- [ ] Café/Bäckerei und Bars als eigene Gebäudetypen (heute Pfade des Streetfood-Stands)
+- [ ] Medizin und Cyberware (Bevölkerungsgesundheit als Nachfrage), Software/Cybersecurity (Technologie als Produkt), Rechenzentren
+- [ ] Mode (neue Warengruppen mit Lieferanten), Energie und Landwirtschaft als eigene Modelle, Versicherungen, Investmentgesellschaft
+- [ ] Medien, Film, Sport, Bildung, Bau, Entsorgung, Polizei als Behörde (Budget statt Gewinn), Mafia-Spezialisierungspfade in der Unterwelt
+- [ ] Holdings mit gemeinsamem Dashboard, Filialen mit Markenbonus, Unternehmensrückschritt bei Insolvenz
+- [ ] Weitere Regionen-Inhalte: Sky-Apartments und mehrstöckige Straßen in Nova Eclipse, Straßenbahnen in Silverbrook, regionale Fraktionen und Missionen, Ambient-Audio je Region
+
 ## Erledigt (Phase 16 – Weiterlaufen)
 
 - [x] Nachholen der vergangenen Zeit beim Laden, nach Hintergrund-Tab und nach Cloud-Laden, gedeckelt und einstellbar
@@ -168,4 +187,4 @@
 
 ## Stand
 
-Alle acht Phasen des Entwicklungsplans plus Phase 9 (Konzern und Karriere), Phase 10 (Grafik und Ausrichtung), Phase 11 (Innenansicht), Phase 12 (Online-Welt), Phase 13 (Casino), Phase 14 (Mobil), Phase 15 (Cloud-Spielstand) und Phase 16 (Weiterlaufen) sind umgesetzt. Offene Punkte oben sind Erweiterungen über den Plan hinaus; als nächste Phase bietet sich die öffentliche Polizeibehörde an.
+Alle acht Phasen des Entwicklungsplans plus Phase 9 (Konzern und Karriere), Phase 10 (Grafik und Ausrichtung), Phase 11 (Innenansicht), Phase 12 (Online-Welt), Phase 13 (Casino), Phase 14 (Mobil), Phase 15 (Cloud-Spielstand), Phase 16 (Weiterlaufen) und Phase 17 (Level, Regionen, Entwicklungsbaum, Banken) sind umgesetzt. Offene Punkte oben sind Erweiterungen über den Plan hinaus; als nächste Phase bietet sich die öffentliche Polizeibehörde an.

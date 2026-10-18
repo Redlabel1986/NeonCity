@@ -14,6 +14,7 @@ import { FactionsPanel } from './FactionsPanel';
 import { PoliticsPanel } from './PoliticsPanel';
 import { ResearchPanel } from './ResearchPanel';
 import { CasinoPanel } from './CasinoPanel';
+import { WorldMapPanel } from './WorldMapPanel';
 import { useSimState } from '../store/gameStore';
 
 export interface PanelView {
@@ -58,6 +59,9 @@ export function usePanelView(): PanelView | null {
       break;
     case 'casino':
       content = <CasinoPanel />;
+      break;
+    case 'map':
+      content = <WorldMapPanel />;
       break;
     case 'build':
       content = <BuildPanel />;

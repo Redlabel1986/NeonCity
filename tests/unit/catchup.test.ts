@@ -4,7 +4,7 @@ import { checkPlacement } from '../../src/sim/systems/construction';
 import { MINUTES_PER_DAY } from '../../src/sim/core/clock';
 import { collectEvents, describeElapsed, emptyReport, ticksForElapsed, NOTABLE_LIMIT } from '../../src/sim/catchup';
 
-const options: NewGameOptions = { seed: 'catchup', playerName: 'Rückkehrer', difficulty: 'standard', background: 'restaurateur', citySize: 40 };
+const options: NewGameOptions = { progression: false, seed: 'catchup', playerName: 'Rückkehrer', difficulty: 'standard', background: 'restaurateur', citySize: 40 };
 
 describe('Offline progress (catch-up)', () => {
   it('turns elapsed real time into ticks at the game speed and respects the cap', () => {

@@ -24,8 +24,8 @@ function build(sim: Simulation, defId: string, archetype?: string): Building {
 
 describe('Weather', () => {
   it('changes over time deterministically and affects demand', () => {
-    const a = new Simulation(createNewGame({ seed: 'w', playerName: 'x', difficulty: 'sandbox', background: 'restaurateur', citySize: 32 }));
-    const b = new Simulation(createNewGame({ seed: 'w', playerName: 'x', difficulty: 'sandbox', background: 'restaurateur', citySize: 32 }));
+    const a = new Simulation(createNewGame({ progression: false, seed: 'w', playerName: 'x', difficulty: 'sandbox', background: 'restaurateur', citySize: 32 }));
+    const b = new Simulation(createNewGame({ progression: false, seed: 'w', playerName: 'x', difficulty: 'sandbox', background: 'restaurateur', citySize: 32 }));
     const kinds = new Set<string>();
     for (let i = 0; i < 20; i++) {
       a.run(MINUTES_PER_DAY);
@@ -42,7 +42,7 @@ describe('Weather', () => {
   });
 
   it('is saved, loaded and migrated', () => {
-    const sim = new Simulation(createNewGame({ seed: 'w2', playerName: 'x', difficulty: 'sandbox', background: 'restaurateur', citySize: 32 }));
+    const sim = new Simulation(createNewGame({ progression: false, seed: 'w2', playerName: 'x', difficulty: 'sandbox', background: 'restaurateur', citySize: 32 }));
     sim.state.weather = { kind: 'fog', untilTick: 999, intensity: 0.5 };
     const { state } = deserialize(serialize(sim.state, 'v8'));
     expect(state.weather.kind).toBe('fog');
@@ -54,7 +54,7 @@ describe('Weather', () => {
 });
 
 describe('Balancing', () => {
-  const options: NewGameOptions = { seed: 'balance', playerName: 'Avg', difficulty: 'standard', background: 'restaurateur', citySize: 64 };
+  const options: NewGameOptions = { progression: false, seed: 'balance', playerName: 'Avg', difficulty: 'standard', background: 'restaurateur', citySize: 64 };
 
   it('a standard ramen bar run is viable over 12 days without micro-management', () => {
     const sim = new Simulation(createNewGame(options));

@@ -4,7 +4,10 @@ import { session } from '../session';
 import { BUILDING_DEFINITIONS } from '../../sim/data/buildings';
 import { DISTRICT_ARCHETYPES } from '../../sim/data/districts';
 import { TileKind } from '../../sim/world/grid';
-import { effectiveCapacity, isOpen } from '../../sim/systems/business';
+import { effectiveCapacity, isOpen, openingHours } from '../../sim/systems/business';
+import { stageLevel, stageName, treeOf } from '../../sim/data/evolution';
+import { REGIONS } from '../../sim/data/regions';
+import { regionOfDistrict } from '../../sim/systems/progression';
 import { stockOf, totalUnits } from '../../sim/systems/inventory';
 import { INGREDIENTS, INGREDIENT_IDS } from '../../sim/data/ingredients';
 import { hotelRooms } from '../../sim/systems/hotel';
@@ -61,7 +64,7 @@ function TileDetails({ x, y }: { x: number; y: number }) {
       </dl>
       {kind === TileKind.Lot && quote && (
         <div className="mt-4">
-          <p className="text-xs text-muted">Eine Ramenbar hier kostet {credits(quote.total)} und braucht {duration(quote.buildTime)}.</p>
+          <p className="text-xs text-muted">Ein Asia-Imbiss hier kostet {credits(quote.total)} und braucht {duration(quote.buildTime)}.</p>
           <button type="button" className="btn btn-primary mt-2 w-full" onClick={() => setPanel('build')}>
             Hier bauen
           </button>
@@ -77,6 +80,8 @@ function BuildingDetails({ b }: { b: Building }) {
   const selectBuilding = useGameStore((s) => s.selectBuilding);
   const [confirmDemolish, setConfirmDemolish] = useState(false);
   const [renaming, setRenaming] = useState<string | null>(null);
+  const openDashboard = useGameStore((s) => s.openDashboard);
+  const setDashboardTab = useGameStore((s) => s.setDashboardTab);
   if (!state) return null;
   const district = state.districts[b.districtId]!;
   const arch = DISTRICT_ARCHETYPES[district.archetype];
@@ -89,7 +94,7 @@ function BuildingDetails({ b }: { b: Building }) {
     <div>
       <Header
         title={b.label}
-        subtitle={`${isPlayer ? (def?.name ?? 'Eigenes Gebäude') : otherOwner ? `Gebäude von ${otherOwner}` : 'Stadtgebäude'} · ${district.name}`}
+        subtitle={`${isPlayer ? (b.business ? stageName(b) : (def?.name ?? 'Eigenes Gebäude')) : otherOwner ? `Gebäude von ${otherOwner}` : 'Stadtgebäude'} · ${district.name}${REGIONS[regionOfDistrict(state, district.id)].name !== district.name ? ` · ${REGIONS[regionOfDistrict(state, district.id)].name}` : ''}`}
         color={isPlayer ? 0xff2bd6 : otherOwner ? 0xffb020 : arch.color}
         onClose={() => selectBuilding(null)}
       />
@@ -122,7 +127,22 @@ function BuildingDetails({ b }: { b: Building }) {
           </>
         )}
         {isPlayer && <Row label="Investiert" value={credits(b.investment)} />}
+        {isPlayer && b.business && b.status === 'operational' && (
+          <Row label="Entwicklungsstufe" value={`${stageName(b)} (Stufe ${stageLevel(b)})${b.stageUpgrade ? ' · Ausbau läuft' : ''}${b.stars ? ` · ${'★'.repeat(b.stars)}` : ''}`} />
+        )}
       </dl>
+      {isPlayer && b.business && b.status === 'operational' && treeOf(b.defId) && (
+        <button
+          type="button"
+          className="btn mt-3 w-full"
+          onClick={() => {
+            openDashboard(b.id);
+            setDashboardTab('evolution');
+          }}
+        >
+          Entwicklungsbaum öffnen
+        </button>
+      )}
       {!isPlayer && !otherOwner && <PurchaseOffer b={b} />}
       {isPlayer && b.property && <PropertyDetails b={b} />}
 
@@ -278,6 +298,13 @@ function OtherBusinessDetails({ b }: { b: Building }) {
             <Row label="Umsatz gestern" value={credits(biz.history[biz.history.length - 1]?.revenue ?? 0)} />
           </>
         )}
+        {biz.kind === 'bank' && (
+          <>
+            <Row label="Einlagen" value={credits(biz.deposits)} />
+            <Row label="Kredite" value={credits(biz.loansOut)} />
+            <Row label="Rücklage" value={credits(biz.reserve)} />
+          </>
+        )}
         {biz.kind === 'retail' && (
           <>
             <Row label="Kunden heute" value={integer(biz.todayCustomers)} />
@@ -304,7 +331,8 @@ function BusinessDetails({ b, hour }: { b: Building; hour: number }) {
   const biz = b.business;
   const model = BUILDING_DEFINITIONS[b.defId]!.business!;
   if (model.kind !== 'gastronomy') return null;
-  const open = isOpen(model, hour);
+  const open = isOpen(model, hour, b);
+  const hours = openingHours(model, b);
   const cap = effectiveCapacity(b, state);
   const last = biz.history[biz.history.length - 1];
   const lowStock = INGREDIENT_IDS.filter((id) => stockOf(biz, id) < 8).map((id) => INGREDIENTS[id]!.name);
@@ -315,7 +343,7 @@ function BusinessDetails({ b, hour }: { b: Building; hour: number }) {
         <span className={`text-xs ${open ? 'text-acid' : 'text-muted'}`}>{open ? 'geöffnet' : 'geschlossen'}</span>
       </div>
       <dl className="mt-2 text-sm">
-        <Row label="Öffnungszeiten" value={`${pad(model.openHour)}:00 – ${pad(model.closeHour)}:00`} />
+        <Row label="Öffnungszeiten" value={hours.open === 0 && hours.close === 24 ? 'rund um die Uhr' : `${pad(hours.open)}:00 – ${pad(hours.close % 24)}:00`} />
         <Row label="Gäste heute" value={`${integer(biz.todayGuests)}${biz.todayTurnedAway > 0 ? ` (+${integer(biz.todayTurnedAway)} abgewiesen)` : ''}`} />
         <Row label="Umsatz heute" value={credits(biz.todayRevenue)} />
         {last && <Row label="Gestern" value={`${integer(last.guests)} Gäste, ${signedCredits(last.revenue - last.costs)}`} />}

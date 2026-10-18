@@ -20,6 +20,7 @@ const PANEL_BINDINGS: Partial<Record<keyof KeyBindings, Panel>> = {
   politics: 'politics',
   research: 'research',
   casino: 'casino',
+  map: 'map',
 };
 
 /** Global keyboard shortcuts for the game screen, using the configurable bindings. */

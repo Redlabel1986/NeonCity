@@ -6,6 +6,7 @@ async function start(page: Page): Promise<void> {
   await page.getByLabel('Dein Name').fill('P5 Tester');
   await page.getByLabel('Stadt-Seed').fill('phase5-seed');
   await page.getByRole('button', { name: 'Sandbox', exact: true }).click();
+  await page.getByLabel('Aufstieg durch Regionen').uncheck();
   await page.getByRole('button', { name: 'Stadt betreten' }).click();
   await page.waitForFunction(() => !!window.__neon?.session.renderer && !!window.__neon.session.sim);
   await page.keyboard.press('0');

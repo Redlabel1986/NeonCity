@@ -6,9 +6,9 @@
 import type { SimContext } from '../core/context';
 import type { Rng } from '../core/rng';
 import type { Building, Employee, EmployeeRole, GastronomyState, StaffedBusiness } from '../state';
-import { BUILDING_DEFINITIONS } from '../data/buildings';
 import { randomName } from '../data/names';
 import { upgradeEffects } from '../data/upgrades';
+import { stageEffects, unlockedAlongPath } from '../data/evolution';
 import { book } from '../economy/finance';
 
 export const ROLE_LABELS: Record<EmployeeRole, string> = {
@@ -25,6 +25,11 @@ export const ROLE_LABELS: Record<EmployeeRole, string> = {
   researcher: 'Forscher',
   worker: 'Arbeiter',
   technician: 'Techniker',
+  banker: 'Bankkaufmann',
+  analyst: 'Kreditanalyst',
+  sommelier: 'Sommelier',
+  concierge: 'Concierge',
+  dispatcher: 'Disponent',
 };
 
 /** Which roles each business type hires. */
@@ -36,9 +41,10 @@ export const ROLES_BY_KIND: Record<string, readonly EmployeeRole[]> = {
   security: ['guard', 'investigator', 'manager'],
   lab: ['researcher', 'technician', 'manager'],
   industry: ['worker', 'technician', 'manager'],
+  bank: ['banker', 'analyst', 'security', 'manager'],
 };
 
-const WAGE_BASE: Record<EmployeeRole, number> = { cook: 80, service: 65, manager: 140, reception: 70, housekeeping: 60, driver: 75, clerk: 62, security: 70, guard: 72, investigator: 110, researcher: 120, worker: 68, technician: 95 };
+const WAGE_BASE: Record<EmployeeRole, number> = { cook: 80, service: 65, manager: 140, reception: 70, housekeeping: 60, driver: 75, clerk: 62, security: 70, guard: 72, investigator: 110, researcher: 120, worker: 68, technician: 95, banker: 90, analyst: 125, sommelier: 130, concierge: 115, dispatcher: 95 };
 
 /** Expected daily wage for a role and skill level. */
 export function expectedWage(role: EmployeeRole, skill: number): number {
@@ -190,7 +196,7 @@ export function closeStaffDay(ctx: SimContext, b: Building, utilization: number)
   for (const e of biz.employees) {
     wages += e.wage;
     if (e.wage < minWage) e.wage = minWage; // the law enforces the floor
-    const fair = Math.max(minWage, expectedWage(e.role, e.skill) * laborState.wageFactor);
+    const fair = Math.max(minWage, expectedWage(e.role, e.skill) * laborState.wageFactor * stageEffects(b).wage); // luxury stages pay more, automation less
     const payFactor = e.wage / fair; // <1 underpaid
     if (strike) e.morale = Math.max(0, e.morale - 1);
     let target = 50 + (payFactor - 1) * 80 + bonus + (hasManager ? 6 : 0) - Math.max(0, utilization - 0.9) * 60 + (hygiene < 40 ? -10 : 0);
@@ -215,6 +221,12 @@ export function refreshCandidates(ctx: SimContext, b: Building, day: number): vo
   const biz = b.business as StaffedBusiness | undefined;
   if (!biz) return;
   const district = ctx.state.districts[b.districtId]!;
-  const kind = BUILDING_DEFINITIONS[b.defId]?.business?.kind ?? 'gastronomy';
-  generateCandidates(biz, ctx.rng, day, district.stats.purchasingPower, ROLES_BY_KIND[kind] ?? ROLES_BY_KIND.gastronomy!);
+  generateCandidates(biz, ctx.rng, day, district.stats.purchasingPower, rolesFor(b));
+}
+
+/** Roles a business hires: its kind's roles plus what its evolution stages unlocked. */
+export function rolesFor(b: Building): readonly EmployeeRole[] {
+  const base = ROLES_BY_KIND[b.business?.kind ?? 'gastronomy'] ?? ROLES_BY_KIND.gastronomy!;
+  const extra = unlockedAlongPath(b).roles.filter((r) => !base.includes(r));
+  return extra.length > 0 ? [...base, ...extra] : base;
 }

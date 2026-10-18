@@ -24,6 +24,8 @@ import { DIFFICULTIES } from '../data/difficulty';
 import { upgradeEffects } from '../data/upgrades';
 import { book, canAfford } from '../economy/finance';
 import { marketFactor } from './market';
+import { regionDistance } from '../data/regions';
+import { regionOfDistrict } from './progression';
 import type { MarketState } from '../state';
 
 export function stockOf(biz: StockHolder, ingredientId: string): number {
@@ -161,7 +163,9 @@ export function placeOrder(
   }
   if (!canAfford(state, quote.cost)) return { ok: false, error: `Nicht genug Credits für die Bestellung (${Math.round(quote.cost)} ¢).` };
   const delayed = rng.chance(supplier.delayChance);
-  const hours = Math.max(1, Math.round((supplier.deliveryHours + (delayed ? supplier.delayHours : 0)) * techFactors(state).delivery * crisisFactors(state).delivery));
+  // Suppliers ship from Neon Central: every region in between adds two hours.
+  const regionHours = 2 * regionDistance(regionOfDistrict(state, b.districtId), 'neon_central');
+  const hours = Math.max(1, Math.round((supplier.deliveryHours + regionHours + (delayed ? supplier.delayHours : 0)) * techFactors(state).delivery * crisisFactors(state).delivery));
   const order: SupplyOrder = {
     id: biz.nextEntityId++,
     supplierId,

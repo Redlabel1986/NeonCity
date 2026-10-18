@@ -20,9 +20,10 @@ export type BuildingCategory =
   | 'office'
   | 'civic'
   | 'security'
-  | 'research';
+  | 'research'
+  | 'finance';
 
-export type BusinessModelId = 'gastronomy' | 'hotel' | 'transport' | 'retail' | 'security' | 'lab' | 'industry';
+export type BusinessModelId = 'gastronomy' | 'hotel' | 'transport' | 'retail' | 'security' | 'lab' | 'industry' | 'bank';
 
 export interface GastronomyModel {
   kind: 'gastronomy';
@@ -128,7 +129,25 @@ export interface IndustryModel {
   upgrades: readonly string[];
 }
 
-export type BusinessModel = GastronomyModel | HotelModel | TransportModel | RetailModel | SecurityModel | LabModel | IndustryModel;
+export interface BankModel {
+  kind: 'bank';
+  /** Own capital paid in at the founding (becomes the reserve). */
+  foundingCapital: number;
+  /** Deposit inflow per day in an average district at market rates. */
+  baseDepositDraw: number;
+  /** What other banks pay on deposits per day (fraction). */
+  marketDepositRate: number;
+  /** What other banks charge on loans per day (fraction). */
+  marketLoanRate: number;
+  /** Share of the loan book lost per day in an average district. */
+  baseDefaultRate: number;
+  /** Deposits allowed per credit of reserve. */
+  leverage: number;
+  startingStaff: readonly { role: 'banker' | 'analyst'; skill: number }[];
+  upgrades: readonly string[];
+}
+
+export type BusinessModel = GastronomyModel | HotelModel | TransportModel | RetailModel | SecurityModel | LabModel | IndustryModel | BankModel;
 
 export interface BuildingDefinition {
   id: string;
@@ -145,18 +164,22 @@ export interface BuildingDefinition {
   upkeepPerDay: number;
   /** Development phase that makes this building available. */
   availability: number;
+  /** Player level (data/regions.ts) needed to build it; missing = 1. */
+  minLevel?: number;
+  /** Regions that allow this building; missing = everywhere. */
+  regions?: readonly import('./regions').RegionId[];
   /** Art key used by the renderer. */
-  art: 'ramen' | 'foodstand' | 'capsule_hotel' | 'taxi_depot' | 'kiosk' | 'diner' | 'security_hq' | 'lab' | 'factory' | 'city';
+  art: 'ramen' | 'foodstand' | 'capsule_hotel' | 'taxi_depot' | 'kiosk' | 'diner' | 'security_hq' | 'lab' | 'factory' | 'bank' | 'farm' | 'inn' | 'city';
   business?: BusinessModel;
 }
 
 export const BUILDING_DEFINITIONS: Record<string, BuildingDefinition> = {
   ramen_bar: {
     id: 'ramen_bar',
-    name: 'Ramenbar',
+    name: 'Asia-Imbiss',
     category: 'gastronomy',
     description:
-      'Dampfende Nudelsuppen für Nachtschwärmer, Pendler und Konzernangestellte. Dein erster Schritt ins Geschäft.',
+      'Dampfende Nudelsuppen für Nachtschwärmer, Pendler und Konzernangestellte. Dein erster Schritt ins Geschäft; wächst zur Ramenbar, zum China-Restaurant und zum Sternerestaurant.',
     footprint: { w: 1, h: 1 },
     floors: 2,
     cost: 6500,
@@ -204,7 +227,7 @@ export const BUILDING_DEFINITIONS: Record<string, BuildingDefinition> = {
       cookRate: 16,
       serviceRate: 30,
       baseDraw: 10,
-      recipes: ['noodle_box', 'synth_skewer', 'synth_beer'],
+      recipes: ['noodle_box', 'synth_skewer', 'synth_beer', 'herb_bowl'],
       enabledAtStart: 2,
       startingStaff: [{ role: 'cook', skill: 40 }],
       startingStock: { noodles: 60, vegetables: 45, synthmeat: 40, spices: 15, drinks: 25 },
@@ -217,7 +240,7 @@ export const BUILDING_DEFINITIONS: Record<string, BuildingDefinition> = {
     id: 'diner',
     name: 'Imbiss',
     category: 'gastronomy',
-    description: 'Schneller Imbiss mit kleiner Karte. Entsteht auch bei der Übernahme eines Konkurrenzlokals.',
+    description: 'Schneller Imbiss mit kleiner Karte. Entsteht auch bei der Übernahme eines Konkurrenzlokals; wächst zum Dönerladen, Restaurant und Sternerestaurant.',
     footprint: { w: 1, h: 1 },
     floors: 1,
     cost: 3800,
@@ -253,6 +276,7 @@ export const BUILDING_DEFINITIONS: Record<string, BuildingDefinition> = {
     buildTimeMinutes: 48 * 60,
     upkeepPerDay: 260,
     availability: 4,
+    minLevel: 2,
     art: 'capsule_hotel',
     business: {
       kind: 'hotel',
@@ -279,6 +303,7 @@ export const BUILDING_DEFINITIONS: Record<string, BuildingDefinition> = {
     buildTimeMinutes: 96 * 60,
     upkeepPerDay: 720,
     availability: 4,
+    minLevel: 3,
     art: 'capsule_hotel',
     business: {
       kind: 'hotel',
@@ -306,6 +331,7 @@ export const BUILDING_DEFINITIONS: Record<string, BuildingDefinition> = {
     buildTimeMinutes: 60 * 60,
     upkeepPerDay: 320,
     availability: 4,
+    minLevel: 2,
     art: 'taxi_depot',
     business: {
       kind: 'transport',
@@ -333,6 +359,7 @@ export const BUILDING_DEFINITIONS: Record<string, BuildingDefinition> = {
     buildTimeMinutes: 54 * 60,
     upkeepPerDay: 240,
     availability: 5,
+    minLevel: 3,
     art: 'security_hq',
     business: {
       kind: 'security',
@@ -357,6 +384,7 @@ export const BUILDING_DEFINITIONS: Record<string, BuildingDefinition> = {
     buildTimeMinutes: 60 * 60,
     upkeepPerDay: 300,
     availability: 7,
+    minLevel: 3,
     art: 'lab',
     business: {
       kind: 'lab',
@@ -379,6 +407,8 @@ export const BUILDING_DEFINITIONS: Record<string, BuildingDefinition> = {
     buildTimeMinutes: 72 * 60,
     upkeepPerDay: 420,
     availability: 7,
+    minLevel: 2,
+    regions: ['silverbrook', 'neon_central', 'nova_eclipse'],
     art: 'factory',
     business: {
       kind: 'industry',
@@ -406,6 +436,8 @@ export const BUILDING_DEFINITIONS: Record<string, BuildingDefinition> = {
     buildTimeMinutes: 84 * 60,
     upkeepPerDay: 520,
     availability: 7,
+    minLevel: 4,
+    regions: ['nova_eclipse', 'neon_central'],
     art: 'factory',
     business: {
       kind: 'industry',
@@ -446,6 +478,119 @@ export const BUILDING_DEFINITIONS: Record<string, BuildingDefinition> = {
       upgrades: ['shelves', 'storage', 'decor', 'security', 'marketing'],
     },
   },
+  farm: {
+    id: 'farm',
+    name: 'Bauernhof',
+    category: 'industry',
+    description: 'Felder, Gewächshaus und Kräutergarten in Greenhaven. Liefert regionales Gemüse, Premium-Kräuter und Bio-Getreide an eigene Betriebe und den Großmarkt. Nur im Umland.',
+    footprint: { w: 2, h: 2 },
+    floors: 1,
+    cost: 14000,
+    buildTimeMinutes: 30 * 60,
+    upkeepPerDay: 120,
+    availability: 7,
+    minLevel: 1,
+    regions: ['greenhaven'],
+    art: 'farm',
+    business: {
+      kind: 'industry',
+      lines: ['vegetable_field', 'herb_garden', 'grain_field'],
+      maxLines: 2,
+      baseMachineUnits: 220,
+      startingStaff: [
+        { role: 'worker', skill: 45 },
+        { role: 'worker', skill: 40 },
+      ],
+      startingStock: {},
+      storage: 900,
+      upgrades: ['machines', 'storage', 'staff_room'],
+    },
+  },
+  inn: {
+    id: 'inn',
+    name: 'Landgasthof',
+    category: 'hotel',
+    description: 'Pension mit zehn Zimmern, Garten und Frühstück. Zieht Städter an, die Ruhe suchen. Nur im Umland.',
+    footprint: { w: 2, h: 1 },
+    floors: 2,
+    cost: 16000,
+    buildTimeMinutes: 36 * 60,
+    upkeepPerDay: 150,
+    availability: 7,
+    minLevel: 1,
+    regions: ['greenhaven'],
+    art: 'inn',
+    business: {
+      kind: 'hotel',
+      rooms: 10,
+      basePricePerNight: 64,
+      costPerRoomNight: 12,
+      baseDemand: 9,
+      comfort: 55,
+      startingStaff: [
+        { role: 'reception', skill: 45 },
+        { role: 'housekeeping', skill: 42 },
+      ],
+      upgrades: ['rooms', 'lobby', 'housekeeping_tech', 'marketing'],
+    },
+  },
+  farm_shop: {
+    id: 'farm_shop',
+    name: 'Hofladen',
+    category: 'retail',
+    description: 'Verkauft regionales Gemüse, Kräuter, Snacks und Getränke direkt an die Nachbarschaft. Umland und Vorstadt.',
+    footprint: { w: 1, h: 1 },
+    floors: 1,
+    cost: 3600,
+    buildTimeMinutes: 10 * 60,
+    upkeepPerDay: 45,
+    availability: 7,
+    minLevel: 1,
+    regions: ['greenhaven', 'silverbrook'],
+    art: 'kiosk',
+    business: {
+      kind: 'retail',
+      openHour: 7,
+      closeHour: 20,
+      goods: ['vegetables', 'herbs', 'snacks', 'drinks'],
+      clerkRate: 20,
+      baseDraw: 12,
+      startingStaff: [{ role: 'clerk', skill: 42 }],
+      startingStock: { vegetables: 60, herbs: 20, snacks: 40, drinks: 40 },
+      storage: 260,
+      upgrades: ['shelves', 'storage', 'decor', 'marketing'],
+    },
+  },
+  bank: {
+    id: 'bank',
+    name: 'Stadtbank-Filiale',
+    category: 'finance',
+    description: 'Eine eigene Bank: Einlagen der Bevölkerung einsammeln, Kredite vergeben, an der Zinsspanne verdienen. Braucht Gründungskapital als Rücklage und Level 3.',
+    footprint: { w: 2, h: 2 },
+    floors: 6,
+    cost: 120000,
+    buildTimeMinutes: 96 * 60,
+    upkeepPerDay: 600,
+    availability: 7,
+    minLevel: 3,
+    regions: ['neon_central', 'nova_eclipse'],
+    art: 'bank',
+    business: {
+      kind: 'bank',
+      foundingCapital: 150000,
+      baseDepositDraw: 6000,
+      marketDepositRate: 0.0005,
+      marketLoanRate: 0.004,
+      baseDefaultRate: 0.0015,
+      leverage: 6,
+      startingStaff: [
+        { role: 'banker', skill: 50 },
+        { role: 'banker', skill: 42 },
+        { role: 'analyst', skill: 52 },
+      ],
+      upgrades: ['security', 'decor', 'staff_room', 'marketing'],
+    },
+  },
 };
 
 export const PLAYER_BUILDING_IDS: readonly string[] = Object.keys(BUILDING_DEFINITIONS);
@@ -464,6 +609,8 @@ export interface CityBuildingKind {
 }
 
 export const CITY_BUILDING_LABELS: Record<DistrictArchetype['style'], readonly string[]> = {
+  rural: ['Bauernhof', 'Fachwerkhaus', 'Holzhaus', 'Gärtnerei', 'Gewächshaus', 'Pension', 'Dorfladen', 'Fahrradwerkstatt', 'Tierarzt', 'Mühle'],
+  suburb: ['Reihenhaus', 'Einfamilienhaus', 'Wohnblock', 'Supermarkt', 'Schule', 'Tankstelle', 'Autohaus', 'Parkhaus', 'Fitnessstudio', 'Kino'],
   corporate: ['Konzernturm', 'Bürokomplex', 'Datenzentrum', 'Bankgebäude'],
   market: ['Ladenzeile', 'Imbiss', 'Elektronikmarkt', 'Spielhalle', 'Karaoke-Bar'],
   docks: ['Lagerhalle', 'Montagewerk', 'Containerdepot', 'Recyclinganlage'],

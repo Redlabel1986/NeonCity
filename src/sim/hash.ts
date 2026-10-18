@@ -24,6 +24,8 @@ export function worldHash(world: WorldState): string {
     mixNumber(p.ledger.dirtyBalance);
     mixNumber(p.player.reputation);
     mixNumber(p.underworld.heat);
+    mixNumber(p.progression?.level ?? 1);
+    mixNumber(p.progression?.xp ?? 0);
   }
   for (const d of world.districts) {
     mixNumber(d.stats.crime);

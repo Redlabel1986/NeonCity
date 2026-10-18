@@ -7,6 +7,7 @@
 import { session } from './session';
 import { useGameStore } from './store/gameStore';
 import { daylightFactor, tickToDate } from '../sim/core/clock';
+import { lockedDistrictIds } from '../sim/systems/progression';
 import { audio } from './audio';
 import { DISTRICT_ARCHETYPES } from '../sim/data/districts';
 
@@ -50,6 +51,7 @@ export function stopLoop(): void {
 }
 
 let hiddenAt = 0;
+let lastLockKey = '';
 
 function onVisibility(): void {
   if (document.hidden) {
@@ -112,6 +114,9 @@ function frame(now: number): void {
           break;
         case 'task:completed':
           break;
+        case 'level:up':
+          if (store.dialog === null || store.dialog === 'levelup') store.setDialog('levelup');
+          break;
         case 'log':
           if (e.level === 'success' || e.level === 'danger' || e.level === 'warning') store.notify(e.level, e.message);
           break;
@@ -123,6 +128,12 @@ function frame(now: number): void {
   const renderer = session.renderer;
   if (renderer) {
     if (structural) renderer.syncBuildings(sim.state);
+    // Locked regions are drawn dimmed; refresh when the world or the level changes.
+    const lockKey = `${sim.world.seed}:${sim.state.playerId}:${sim.state.progression.enabled ? sim.state.progression.level : 'free'}:${renderer.worldGeneration}`;
+    if (lockKey !== lastLockKey) {
+      lastLockKey = lockKey;
+      renderer.setLockedDistricts(lockedDistrictIds(sim.state));
+    }
     const date = tickToDate(sim.state.tick);
     renderer.setDaylight(daylightFactor(date.minuteOfDay));
     const density = trafficDensity(date.hour, sim.state);

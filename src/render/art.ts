@@ -25,7 +25,7 @@ export interface GeneratedTexture {
   oy: number;
 }
 
-export type ArtStyle = 'corporate' | 'market' | 'docks' | 'ghost' | 'old' | 'chrome' | 'undercity' | 'skyline' | 'player';
+export type ArtStyle = 'rural' | 'suburb' | 'corporate' | 'market' | 'docks' | 'ghost' | 'old' | 'chrome' | 'undercity' | 'skyline' | 'player';
 
 /** Number of visual variants a building seed can take. */
 export const SEED_VARIANTS = 8;
@@ -33,7 +33,7 @@ export const SEED_VARIANTS = 8;
 export const BUILDING_INSET = 0.14;
 
 export interface BuildingArtKey {
-  art: 'city' | 'ramen' | 'foodstand' | 'capsule_hotel' | 'taxi_depot' | 'kiosk' | 'diner' | 'security_hq' | 'lab' | 'factory';
+  art: 'city' | 'ramen' | 'foodstand' | 'capsule_hotel' | 'taxi_depot' | 'kiosk' | 'diner' | 'security_hq' | 'lab' | 'factory' | 'bank' | 'farm' | 'inn';
   style: ArtStyle;
   w: number;
   h: number;
@@ -42,9 +42,13 @@ export interface BuildingArtKey {
   seed: number;
   facing: Facing;
   construction: boolean;
+  /** Evolution stage look: a city-style body with the stage's sign (levels 3+), or null for the type's own drawer. */
+  stage?: { style: ArtStyle; sign: string; color: number } | null;
 }
 
 interface Palette {
+  /** Gable roof instead of a flat one (countryside and suburb). */
+  pitched?: boolean;
   wallLeft: number;
   wallRight: number;
   roof: number;
@@ -65,9 +69,15 @@ const PALETTES: Record<ArtStyle, Palette> = {
   undercity: { wallLeft: 0x343a3c, wallRight: 0x444d4f, roof: 0x485254, trim: 0x5a7a4a, window: 0x0f1414, lit: [0xc8ff9a, 0xffd89a, 0xffd89a, 0x8cff3a], neon: [0x8cff3a, 0xffb020], litRatio: 0.36 },
   skyline: { wallLeft: 0x5e5646, wallRight: 0x776c58, roof: 0x887a68, trim: 0xd4b872, window: 0x1e1a12, lit: [0xffe8b0, 0xfff4d8, 0xffffff], neon: [0xffe08a, 0xd4b872], litRatio: 0.42 },
   player: { wallLeft: 0x5c3640, wallRight: 0x744650, roof: 0x684450, trim: 0xff8a1f, window: 0x1e1012, lit: [0xffd08a, 0xffb020], neon: [0xff2bd6, 0xffb020], litRatio: 0.9 },
+  // Greenhaven: timber and whitewash, warm light, pitched roofs.
+  rural: { wallLeft: 0xb8a88a, wallRight: 0xd6c8a8, roof: 0x8a4a3a, trim: 0x6a4a30, window: 0x3a3020, lit: [0xffe0a0, 0xfff0c8, 0xffd080], neon: [0xffb020, 0x8cff3a], litRatio: 0.55, pitched: true },
+  // Silverbrook: rendered facades, grey roofs, tidy windows.
+  suburb: { wallLeft: 0x8a8e9a, wallRight: 0xa8acb8, roof: 0x5a5e6a, trim: 0x6a8ab0, window: 0x24283a, lit: [0xfff0c8, 0xffe8b0, 0xd9f6ff], neon: [0x19e6ff, 0xffb020, 0xff2bd6], litRatio: 0.5, pitched: true },
 };
 
 export const LOT_TINT: Record<ArtStyle, number> = {
+  rural: 0x2a3a22,
+  suburb: 0x242a2e,
   corporate: 0x1a2030,
   market: 0x221a28,
   docks: 0x241e18,
@@ -83,6 +93,8 @@ const NEON_COLORS = [0x19e6ff, 0xff2bd6, 0x8cff3a, 0xffb020, 0xff3a5a, 0xc08aff,
 
 /** Short words for neon boards; narrow buildings use the first group, wider ones also the second. */
 const SIGN_WORDS: Record<ArtStyle, { short: readonly string[]; long: readonly string[] }> = {
+  rural: { short: ['HOF', 'MÜHLE', 'CAFÉ', 'LADEN'], long: ['HOFLADEN', 'GÄRTNEREI', 'PENSION AM SEE', 'DORFBÄCKEREI'] },
+  suburb: { short: ['MARKT', 'KINO', 'PIZZA', 'AUTO'], long: ['SUPERMARKT', 'FITNESS CLUB', 'TANKSTELLE', 'AUTOHAUS NOVA'] },
   corporate: { short: ['NEXUS', 'AXIOM', 'ORBIT', 'DATA'], long: ['KŌSEI CORP', 'NOVANET', 'HELIX BANK', 'ARCOLOGY'] },
   market: { short: ['BAR', '24h', 'VR', 'SUSHI', 'GAMES', 'TATTOO'], long: ['NOODLE HOUSE', 'PACHINKO', 'KARAOKE', 'NIGHT MARKET', 'CYBER CAFE'] },
   docks: { short: ['CARGO', 'FUEL', 'DOCK 7', 'STEEL'], long: ['CONTAINER DEPOT', 'SALVAGE YARD', 'FREIGHT LINE'] },
@@ -166,10 +178,10 @@ export class ArtCache {
   }
 
   /** Night overlay for ground tiles (lamp heads, lot markers); solid shapes, drawn depth sorted above the day sprite. Returns null when the tile emits nothing. */
-  groundNight(kind: number, variant: number, x: number, y: number): GeneratedTexture | null {
+  groundNight(kind: number, variant: number, x: number, y: number, style: ArtStyle = 'player'): GeneratedTexture | null {
     if (kind === TileKind.Road) {
       const lamp = roadLamp(variant, x, y);
-      if (lamp === 'none') return null;
+      if (lamp === 'none' || (style === 'rural' && lamp === 'lamp')) return null;
       return this.generate(`gn:road:${lamp}`, (c) => drawStreetLight(c, lamp === 'intersection'));
     }
     if (kind === TileKind.Lot) return this.generate('gn:lot', (c) => drawLotMarkerNight(c));
@@ -182,10 +194,19 @@ export class ArtCache {
     return this.generate('lamp', (c) => drawLampPost(c), 3);
   }
 
+  /** A roadside tree for country lanes (replaces lamp posts in Greenhaven). */
+  roadsideTree(variant: number): GeneratedTexture {
+    return this.generate(`tree:${variant % 2}`, (c) => {
+      const g = new Graphics();
+      c.addChild(g);
+      drawTree(g, LAMP_POS.x, LAMP_POS.y, 5.5 + (variant % 2), variant % 2);
+    }, 3);
+  }
+
   // ------------------------------------------------------------- buildings
 
   building(key: BuildingArtKey, night: boolean): GeneratedTexture {
-    const k = `b:${key.art}:${key.style}:${key.w}x${key.h}:${key.floors}:${key.seed}:${key.facing}:${key.construction ? 'c' : 'o'}:${night ? 'n' : 'd'}`;
+    const k = `b:${key.art}:${key.style}:${key.w}x${key.h}:${key.floors}:${key.seed}:${key.facing}:${key.construction ? 'c' : 'o'}:${night ? 'n' : 'd'}:${key.stage ? `${key.stage.style}/${key.stage.sign}/${key.stage.color}` : '-'}`;
     return this.generate(k, (c) => drawBuilding(c, key, night), key.w * key.h <= 1 ? 2 : 1.5);
   }
 }
@@ -213,7 +234,7 @@ function drawGround(c: Container, kind: number, variant: number, style: ArtStyle
   c.addChild(g);
   switch (kind) {
     case TileKind.Road:
-      drawRoad(g, variant);
+      drawRoad(g, variant, style);
       break;
     case TileKind.Lot:
       diamond(g).fill(mix(LOT_TINT[style], 0x8a7ab0, 0.08));
@@ -221,7 +242,7 @@ function drawGround(c: Container, kind: number, variant: number, style: ArtStyle
       g.poly([0, 10, 6, 13, 0, 16, -6, 13]).fill({ color: 0x9a8ac0, alpha: 0.35 });
       break;
     case TileKind.Park:
-      drawPark(g, variant);
+      drawPark(g, variant, style);
       break;
     case TileKind.Water:
       diamond(g).fill(0x0a1a30);
@@ -240,8 +261,12 @@ function drawGround(c: Container, kind: number, variant: number, style: ArtStyle
   }
 }
 
-function drawRoad(g: Graphics, mask: number): void {
-  diamond(g).fill(0x1f1f29);
+function drawRoad(g: Graphics, mask: number, style: ArtStyle = 'player'): void {
+  if (style === 'rural') {
+    drawCountryRoad(g, mask);
+    return;
+  }
+  diamond(g).fill(style === 'suburb' ? 0x2a2a32 : 0x1f1f29);
   // Sidewalks on edges that do not continue into a road.
   const curb = 0x3a3846;
   const edge = 6;
@@ -267,6 +292,32 @@ function drawRoad(g: Graphics, mask: number): void {
   g.poly([0, 4, 8, 8, 0, 12, -8, 8]).fill({ color: 0x4a4a5c, alpha: 0.18 });
 }
 
+/** Narrow country lane on grass: no kerbs, no neon lane marks, trees at the verge. */
+function drawCountryRoad(g: Graphics, mask: number): void {
+  diamond(g).fill(0x2e5a2e);
+  const w = 0.55; // lane width as a share of the tile
+  const lane = 0x4a4a46;
+  const cx = 0;
+  const cy = HALF_H;
+  // Centre patch plus arms towards connected neighbours.
+  g.poly([cx, cy - HALF_H * w, HALF_W * w, cy, cx, cy + HALF_H * w, -HALF_W * w, cy]).fill(lane);
+  const arm = (dx: number, dy: number): void => {
+    const ex = cx + dx * HALF_W;
+    const ey = cy + dy * HALF_H;
+    const px = -dy * HALF_W * w * 0.5;
+    const py = dx * HALF_H * w * 0.5;
+    g.poly([cx + px, cy + py, ex + px, ey + py, ex - px, ey - py, cx - px, cy - py]).fill(lane);
+  };
+  if (mask & RoadDir.N) arm(0.5, -0.5);
+  if (mask & RoadDir.E) arm(0.5, 0.5);
+  if (mask & RoadDir.S) arm(-0.5, 0.5);
+  if (mask & RoadDir.W) arm(-0.5, -0.5);
+  // Faded centre line and a tree at the verge on dead-end sides.
+  g.moveTo(cx - 4, cy).lineTo(cx + 4, cy).stroke({ width: 1, color: 0xd8d0a0, alpha: 0.35 });
+  if (!(mask & RoadDir.W)) drawTree(g, -HALF_W * 0.62, HALF_H * 0.95, 4, 0);
+  if (!(mask & RoadDir.E)) drawTree(g, HALF_W * 0.62, HALF_H * 1.05, 4, 1);
+}
+
 function drawTree(g: Graphics, x: number, y: number, r: number, tone = 0): void {
   const dark = tone === 0 ? 0x1c5a38 : 0x1f5a4a;
   const light = tone === 0 ? 0x3a9a5a : 0x3a9a7a;
@@ -277,7 +328,37 @@ function drawTree(g: Graphics, x: number, y: number, r: number, tone = 0): void 
   g.circle(x - r * 0.45, y - 5.5, r * 0.25).fill({ color: 0xc8ffb0, alpha: 0.5 });
 }
 
-function drawPark(g: Graphics, variant: number): void {
+function drawPark(g: Graphics, variant: number, style: ArtStyle = 'player'): void {
+  if (variant === ParkVariant.Field) {
+    // Crop rows on brown soil.
+    diamond(g).fill(0x5a4a2c);
+    for (let i = -3; i <= 3; i++) {
+      const o = i * 4;
+      g.moveTo(-HALF_W * 0.7 + o * 0.5, HALF_H + o * 0.6).lineTo(o * 0.5, HALF_H * 0.3 + o * 0.6).stroke({ width: 2, color: 0x6fae3a });
+    }
+    g.rect(HALF_W * 0.45, HALF_H * 1.1, 4, 3).fill(0xc03a2a); // tractor
+    return;
+  }
+  if (variant === ParkVariant.Forest) {
+    diamond(g).fill(0x1f4a28);
+    drawTree(g, -12, 14, 6, 0);
+    drawTree(g, 4, 10, 6.5, 1);
+    drawTree(g, 12, 20, 5.5, 0);
+    drawTree(g, -2, 22, 5, 1);
+    return;
+  }
+  if (variant === ParkVariant.Meadow) {
+    diamond(g).fill(0x3e7a3a);
+    const colors = [0xffd84a, 0xff6a8a, 0xffffff, 0xc08aff];
+    for (let i = 0; i < 9; i++) {
+      const a = (i * 97) % 23;
+      const bx = -14 + ((i * 7) % 28);
+      const by = 10 + ((a * 3) % 14);
+      g.circle(bx, by, 1.4).fill(colors[i % colors.length]!);
+    }
+    drawTree(g, 13, 11, 4, 0);
+    return;
+  }
   if (variant === ParkVariant.Plaza) {
     diamond(g).fill(0x2a2936);
     g.moveTo(-HALF_W / 2, HALF_H / 2).lineTo(HALF_W / 2, HALF_H * 1.5).stroke({ width: 1, color: 0x3c3a4a, alpha: 0.9 });
@@ -296,7 +377,7 @@ function drawPark(g: Graphics, variant: number): void {
     g.circle(12, 12, 2.5).fill(0x2f6a42);
     return;
   }
-  diamond(g).fill(0x16382a);
+  diamond(g).fill(style === 'rural' || style === 'suburb' ? 0x2f6a36 : 0x16382a);
   diamond(g, 2).stroke({ width: 1, color: 0x2a6a48, alpha: 0.35 });
   g.moveTo(-10, 18).lineTo(10, 10).stroke({ width: 2, color: 0x3a3a48, alpha: 0.6 });
   drawTree(g, -11, 12, 5.5, 0);
@@ -439,6 +520,11 @@ function drawBuilding(c: Container, key: BuildingArtKey, night: boolean): void {
     else drawConstructionNight(g, key);
     return;
   }
+  if (key.stage) {
+    // Evolved business: a bigger body in the stage's style with its own sign.
+    drawCityBuilding(c, g, { ...key, style: key.stage.style }, night, { sign: key.stage.sign, color: key.stage.color });
+    return;
+  }
   switch (key.art) {
     case 'foodstand':
       drawFoodStand(g, night);
@@ -462,6 +548,15 @@ function drawBuilding(c: Container, key: BuildingArtKey, night: boolean): void {
     case 'security_hq':
       drawCityBuilding(c, g, { ...key, style: 'corporate' }, night, { sign: 'SECURITY', color: 0xff3a5a });
       return;
+    case 'bank':
+      drawCityBuilding(c, g, { ...key, style: 'corporate' }, night, { sign: 'BANK', color: 0xffb020 });
+      return;
+    case 'farm':
+      drawCityBuilding(c, g, { ...key, style: 'rural' }, night, { sign: 'HOF', color: 0x8cff3a });
+      return;
+    case 'inn':
+      drawCityBuilding(c, g, { ...key, style: 'rural' }, night, { sign: 'GASTHOF', color: 0xffb020 });
+      return;
     case 'taxi_depot':
       drawCityBuilding(c, g, { ...key, style: 'docks' }, night, { sign: 'TAXI', color: 0xffb020 });
       return;
@@ -478,6 +573,19 @@ function drawBox(g: Graphics, box: Box, pal: Palette): void {
   // walls
   g.poly([p3[0], p3[1], p2[0], p2[1], p2[0], p2[1] - H, p3[0], p3[1] - H]).fill(pal.wallLeft);
   g.poly([p2[0], p2[1], p1[0], p1[1], p1[0], p1[1] - H, p2[0], p2[1] - H]).fill(pal.wallRight);
+  if (pal.pitched) {
+    // Gable roof: ridge from the back-left edge to the front-right edge.
+    const r = 7 + Math.min(box.w, box.h) * 3;
+    const a: [number, number] = [(p0[0] + p3[0]) / 2, (p0[1] + p3[1]) / 2 - H - r];
+    const b: [number, number] = [(p1[0] + p2[0]) / 2, (p1[1] + p2[1]) / 2 - H - r];
+    g.poly([p0[0], p0[1] - H, p1[0], p1[1] - H, b[0], b[1], a[0], a[1]]).fill(shade(pal.roof, 0.7));
+    g.poly([p3[0], p3[1] - H, p2[0], p2[1] - H, b[0], b[1], a[0], a[1]]).fill(pal.roof);
+    g.poly([p2[0], p2[1] - H, p1[0], p1[1] - H, b[0], b[1]]).fill(shade(pal.wallRight, 1.05));
+    g.moveTo(a[0], a[1]).lineTo(b[0], b[1]).stroke({ width: 1.2, color: shade(pal.roof, 1.3) });
+    // chimney
+    g.rect(a[0] + (b[0] - a[0]) * 0.3 - 1.5, a[1] + (b[1] - a[1]) * 0.3 - 6, 3, 6).fill(0x6a5a50);
+    return;
+  }
   // roof with a parapet rim
   g.poly([p0[0], p0[1] - H, p1[0], p1[1] - H, p2[0], p2[1] - H, p3[0], p3[1] - H]).fill(pal.roof);
   const inner = corners(box.w, box.h, box.inset + 0.1);
@@ -499,6 +607,10 @@ interface WindowPattern {
 
 function windowPattern(style: ArtStyle, seed: number): WindowPattern {
   switch (style) {
+    case 'rural':
+      return { cols: 2, w: 0.3, h: 5 };
+    case 'suburb':
+      return seed % 2 === 0 ? { cols: 2, w: 0.28, h: 5.5 } : { cols: 3, w: 0.22, h: 5 };
     case 'corporate':
       return seed % 2 === 0 ? { cols: 3, w: 0.3, h: 5.5 } : { cols: 3, w: 0.2, h: 6.5 };
     case 'chrome':

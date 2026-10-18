@@ -8,6 +8,7 @@
 import type { SimContext } from '../core/context';
 import type { Rng } from '../core/rng';
 import type { SecurityModel } from '../data/buildings';
+import { effectiveUpkeep, stageEffects } from '../data/evolution';
 import { BUILDING_DEFINITIONS } from '../data/buildings';
 import { DISTRICT_ARCHETYPES } from '../data/districts';
 import { book } from '../economy/finance';
@@ -87,11 +88,11 @@ export function closeSecurityDay(ctx: SimContext, day: number): void {
       if (!district || n <= 0) continue;
       patrols += n;
       // City contract: pays per guard-day, more in rough districts.
-      const cityRate = model.cityRatePerGuard * (0.7 + district.stats.crime / 120);
+      const cityRate = model.cityRatePerGuard * stageEffects(b).price * (0.7 + district.stats.crime / 120);
       revenue += n * cityRate;
       // Private contracts from businesses in the district.
       const venues = district.economy.venues;
-      contracts += Math.round(venues * model.contractPerVenue * Math.min(1, n / 3));
+      contracts += Math.round(venues * model.contractPerVenue * stageEffects(b).price * Math.min(1, n / 3));
       // Effects: presence up, crime down, bounded; conflicts with the player's own territory.
       const effect = n * (0.3 + avgSkill / 200) * (0.5 + biz.reputation / 200) * techFactors(state).security;
       district.stats.policePresence = Math.min(100, district.stats.policePresence + effect * 0.6);
@@ -144,8 +145,7 @@ export function closeSecurityDay(ctx: SimContext, day: number): void {
       biz.reputation = Math.max(0, Math.min(100, biz.reputation + (target - biz.reputation) * 0.15 + rng.gaussian()));
     }
     const wages = closeStaffDay(ctx, b, patrols > 0 ? Math.min(1, assignedGuards(biz) / Math.max(1, guards.length)) : 0.2);
-    const def = BUILDING_DEFINITIONS[b.defId]!;
-    const costs = wages + def.upkeepPerDay;
+    const costs = wages + effectiveUpkeep(b);
     biz.history.push({ day, revenue: biz.todayRevenue, costs, patrols, contracts });
     if (biz.history.length > 30) biz.history.shift();
     biz.todayRevenue = 0;

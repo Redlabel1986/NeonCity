@@ -8,7 +8,7 @@ import { fleetCapacity } from '../../src/sim/systems/transport';
 import { dailyRent, isResidential, propertyPrice } from '../../src/sim/systems/property';
 import { serialize, deserialize } from '../../src/persistence/serializer';
 
-const options: NewGameOptions = { seed: 'phase4', playerName: 'Tycoon', difficulty: 'sandbox', background: 'heir', citySize: 48 };
+const options: NewGameOptions = { progression: false, seed: 'phase4', playerName: 'Tycoon', difficulty: 'sandbox', background: 'heir', citySize: 48 };
 
 function build(sim: Simulation, defId: string, archetype?: string): Building {
   const { grid, districts } = sim.state;

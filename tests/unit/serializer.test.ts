@@ -7,7 +7,7 @@ import { checkPlacement } from '../../src/sim/systems/construction';
 import { MINUTES_PER_DAY } from '../../src/sim/core/clock';
 
 function makeSim(): Simulation {
-  const sim = new Simulation(createNewGame({ seed: 'save-test', playerName: 'Saver', difficulty: 'standard', background: 'ex_corporate', citySize: 40 }));
+  const sim = new Simulation(createNewGame({ progression: false, seed: 'save-test', playerName: 'Saver', difficulty: 'standard', background: 'ex_corporate', citySize: 40 }));
   outer: for (let y = 0; y < 40; y++) {
     for (let x = 0; x < 40; x++) {
       if (checkPlacement(sim.state, 'food_stand', x, y).ok) {

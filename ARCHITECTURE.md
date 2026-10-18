@@ -61,6 +61,8 @@ Forschung (`techFactors`) und Krisen (`crisisFactors`) liefern Multiplikatoren, 
 Culling: eigene AABB-Liste in Weltkoordinaten; nur bei Kamerabewegung neu ausgewertet. Sichtbare Kacheln/Gebäude werden ein- bzw. ausgeblendet.
 
 ### Prozedurale Grafik
+`sim/data/regions.ts` (Regionen, Level, XP-Meilensteine), `sim/systems/progression.ts` (XP, Aufstieg, Sperren, Logistikdistanz), `sim/data/evolution.ts` (Entwicklungsgraphen) und `sim/systems/evolution.ts` (Prüfung, Start, Abbruch, Abschluss, Kritiker, Franchise) sind reine Simulation; die Effekte lesen die Betriebssysteme über `stageEffects(b)` und `hasFeature(b, …)`. `sim/systems/bank.ts` ist das Bankmodell. Der Generator legt zehn Bezirke von West (Greenhaven, ländlich) nach Ost (Nova Eclipse) mit gewichtetem Voronoi, Seen und Feldvarianten an.
+
 `render/art.ts` zeichnet alle Kacheln und Gebäude mit Pixi-Graphics und rendert sie einmalig in Texturen (`ArtCache`). Schlüssel: Art, Stil, Grundfläche, Etagen (ab 5 auf gerade Zahlen gebündelt), Variante (0–7), Ausrichtung, Baustelle, Tag/Nacht. Dadurch bleibt die Texturzahl bei wenigen hundert. Keine Fremd-Assets, kein Copyright-Risiko.
 
 Gebäude werden um `BUILDING_INSET` (0,14 Felder) in ihre Grundfläche eingerückt; die Gebäudekacheln darunter zeigen Pflaster. Die Fassade (Erdgeschoss, Leuchtkasten, Hängeschild, Logo) liegt auf der Wand, die `Building.facing` bestimmt: 0 = +x-Kante (rechte Wand), 1 = +y-Kante (linke Wand); 2 und 3 zeigen von der Kamera weg, dann trägt das Gebäude sein Schild auf dem Dach. `grid.edgeTouchesRoad` und `grid.pickFacing` prüfen bzw. wählen die Straßenseite; `checkPlacement` nimmt die Ausrichtung optional entgegen.

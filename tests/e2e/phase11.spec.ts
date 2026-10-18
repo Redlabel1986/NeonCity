@@ -13,6 +13,7 @@ async function start(page: Page): Promise<void> {
   await page.getByLabel('Dein Name').fill('P11 Tester');
   await page.getByLabel('Stadt-Seed').fill('phase11-seed');
   await page.getByRole('button', { name: 'Sandbox', exact: true }).click();
+  await page.getByLabel('Aufstieg durch Regionen').uncheck();
   await page.getByRole('button', { name: 'Stadt betreten' }).click();
   await page.waitForFunction(() => !!window.__neon?.session.renderer && !!window.__neon.session.sim);
   await page.keyboard.press('0');
@@ -48,13 +49,13 @@ test('managing a business flies into the building and shows its interior', async
   await page.evaluate((id) => (window.__neon.store.getState() as unknown as Api).openDashboard(id), barId);
   const interior = page.getByTestId('interior-view');
   await expect(interior).toBeVisible();
-  await expect(page.getByRole('application', { name: /Innenansicht: Ramenbar/ })).toBeVisible();
+  await expect(page.getByRole('application', { name: /Innenansicht: Asia-Imbiss/ })).toBeVisible();
   await expect.poll(() => page.evaluate(() => window.__neon.session.renderer!.zoom)).toBeGreaterThan(2.4);
   await page.waitForTimeout(900);
   await page.screenshot({ path: 'tests/e2e/output/p11-ramen-interior.png' });
 
   // Clicking a zone switches the dashboard tab: find the kitchen zone centre through the renderer geometry.
-  const dashboard = page.getByRole('region', { name: 'Ramenbar' });
+  const dashboard = page.getByRole('region', { name: 'Asia-Imbiss' });
   await expect(dashboard.getByRole('tab', { name: 'Übersicht' })).toHaveAttribute('aria-selected', 'true');
   await page.evaluate(() => (window.__neon.store.getState() as unknown as { setDashboardTab: (t: string) => void }).setDashboardTab('supply'));
   await expect(dashboard.getByRole('tab', { name: 'Einkauf' })).toHaveAttribute('aria-selected', 'true');

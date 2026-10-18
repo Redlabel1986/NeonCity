@@ -39,12 +39,16 @@ import { createCorporateState, closeCorporateDay, takeLoan, repayLoan, sellShare
 import { createCrisisState, closeCrisisDay, crisisFactors, activeCrisis } from './systems/crises';
 import { createWeather, stepWeatherHour } from './systems/weather';
 import { playSlots, playRoulette, blackjackDeal, blackjackHit, blackjackStand, blackjackDouble } from './systems/casino';
+import { acknowledgeLevelUp, awardMilestone, closeProgressionDay, isDistrictUnlocked, startingDistrict } from './systems/progression';
+import { cancelEvolution, closeEvolutionDay, grantFranchise, revokeFranchise, startEvolution, stepEvolutions } from './systems/evolution';
+import { stageEffects } from './data/evolution';
+import { bankCapital, closeBanksDay, setBankRates } from './systems/bank';
 import type { RouletteBet } from './data/casino';
 import type { FactionId } from './data/factions';
 import { wantedLevelFor } from './data/underworld';
 import { LOG_LIMIT, LOCAL_PLAYER_ID, type Facing, type GameState, type WorldState } from './state';
 
-export const SAVE_FORMAT_VERSION = 13;
+export const SAVE_FORMAT_VERSION = 14;
 export const SPEEDS = [0, 1, 3, 8] as const;
 export type Speed = (typeof SPEEDS)[number];
 
@@ -54,6 +58,8 @@ export interface NewGameOptions {
   difficulty: DifficultyId;
   background: BackgroundId;
   citySize?: number;
+  /** Tier system with district licences (default true); false = free play with every district open. */
+  progression?: boolean;
 }
 
 export type Command =
@@ -106,6 +112,13 @@ export type Command =
   | { type: 'sellCompany' }
   | { type: 'newCareer'; background: BackgroundId; name: string }
   | { type: 'rename'; buildingId: number; label: string }
+  | { type: 'startEvolution'; buildingId: number; stageId: string }
+  | { type: 'cancelEvolution'; buildingId: number }
+  | { type: 'grantFranchise'; buildingId: number }
+  | { type: 'revokeFranchise'; buildingId: number }
+  | { type: 'ackLevelUp' }
+  | { type: 'setBankRates'; buildingId: number; depositRate: number; loanRate: number }
+  | { type: 'bankCapital'; buildingId: number; amount: number }
   | { type: 'casinoSlots'; bet: number }
   | { type: 'casinoRoulette'; bets: RouletteBet[] }
   | { type: 'blackjackDeal'; bet: number }
@@ -160,7 +173,7 @@ export function createWorld(options: NewWorldOptions): WorldState {
 /** Single-player start: a fresh world with one local player. */
 export function createNewGame(options: NewGameOptions): WorldState {
   const world = createWorld({ seed: options.seed, citySize: options.citySize });
-  addPlayer(world, { id: LOCAL_PLAYER_ID, name: options.playerName, background: options.background, difficulty: options.difficulty });
+  addPlayer(world, { id: LOCAL_PLAYER_ID, name: options.playerName, background: options.background, difficulty: options.difficulty, progression: options.progression });
   return world;
 }
 
@@ -172,7 +185,7 @@ function startNewCareer(ctx: SimContext, backgroundId: BackgroundId, name: strin
   const assets = Object.values(state.buildings).filter((b) => b.owner === state.playerId && (b.business || b.property));
   if (assets.length > 0) return { ok: false, error: 'Verkaufe zuerst die Unternehmensgruppe.' };
   const difficulty = DIFFICULTIES[state.player.difficulty];
-  const home = state.districts.find((d) => d.archetype === background.homeDistrict) ?? state.districts[0]!;
+  const home = state.districts[startingDistrict(state.districts, background.homeDistrict, state.progression.enabled)]!;
   state.player.name = name.trim() || state.player.name;
   state.player.background = backgroundId;
   state.player.apartmentRent = Math.round(background.apartmentRent * difficulty.rentMultiplier);
@@ -272,6 +285,7 @@ export class Simulation {
     this.runAs(null, () => {
       stepConstruction(this.ctx);
       stepUpgrades(this.ctx);
+      stepEvolutions(this.ctx);
     });
     if (isHourBoundary(world.tick)) {
       const date = tickToDate(world.tick);
@@ -350,7 +364,7 @@ export class Simulation {
         const b = this.ownBusiness(command.buildingId);
         if (!b || b.business!.kind !== 'gastronomy') return { ok: false, error: 'Kein eigenes Lokal.' };
         const entry = b.business!.menu.find((m) => m.recipeId === command.recipeId);
-        const bounds = priceBounds(command.recipeId);
+        const bounds = priceBounds(command.recipeId, stageEffects(b).price);
         if (!entry || !bounds || !Number.isFinite(command.price)) return { ok: false, error: 'Ungültiger Preis.' };
         entry.price = clamp(Math.round(command.price), bounds.min, bounds.max);
         return { ok: true };
@@ -414,7 +428,7 @@ export class Simulation {
       case 'setRoomPrice': {
         const b = this.ownBusiness(command.buildingId);
         if (!b || b.business!.kind !== 'hotel') return { ok: false, error: 'Kein eigenes Hotel.' };
-        const bounds = hotelPriceBounds(b.defId);
+        const bounds = hotelPriceBounds(b.defId, stageEffects(b).price);
         if (!bounds || !Number.isFinite(command.price)) return { ok: false, error: 'Ungültiger Preis.' };
         b.business!.pricePerNight = clamp(Math.round(command.price), bounds.min, bounds.max);
         return { ok: true };
@@ -422,7 +436,7 @@ export class Simulation {
       case 'setFare': {
         const b = this.ownBusiness(command.buildingId);
         if (!b || b.business!.kind !== 'transport') return { ok: false, error: 'Kein eigenes Taxiunternehmen.' };
-        const bounds = fareBounds(b.defId);
+        const bounds = fareBounds(b.defId, stageEffects(b).price);
         if (!bounds || !Number.isFinite(command.fare)) return { ok: false, error: 'Ungültiger Tarif.' };
         b.business!.fare = clamp(Math.round(command.fare), bounds.min, bounds.max);
         return { ok: true };
@@ -440,21 +454,29 @@ export class Simulation {
       case 'setGoodPrice': {
         const b = this.ownBusiness(command.buildingId);
         if (!b || b.business!.kind !== 'retail') return { ok: false, error: 'Kein eigener Laden.' };
-        const bounds = retailPriceBounds(command.goodId);
+        const bounds = retailPriceBounds(command.goodId, stageEffects(b).price);
         if (!bounds || !Number.isFinite(command.price) || !(command.goodId in b.business!.prices)) return { ok: false, error: 'Ungültiger Preis.' };
         b.business!.prices[command.goodId] = clamp(Math.round(command.price * 10) / 10, bounds.min, bounds.max);
         return { ok: true };
       }
-      case 'buyProperty':
+      case 'buyProperty': {
+        const target = state.buildings[command.buildingId];
+        if (target && !isDistrictUnlocked(state, target.districtId)) return { ok: false, error: 'Dieser Bezirk ist noch nicht erschlossen.' };
         return buyProperty(this.ctx, command.buildingId);
+      }
       case 'sellProperty':
         return sellProperty(this.ctx, command.buildingId);
       case 'setRentLevel':
         return setRentLevel(state, command.buildingId, command.level);
       case 'renovate':
         return renovate(this.ctx, command.buildingId);
-      case 'takeoverCompetitor':
-        return takeoverCompetitor(this.ctx, command.buildingId);
+      case 'takeoverCompetitor': {
+        const target = state.buildings[command.buildingId];
+        if (target && !isDistrictUnlocked(state, target.districtId)) return { ok: false, error: 'Dieser Bezirk ist noch nicht erschlossen.' };
+        const result = takeoverCompetitor(this.ctx, command.buildingId);
+        if (result.ok) awardMilestone(state, this.events, 'first_takeover');
+        return result;
+      }
       case 'foundOrganisation':
         return foundOrganisation(this.ctx, command.name);
       case 'recruitCrew':
@@ -502,6 +524,7 @@ export class Simulation {
       case 'setInsurance':
         return setInsurance(state, command.policyId, command.active);
       case 'chainTakeover':
+        if (!isDistrictUnlocked(state, command.districtId)) return { ok: false, error: 'Dieser Bezirk ist noch nicht erschlossen.' };
         return chainTakeover(this.ctx, command.districtId);
       case 'sellCompany': {
         const r = sellCompany(this.ctx);
@@ -521,6 +544,32 @@ export class Simulation {
         return blackjackStand(this.ctx);
       case 'blackjackDouble':
         return blackjackDouble(this.ctx);
+      case 'startEvolution': {
+        const b = this.ownBusiness(command.buildingId);
+        if (!b) return { ok: false, error: 'Kein eigener Betrieb.' };
+        return startEvolution(this.ctx, b, command.stageId);
+      }
+      case 'cancelEvolution': {
+        const b = this.ownBusiness(command.buildingId);
+        if (!b) return { ok: false, error: 'Kein eigener Betrieb.' };
+        return cancelEvolution(this.ctx, b);
+      }
+      case 'grantFranchise': {
+        const b = this.ownBusiness(command.buildingId);
+        if (!b) return { ok: false, error: 'Kein eigener Betrieb.' };
+        return grantFranchise(this.ctx, b);
+      }
+      case 'revokeFranchise': {
+        const b = this.ownBusiness(command.buildingId);
+        if (!b) return { ok: false, error: 'Kein eigener Betrieb.' };
+        return revokeFranchise(this.ctx, b);
+      }
+      case 'ackLevelUp':
+        return acknowledgeLevelUp(state);
+      case 'setBankRates':
+        return setBankRates(state, command.buildingId, command.depositRate, command.loanRate);
+      case 'bankCapital':
+        return bankCapital(this.ctx, command.buildingId, command.amount);
       case 'rename': {
         const b = state.buildings[command.buildingId];
         if (!b || b.owner !== state.playerId) return { ok: false, error: 'Kein eigenes Gebäude.' };
@@ -561,6 +610,8 @@ export class Simulation {
         closeUnderworldDay(this.ctx, day - 1);
         closeLabsDay(this.ctx, day - 1);
         closeIndustryDay(this.ctx, day - 1);
+        closeBanksDay(this.ctx, day - 1);
+        closeEvolutionDay(this.ctx);
       });
     }
     this.runAs(null, () => {
@@ -593,6 +644,7 @@ export class Simulation {
     let expenses = 0;
     for (const id of players) {
       this.runAs(id, (state) => {
+        closeProgressionDay(this.ctx);
         const totals = closeDay(state, day);
         income += totals.income;
         expenses += totals.expenses;

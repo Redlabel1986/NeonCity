@@ -193,6 +193,9 @@ function validateState(s: Record<string, unknown>, version: number): void {
         validateStaffed(b.business, `${path}.business`);
         for (const k of ['reputation', 'lifetimeCustomers', 'lifetimeRevenue', 'todayPurchases']) expectNumber(b.business, k, `${path}.business`);
         if (!isObject(b.business.prices) || !Array.isArray(b.business.inventory) || !Array.isArray(b.business.orders)) throw new SaveValidationError(`${path}.business: Laden unvollständig.`);
+      } else if (kind === 'bank') {
+        validateStaffed(b.business, `${path}.business`);
+        for (const k of ['reserve', 'deposits', 'loansOut', 'depositRate', 'loanRate', 'reputation']) expectNumber(b.business, k, `${path}.business`);
       } else {
         throw new SaveValidationError(`${path}.business.kind ist unbekannt.`);
       }
@@ -463,5 +466,11 @@ function validatePlayerSlice(slice: Record<string, unknown>, path: string, versi
   }
   if (version >= 13) {
     if (!isObject(slice.casino) || !isObject((slice.casino as Record<string, unknown>).stats) || !Array.isArray((slice.casino as Record<string, unknown>).history)) throw new SaveValidationError(`${path}.casino fehlt.`);
+  }
+  if (version >= 14) {
+    const p = slice.progression as Record<string, unknown> | undefined;
+    if (!isObject(p) || !Array.isArray(p.unlockedRegions) || !Array.isArray(p.milestones)) throw new SaveValidationError(`${path}.progression fehlt.`);
+    expectNumber(p, 'level', `${path}.progression`);
+    expectNumber(p, 'xp', `${path}.progression`);
   }
 }

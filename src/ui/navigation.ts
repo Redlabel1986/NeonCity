@@ -21,4 +21,5 @@ export const RAIL_ENTRIES: RailEntry[] = [
   { id: 'underworld', label: 'Unterwelt', key: 'X', phase: 1 },
   { id: 'stats', label: 'Statistik', key: 'T', phase: 1 },
   { id: 'casino', label: 'Casino', key: 'J', phase: 1 },
+  { id: 'map', label: 'Weltkarte', key: 'G', phase: 1 },
 ];

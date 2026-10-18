@@ -4,6 +4,7 @@
  */
 
 import type { SimContext } from '../core/context';
+import { awardMilestone } from './progression';
 import type { GameState, TaskState } from '../state';
 
 export interface TaskDefinition {
@@ -17,7 +18,7 @@ export const TASK_DEFINITIONS: readonly TaskDefinition[] = [
   {
     id: 'first_build',
     title: 'Eröffne deine erste Baustelle',
-    hint: 'Öffne das Baumenü (B), wähle eine Ramenbar oder einen Streetfood-Stand und platziere ihn an einer Straße.',
+    hint: 'Öffne das Baumenü (B), wähle einen Asia-Imbiss oder einen Streetfood-Stand und platziere ihn an einer Straße.',
     check: (s) => Object.values(s.buildings).some((b) => b.owner === s.playerId),
   },
   {
@@ -105,6 +106,7 @@ export function stepTasks(ctx: SimContext): void {
       task.completedTick = state.tick;
       events.emit({ type: 'task:completed', tick: state.tick, taskId: task.id });
       events.emit({ type: 'log', tick: state.tick, level: 'success', message: `Aufgabe erledigt: ${def.title}` });
+      awardMilestone(state, events, task.id);
     }
   }
 }

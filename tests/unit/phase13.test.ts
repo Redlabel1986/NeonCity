@@ -5,7 +5,7 @@ import { ROULETTE_RED, handValue, rouletteReturn, slotPayout, slotReturnToPlayer
 import { deserialize, serialize } from '../../src/persistence/serializer';
 import { withPlayer } from '../../src/sim/players';
 
-const options: NewGameOptions = { seed: 'casino', playerName: 'Spieler', difficulty: 'standard', background: 'restaurateur', citySize: 32 };
+const options: NewGameOptions = { progression: false, seed: 'casino', playerName: 'Spieler', difficulty: 'standard', background: 'restaurateur', citySize: 32 };
 
 function sum(xs: number[]): number {
   return xs.reduce((a, b) => a + b, 0);

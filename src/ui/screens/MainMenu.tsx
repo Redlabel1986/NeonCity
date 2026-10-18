@@ -22,6 +22,7 @@ export function MainMenu() {
   const [difficulty, setDifficulty] = useState<DifficultyId>('standard');
   const [background, setBackground] = useState<BackgroundId>('restaurateur');
   const [showSaves, setShowSaves] = useState(false);
+  const [progression, setProgression] = useState(true);
 
   const preset = DIFFICULTIES[difficulty];
   const bg = BACKGROUNDS[background];
@@ -73,14 +74,14 @@ export function MainMenu() {
           <div className="hidden lg:block">
             <OnlineSection background={background} />
           </div>
-          <p className="mt-10 hidden text-xs text-muted lg:block">Version 0.17.0 – Weiterlaufen, Cloud-Spielstand, Mobil.</p>
+          <p className="mt-10 hidden text-xs text-muted lg:block">Version 0.18.0 – Level und Regionen, Entwicklungsbaum, Banken.</p>
         </section>
 
         <form
           className="panel flex-1 p-6 lg:max-w-xl"
           onSubmit={(e) => {
             e.preventDefault();
-            newGame({ seed, playerName: name || 'Namenlos', difficulty, background });
+            newGame({ seed, playerName: name || 'Namenlos', difficulty, background, progression });
           }}
         >
           <h2 className="text-lg font-medium text-white">Neues Spiel</h2>
@@ -143,6 +144,14 @@ export function MainMenu() {
             <p className="mt-2 text-xs text-muted">{preset.description}</p>
           </fieldset>
 
+          <label className="mt-5 flex items-start gap-2 text-sm">
+            <input type="checkbox" className="mt-1 h-4 w-4 accent-[#19e6ff]" checked={progression} onChange={(e) => setProgression(e.target.checked)} aria-label="Aufstieg durch Regionen" />
+            <span>
+              <span className="text-white">Aufstieg: von Greenhaven bis Nova Eclipse</span>
+              <span className="block text-xs text-muted">Du startest im grünen Umland. Mit Erfahrungspunkten steigst du auf und öffnest die Vorstadt, die Stadt und die Megacity. Aus: alle Regionen sofort offen.</span>
+            </span>
+          </label>
+
           <div className="mt-6 flex items-center justify-between gap-4 border-t border-line pt-4">
             <div className="text-sm">
               <span className="text-muted">Startkapital</span>
@@ -155,7 +164,7 @@ export function MainMenu() {
         </form>
         <div className="lg:hidden">
           <OnlineSection background={background} />
-          <p className="mt-6 text-xs text-muted">Version 0.17.0 – Weiterlaufen, Cloud-Spielstand, Mobil.</p>
+          <p className="mt-6 text-xs text-muted">Version 0.18.0 – Level und Regionen, Entwicklungsbaum, Banken.</p>
         </div>
       </main>
       {showSaves && <SavesDialog onClose={() => setShowSaves(false)} mode="menu" />}

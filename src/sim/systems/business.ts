@@ -17,6 +17,7 @@ import { BACKGROUNDS, DIFFICULTIES } from '../data/difficulty';
 import { RECIPES } from '../data/recipes';
 import { INGREDIENTS } from '../data/ingredients';
 import { UPGRADES, upgradeEffects } from '../data/upgrades';
+import { effectiveUpkeep, hasFeature, stageEffects, unlockedAlongPath } from '../data/evolution';
 import { book, canAfford } from '../economy/finance';
 import { BUSINESS_HISTORY_LIMIT, type Building, type GameState, type GastronomyState } from '../state';
 import { autoReorder, canMake, consumeForRecipe, spoilInventory, stepDeliveries } from './inventory';
@@ -24,7 +25,7 @@ import { closeStaffDay, createEmployee, generateCandidates, staffCapacity } from
 import { applyVisitOutcome } from './population';
 import { registerDemand } from './market';
 import { techFactors } from './research';
-import { crisisFactors } from './crises';
+import { crisisFactors, regionDemandFactor } from './crises';
 import { insuranceClaim } from './corporate';
 import { weatherFactors } from './weather';
 
@@ -99,9 +100,17 @@ const HOUR_PROFILE: readonly number[] = [
   0.8, 0.7, 0.6,
 ];
 
-export function isOpen(model: GastronomyModel, hour: number): boolean {
-  if (model.openHour < model.closeHour) return hour >= model.openHour && hour < model.closeHour;
-  return hour >= model.openHour || hour < model.closeHour;
+/** Opening hours: the model's, unless the evolution stage overrides them (bars, drive-ins). */
+export function openingHours(model: GastronomyModel, b?: Building): { open: number; close: number } {
+  const override = b ? stageEffects(b).hours : null;
+  return override ?? { open: model.openHour, close: model.closeHour };
+}
+
+export function isOpen(model: GastronomyModel, hour: number, b?: Building): boolean {
+  const { open, close } = openingHours(model, b);
+  if (open === 0 && close === 24) return true;
+  if (open < close) return hour >= open && hour < close;
+  return hour >= open || hour < close;
 }
 
 export interface DemandBreakdown {
@@ -152,13 +161,19 @@ export function explainDemand(state: GameState, b: Building): DemandBreakdown | 
 
   const safety = (1 - stats.crime / 300) * (0.9 + (stats.attractiveness / 100) * 0.2);
 
-  const ratio = menuPriceRatio(biz);
+  // Higher stages justify higher prices: guests compare against the stage's price level,
+  // VIP stages, a VIP lounge, a sommelier and critics' stars widen it further.
+  const fx0 = upgradeEffects(biz.upgrades);
+  const sommelier = biz.employees.some((e) => e.role === 'sommelier') ? 1.06 : 1;
+  const vip = hasFeature(b, 'vip') ? 1.1 : 1;
+  const starsLevel = 1 + 0.06 * (b.stars ?? 0);
+  const ratio = menuPriceRatio(biz) / (stageEffects(b).price * fx0.priceAcceptance * sommelier * vip * starsLevel);
   const elasticity = 1.6 - stats.purchasingPower / 100;
   const price = Math.pow(Math.max(0.2, ratio), -elasticity);
 
   const reputation = 0.6 + (biz.reputation / 100) * 0.8;
-  const upgrades = upgradeEffects(biz.upgrades).draw;
-  const modifiers = difficulty.demandMultiplier * background.gastronomyBonus;
+  const upgrades = fx0.draw * stageEffects(b).draw * (1 + 0.12 * (b.stars ?? 0));
+  const modifiers = difficulty.demandMultiplier * background.gastronomyBonus * regionDemandFactor(state, b.districtId, 'gastronomy');
 
   const expectedPeakGuests = model.baseDraw * district * competition * safety * price * reputation * upgrades * modifiers;
   return { district, competition, safety, price, reputation, upgrades, modifiers, expectedPeakGuests };
@@ -181,12 +196,13 @@ export function effectiveCapacity(b: Building, state?: GameState): CapacityBreak
   const biz = b.business;
   if (!model || !biz || model.kind !== 'gastronomy' || biz.kind !== 'gastronomy') return null;
   const fx = upgradeEffects(biz.upgrades);
+  const tf = stageEffects(b);
   const techCook = state ? techFactors(state).cookRate : 1;
-  const staff = staffCapacity(biz, model.cookRate * fx.cookRate * techCook, model.serviceRate);
-  const seats = model.seats + fx.seats;
+  const staff = staffCapacity(biz, model.cookRate * fx.cookRate * techCook * tf.throughput, model.serviceRate * tf.throughput);
+  const seats = Math.round((model.seats + fx.seats) * tf.capacity);
   const seatCapacity = seats * 2.2;
   const serviceThroughput = staff.service > 0 ? staff.serviceThroughput : staff.cookThroughput * 0.55; // cooks serve themselves, slowly
-  const upgrading = biz.upgradeInProgress !== null;
+  const upgrading = biz.upgradeInProgress !== null || !!b.stageUpgrade;
   let capacity = Math.min(seatCapacity, staff.cookThroughput, serviceThroughput);
   if (upgrading) capacity *= 0.8;
   return {
@@ -202,10 +218,10 @@ export function effectiveCapacity(b: Building, state?: GameState): CapacityBreak
   };
 }
 
-export function priceBounds(recipeId: string): { min: number; max: number } | null {
+export function priceBounds(recipeId: string, priceLevel = 1): { min: number; max: number } | null {
   const r = RECIPES[recipeId];
   if (!r) return null;
-  return { min: Math.max(1, Math.ceil(r.basePrice * 0.5)), max: Math.floor(r.basePrice * 2.5) };
+  return { min: Math.max(1, Math.ceil(r.basePrice * 0.5)), max: Math.floor(r.basePrice * 2.5 * priceLevel) };
 }
 
 /** Runs one hour of business for all operational player businesses. */
@@ -224,7 +240,7 @@ export function stepBusinessHour(ctx: SimContext, hour: number, day: number): vo
       book(state, events, CHEAT_RAMEN_HOURLY_REVENUE, { category: 'sales', description: `Stammkundschaft: ${b.label}`, buildingId: b.id });
       b.business.todayRevenue += CHEAT_RAMEN_HOURLY_REVENUE;
     }
-    if (!isOpen(model, hour)) continue;
+    if (!isOpen(model, hour, b)) continue;
     const curfew = state.politics?.laws?.curfew ?? 0;
     if (curfew === 1 && hour >= 1 && hour < 6) continue; // closed 01:00-06:00
     if (curfew === 2 && (hour >= 23 || hour < 6)) continue; // closed 23:00-06:00
@@ -238,18 +254,29 @@ export function stepBusinessHour(ctx: SimContext, hour: number, day: number): vo
     const citizenVisits = state.population.pendingVisits[b.id] ?? 0;
     biz.todayCitizenVisits += citizenVisits;
     const wanting = Math.max(0, Math.round(expected)) + citizenVisits;
-    const attempts = Math.min(wanting, cap.capacity);
+    // Reservations smooth the evening: the room takes 10 % more than its raw capacity.
+    const seatCap = hasFeature(b, 'reservations') ? Math.floor(cap.capacity * 1.1) : cap.capacity;
+    const attempts = Math.min(wanting, seatCap);
     biz.todayTurnedAway += wanting - attempts;
-    if (attempts === 0) {
-      if (citizenVisits > 0) applyVisitOutcome(state, b.id, citizenVisits, 0, 0, 0);
-      continue;
+    let served = 0;
+    if (attempts > 0) {
+      const outcome = serveGuests(ctx, b, biz, model, attempts, cap, hour);
+      served = outcome.served;
+      if (citizenVisits > 0) {
+        const servedCitizens = Math.min(citizenVisits, outcome.served);
+        applyVisitOutcome(state, b.id, citizenVisits, servedCitizens, outcome.avgSatisfaction, outcome.avgPrice);
+      }
+    } else if (citizenVisits > 0) {
+      applyVisitOutcome(state, b.id, citizenVisits, 0, 0, 0);
     }
-    const outcome = serveGuests(ctx, b, biz, model, attempts, cap, hour);
-    biz.hourGuests = outcome.served;
-    if (citizenVisits > 0) {
-      const servedCitizens = Math.min(citizenVisits, outcome.served);
-      applyVisitOutcome(state, b.id, citizenVisits, servedCitizens, outcome.avgSatisfaction, outcome.avgPrice);
+    // Delivery: orders from outside, limited by what the kitchen still manages beyond the room.
+    const deliveryShare = (hasFeature(b, 'delivery') ? 0.3 : 0) + upgradeEffects(biz.upgrades).delivery;
+    if (deliveryShare > 0) {
+      const kitchenLeft = Math.max(0, Math.floor(cap.cookThroughput - served));
+      const orders = Math.min(kitchenLeft, Math.round(expected * deliveryShare));
+      if (orders > 0) served += serveGuests(ctx, b, biz, model, orders, cap, hour, 'Lieferungen').served;
     }
+    biz.hourGuests = served;
   }
 }
 
@@ -259,12 +286,12 @@ interface ServeOutcome {
   avgPrice: number;
 }
 
-function serveGuests(ctx: SimContext, b: Building, biz: GastronomyState, model: GastronomyModel, attempts: number, cap: CapacityBreakdown, _hour: number): ServeOutcome {
+function serveGuests(ctx: SimContext, b: Building, biz: GastronomyState, model: GastronomyModel, attempts: number, cap: CapacityBreakdown, _hour: number, label = 'Gäste'): ServeOutcome {
   const { state, rng } = ctx;
   const events = ctx.events;
   const fx = upgradeEffects(biz.upgrades);
   const tech = techFactors(state);
-  const staff = staffCapacity(biz, model.cookRate, model.serviceRate);
+  const staff = { ...staffCapacity(biz, model.cookRate, model.serviceRate), sommelier: biz.employees.some((e) => e.role === 'sommelier') };
   const utilization = cap.capacity > 0 ? attempts / Math.max(1, cap.capacity) : 1;
   const crowdingPenalty = Math.max(0, utilization - 0.85) * 60;
   const serviceBonus = staff.service > 0 ? (staff.serviceSkill - 50) * 0.12 : -8;
@@ -289,7 +316,7 @@ function serveGuests(ctx: SimContext, b: Building, biz: GastronomyState, model: 
       registerDemand(state.market, ing, units);
     }
     const skillFactor = Math.min(1, (staff.cookSkill + 15) / (recipe.complexity + 15));
-    const dishQuality = clamp(0.5 * consumed.quality + 50 * skillFactor + fx.quality * 0.6, 0, 100);
+    const dishQuality = clamp(0.5 * consumed.quality + 50 * skillFactor + fx.quality * 0.6 + stageEffects(b).quality + (staff.sommelier ? 6 : 0), 0, 100);
     const value = Math.pow(recipe.basePrice / Math.max(1, choice.price), 0.6);
     const satisfaction = clamp(
       0.55 * dishQuality + 22 * value + 0.15 * biz.hygiene + fx.satisfaction + tech.satisfaction + serviceBonus - crowdingPenalty + rng.gaussian() * 3,
@@ -312,7 +339,7 @@ function serveGuests(ctx: SimContext, b: Building, biz: GastronomyState, model: 
     biz.todayRevenue += revenue;
     biz.lifetimeGuests += served;
     biz.lifetimeRevenue += revenue;
-    book(state, events, revenue, { category: 'sales', description: `${b.label}: ${served} Gäste`, buildingId: b.id });
+    book(state, events, revenue, { category: 'sales', description: `${b.label}: ${served} ${label}`, buildingId: b.id });
   }
   if (lost > 0 && lost >= attempts * 0.5 && served === 0) {
     events.emit({ type: 'log', tick: state.tick, level: 'warning', message: `${b.label}: Keine Zutaten, Gäste gehen wieder. Bestelle nach.`, buildingId: String(b.id) });
@@ -368,7 +395,7 @@ export function closeBusinessDay(ctx: SimContext, day: number): void {
     const def = BUILDING_DEFINITIONS[b.defId];
     if (!def) continue;
     if (b.status === 'operational' && def.upkeepPerDay > 0) {
-      book(state, events, -Math.round(def.upkeepPerDay * techFactors(state).upkeep), { category: 'upkeep', description: `Betriebskosten: ${b.label}`, buildingId: b.id });
+      book(state, events, -Math.round(effectiveUpkeep(b) * techFactors(state).upkeep), { category: 'upkeep', description: `Betriebskosten: ${b.label}`, buildingId: b.id });
     }
     const biz = b.business;
     const model = def.business;
@@ -418,7 +445,7 @@ export function closeBusinessDay(ctx: SimContext, day: number): void {
     }
     autoReorder(ctx, b);
 
-    const costs = wages + def.upkeepPerDay + biz.todayPurchases + fines;
+    const costs = wages + effectiveUpkeep(b) + biz.todayPurchases + fines;
     if (isCheatRamenBar(b)) {
       // Cheat: top the day up so that revenue - costs is exactly the cheat profit, booked as a visible transaction.
       const bonus = Math.round((CHEAT_RAMEN_DAILY_PROFIT - (biz.todayRevenue - costs)) * 100) / 100;
@@ -466,7 +493,7 @@ export function startUpgrade(ctx: SimContext, b: Building, upgradeId: string): {
   const model = BUILDING_DEFINITIONS[b.defId]?.business;
   if (!biz || !model) return { ok: false, error: 'Kein Betrieb.' };
   const def = UPGRADES[upgradeId];
-  if (!def || !model.upgrades.includes(upgradeId)) return { ok: false, error: 'Dieser Ausbau ist hier nicht möglich.' };
+  if (!def || (!model.upgrades.includes(upgradeId) && !unlockedAlongPath(b).upgrades.includes(upgradeId))) return { ok: false, error: 'Dieser Ausbau ist hier nicht möglich.' };
   if (b.status !== 'operational') return { ok: false, error: 'Der Betrieb ist noch nicht eröffnet.' };
   if (biz.upgradeInProgress) return { ok: false, error: 'Es läuft bereits ein Ausbau.' };
   const level = (biz.upgrades[upgradeId] ?? 0) + 1;

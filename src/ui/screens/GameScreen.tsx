@@ -12,6 +12,7 @@ import { SettingsDialog } from '../dialogs/SettingsDialog';
 import { HelpDialog } from '../dialogs/HelpDialog';
 import { CareerDialog } from '../dialogs/CareerDialog';
 import { CatchUpDialog } from '../dialogs/CatchUpDialog';
+import { LevelUpDialog } from '../dialogs/LevelUpDialog';
 import { useHotkeys } from '../hooks/useHotkeys';
 import { useState } from 'react';
 import { WEATHER_LABELS } from '../../sim/systems/weather';
@@ -71,6 +72,7 @@ export function GameScreen() {
       {dialog === 'help' && <HelpDialog onClose={() => setDialog(null)} />}
       {dialog === 'career' && <CareerDialog onClose={() => setDialog(null)} />}
       {dialog === 'catchup' && <CatchUpDialog onClose={() => setDialog(null)} />}
+      {dialog === 'levelup' && <LevelUpDialog onClose={() => setDialog(null)} />}
       {intro && !bankrupt && (
         <div className="pointer-events-auto absolute left-1/2 top-16 z-30 w-[30rem] max-w-[calc(100vw-2rem)] -translate-x-1/2">
           <section className="panel p-4 text-sm" aria-label="Einstieg">
@@ -80,7 +82,7 @@ export function GameScreen() {
                 <button type="button" className="underline" onClick={() => setPanel('build')}>
                   Baumenü (B)
                 </button>{' '}
-                öffnen und eine Ramenbar oder einen Streetfood-Stand an eine Straße setzen.
+                öffnen und einen Asia-Imbiss oder einen Streetfood-Stand an eine Straße setzen.
               </li>
               <li>Zeit laufen lassen (1, 2, 3) und die Baustelle fertig werden sehen.</li>
               <li>Nach der Eröffnung im Dashboard Speisekarte, Einkauf und Personal steuern. Die Aufgaben im Dock unten führen weiter.</li>

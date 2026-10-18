@@ -1,5 +1,6 @@
+import { levelDef } from '../../sim/data/regions';
 import { useGameStore, useSimState } from '../store/gameStore';
-import { credits, signedCredits } from '../format';
+import { credits, signedCredits, integer } from '../format';
 import { formatClock, formatDate, tickToDate } from '../../sim/core/clock';
 import { SPEEDS, type Speed } from '../../sim/engine';
 import { CRISES } from '../../sim/data/crises';
@@ -10,6 +11,7 @@ const WANTED_LABELS = ['Unauffällig', 'Verdächtig', 'Unter Beobachtung', 'Ermi
 const SPEED_LABELS: Record<Speed, string> = { 0: '⏸', 1: '1×', 3: '3×', 8: '8×' };
 
 export function TopBar() {
+  const setPanel = useGameStore((s) => s.setPanel);
   const state = useSimState();
   const setSpeed = useGameStore((s) => s.setSpeed);
   const setDialog = useGameStore((s) => s.setDialog);
@@ -61,6 +63,14 @@ export function TopBar() {
           </button>
         ))}
       </div>
+      )}
+      {state.progression.enabled && (
+        <button type="button" className="flex items-baseline gap-1.5" title={`${integer(state.progression.xp)} XP. Weltkarte öffnen (G).`} onClick={() => setPanel('map')} data-testid="level-stat">
+          <span className="text-xs text-muted">Level</span>
+          <span className="num font-medium text-cyan">
+            {state.progression.level} · {levelDef(state.progression.level).name}
+          </span>
+        </button>
       )}
       <Stat label="Ruf" value={`${Math.round(state.player.reputation)}`} title="Unternehmensreputation (0–100)" />
       <Stat label="Fahndung" value={WANTED_LABELS[state.player.wantedLevel] ?? '–'} valueClass={state.player.wantedLevel >= 4 ? 'text-blood' : state.player.wantedLevel >= 2 ? 'text-amber' : 'text-white'} title={`Polizeiaufmerksamkeit ${Math.round(state.underworld.heat)} / 100`} />

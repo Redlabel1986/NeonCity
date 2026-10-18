@@ -5,7 +5,7 @@ import { buildInteriorScene, type DashboardTab } from '../../src/render/interior
 import { migrate, serialize, type SaveFile } from '../../src/persistence/serializer';
 import type { Building, GastronomyState, RetailState } from '../../src/sim/state';
 
-const options: NewGameOptions = { seed: 'interior', playerName: 'Innen', difficulty: 'sandbox', background: 'restaurateur', citySize: 48 };
+const options: NewGameOptions = { progression: false, seed: 'interior', playerName: 'Innen', difficulty: 'sandbox', background: 'restaurateur', citySize: 48 };
 
 function build(sim: Simulation, defId: string): Building {
   const { grid } = sim.state;

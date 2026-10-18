@@ -7,6 +7,8 @@ import type { Building, Facing, GameState } from '../state';
 import { viewOf } from '../players';
 import { TileKind } from '../world/grid';
 import { occupy, vacate } from '../world/generator';
+import { effectivePlayerTier, isDistrictUnlocked, regionOfDistrict } from './progression';
+import { bankClosingValue } from './bank';
 import { BUILDING_DEFINITIONS, CURRENT_PHASE, type BuildingDefinition } from '../data/buildings';
 import { DIFFICULTIES, BACKGROUNDS } from '../data/difficulty';
 import { book, canAfford } from '../economy/finance';
@@ -17,6 +19,9 @@ import { tickToDate } from '../core/clock';
 export type PlacementError =
   | 'unknown_building'
   | 'not_available'
+  | 'district_locked'
+  | 'tier_required'
+  | 'region_restricted'
   | 'out_of_bounds'
   | 'tile_occupied'
   | 'no_road_access'
@@ -27,6 +32,9 @@ export type PlacementError =
 export const PLACEMENT_ERROR_TEXT: Record<PlacementError, string> = {
   unknown_building: 'Unbekannter Gebäudetyp.',
   not_available: 'Dieses Gebäude ist in dieser Entwicklungsphase noch nicht verfügbar.',
+  district_locked: 'Diese Region ist noch gesperrt. Sie öffnet sich mit dem nächsten Spielerlevel (Weltkarte, G).',
+  tier_required: 'Dieses Gebäude braucht ein höheres Spielerlevel (Weltkarte, G).',
+  region_restricted: 'Dieses Gebäude gibt es nur in bestimmten Regionen (siehe Baumenü).',
   out_of_bounds: 'Das Grundstück liegt außerhalb der Stadtgrenzen.',
   tile_occupied: 'Das Grundstück ist bereits bebaut oder nicht bebaubar.',
   no_road_access: 'Das Gebäude braucht einen Straßenanschluss.',
@@ -39,6 +47,8 @@ export interface PlacementQuote {
   def: BuildingDefinition;
   landCost: number;
   constructionCost: number;
+  /** Founding capital locked in the building (banks); part of `total`. */
+  capital: number;
   total: number;
   buildTime: number;
   districtId: number;
@@ -68,7 +78,8 @@ export function quotePlacement(state: GameState, def: BuildingDefinition, distri
   const energyFactor = district.stats.energySupply < 50 ? 1.5 : 1;
   const buildTime = difficulty.instantBuild ? 0 : Math.round(def.buildTimeMinutes * energyFactor * zoning * tech.buildTime);
   const zonedConstruction = Math.round(constructionCost * zoning * tech.buildCost);
-  return { def, landCost, constructionCost: zonedConstruction, total: landCost + zonedConstruction, buildTime, districtId };
+  const capital = def.business?.kind === 'bank' ? Math.round(def.business.foundingCapital * difficulty.costMultiplier) : 0;
+  return { def, landCost, constructionCost: zonedConstruction, capital, total: landCost + zonedConstruction + capital, buildTime, districtId };
 }
 
 /**
@@ -95,9 +106,12 @@ export function checkPlacement(state: GameState, defId: string, x: number, y: nu
     }
   }
   if (def.availability > CURRENT_PHASE) return { ok: false, error: 'not_available', tiles, facing: requested };
+  if ((def.minLevel ?? 1) > effectivePlayerTier(state)) return { ok: false, error: 'tier_required', tiles: tiles.map((t) => ({ ...t, ok: false })), facing: requested };
   if (!allInside) return { ok: false, error: 'out_of_bounds', tiles, facing: requested };
   if (!allFree) return { ok: false, error: 'tile_occupied', tiles, facing: requested };
   const blocked = tiles.map((t) => ({ ...t, ok: false }));
+  if (!isDistrictUnlocked(state, state.grid.districtAt(x, y))) return { ok: false, error: 'district_locked', tiles: blocked, facing: requested };
+  if (def.regions && !def.regions.includes(regionOfDistrict(state, state.grid.districtAt(x, y)))) return { ok: false, error: 'region_restricted', tiles: blocked, facing: requested };
   if (!state.grid.footprintTouchesRoad(x, y, w, h)) {
     return { ok: false, error: 'no_road_access', tiles: blocked, facing: requested };
   }
@@ -126,7 +140,7 @@ export function placeBuilding(
   const { state, events } = ctx;
   const check = checkPlacement(state, defId, x, y, facing);
   if (!check.ok || !check.quote) return { ok: false, error: check.error ?? 'tile_occupied' };
-  const { def, landCost, constructionCost, buildTime, districtId } = check.quote;
+  const { def, landCost, constructionCost, capital, buildTime, districtId } = check.quote;
   const id = state.nextBuildingId++;
   const rngVariant = ctx.rng.int(0, 255);
   const building: Building = {
@@ -146,7 +160,7 @@ export function placeBuilding(
     progress: 0,
     buildTime,
     placedTick: state.tick,
-    investment: landCost + constructionCost,
+    investment: landCost + constructionCost + capital,
   };
   if (def.business) {
     building.business = createBusinessStateFor(def, ctx.rng, tickToDate(state.tick).day, state.tick, state.districts[districtId]!.stats.purchasingPower);
@@ -155,6 +169,10 @@ export function placeBuilding(
   occupy(state.grid, building);
   book(state, events, -landCost, { category: 'land', description: `Grundstück für ${def.name}`, buildingId: id });
   book(state, events, -constructionCost, { category: 'construction', description: `Bau: ${def.name}`, buildingId: id });
+  if (capital > 0) {
+    book(state, events, -capital, { category: 'capital', description: `Gründungskapital: ${def.name}`, buildingId: id });
+    if (building.business?.kind === 'bank') building.business.reserve = capital;
+  }
   if (building.status === 'construction') {
     state.undoStack.push({ buildingId: id, tick: state.tick });
     if (state.undoStack.length > 20) state.undoStack.shift();
@@ -196,6 +214,11 @@ export function removeBuilding(
     const demolitionCost = Math.round((def?.cost ?? 1000) * 0.08);
     book(state, events, landRefund, { category: 'land', description: `Grundstücksverkauf: ${name}`, buildingId });
     book(state, events, -demolitionCost, { category: 'demolition', description: `Abriss: ${name}`, buildingId });
+    if (b.business?.kind === 'bank') {
+      // Closing a bank: the reserve comes back, loans are sold at a discount, depositors are paid out.
+      const closing = bankClosingValue(b.business);
+      book(state, events, closing, { category: 'capital', description: `Bank aufgelöst: ${name}`, buildingId });
+    }
     events.emit({ type: 'log', tick: state.tick, level: 'warning', message: `${name} abgerissen.` });
   }
   vacate(state.grid, b);

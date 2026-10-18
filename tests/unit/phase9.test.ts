@@ -8,7 +8,7 @@ import { megacorpProgress, MEGACORP_VALUATION } from '../../src/sim/systems/corp
 import type { Building, IndustryState } from '../../src/sim/state';
 import { serialize, deserialize } from '../../src/persistence/serializer';
 
-const options: NewGameOptions = { seed: 'phase9', playerName: 'Chair', difficulty: 'sandbox', background: 'consultant', citySize: 48 };
+const options: NewGameOptions = { progression: false, seed: 'phase9', playerName: 'Chair', difficulty: 'sandbox', background: 'consultant', citySize: 48 };
 
 function build(sim: Simulation, defId: string): Building {
   const { grid } = sim.state;

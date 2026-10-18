@@ -12,7 +12,7 @@ import type { CloudAuthResponse, CloudMeta } from '../../src/net/cloudProtocol';
 const SECRET = 'test-secret-with-enough-length';
 
 function sampleSave(): { text: string; tick: number } {
-  const sim = new Simulation(createNewGame({ seed: 'cloud', playerName: 'Wolke', difficulty: 'standard', background: 'restaurateur', citySize: 32 }));
+  const sim = new Simulation(createNewGame({ progression: false, seed: 'cloud', playerName: 'Wolke', difficulty: 'standard', background: 'restaurateur', citySize: 32 }));
   const { grid } = sim.state;
   outer: for (let y = 0; y < grid.height; y++)
     for (let x = 0; x < grid.width; x++)

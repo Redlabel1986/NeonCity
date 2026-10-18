@@ -6,6 +6,8 @@
  */
 
 export type DistrictArchetypeId =
+  | 'greenhaven'
+  | 'silverbrook'
   | 'corporate_heights'
   | 'neon_market'
   | 'rust_docks'
@@ -41,7 +43,7 @@ export interface DistrictArchetype {
   /** Hex colour used for map overlays and UI accents. */
   color: number;
   /** Visual style key for procedurally drawn buildings. */
-  style: 'corporate' | 'market' | 'docks' | 'ghost' | 'old' | 'chrome' | 'undercity' | 'skyline';
+  style: 'rural' | 'suburb' | 'corporate' | 'market' | 'docks' | 'ghost' | 'old' | 'chrome' | 'undercity' | 'skyline';
   stats: DistrictStats;
   /** Fraction of block tiles left as empty lots (buildable). */
   vacancy: number;
@@ -54,6 +56,73 @@ export interface DistrictArchetype {
 }
 
 export const DISTRICT_ARCHETYPES: Record<DistrictArchetypeId, DistrictArchetype> = {
+  greenhaven: {
+    id: 'greenhaven',
+    name: 'Greenhaven',
+    tagline: 'Felder, Wälder, Seen und Solardächer',
+    color: 0x6fcf6f,
+    style: 'rural',
+    vacancy: 0.14,
+    greenery: 0.5,
+    footprints: [
+      [1, 1, 6],
+      [2, 1, 2],
+      [2, 2, 1],
+    ],
+    floors: [1, 2],
+    stats: {
+      population: 9000,
+      purchasingPower: 48,
+      rentIndex: 8,
+      landPrice: 320,
+      crime: 8,
+      policePresence: 40,
+      attractiveness: 82,
+      infrastructure: 55,
+      traffic: 25,
+      energySupply: 72,
+      water: 92,
+      pollution: 4,
+      corruption: 10,
+      politicalInfluence: 15,
+      demandFood: 56,
+      competition: 18,
+    },
+  },
+  silverbrook: {
+    id: 'silverbrook',
+    name: 'Silverbrook',
+    tagline: 'Reihenhäuser, Supermärkte und Pendler',
+    color: 0x9fb8d8,
+    style: 'suburb',
+    vacancy: 0.14,
+    greenery: 0.16,
+    footprints: [
+      [1, 1, 4],
+      [2, 1, 3],
+      [1, 2, 2],
+      [2, 2, 1],
+    ],
+    floors: [2, 4],
+    stats: {
+      population: 26000,
+      purchasingPower: 62,
+      rentIndex: 16,
+      landPrice: 700,
+      crime: 20,
+      policePresence: 60,
+      attractiveness: 68,
+      infrastructure: 76,
+      traffic: 60,
+      energySupply: 86,
+      water: 90,
+      pollution: 20,
+      corruption: 24,
+      politicalInfluence: 30,
+      demandFood: 62,
+      competition: 40,
+    },
+  },
   corporate_heights: {
     id: 'corporate_heights',
     name: 'Corporate Heights',
@@ -327,6 +396,8 @@ export const DISTRICT_ARCHETYPES: Record<DistrictArchetypeId, DistrictArchetype>
 };
 
 export const DISTRICT_ORDER: readonly DistrictArchetypeId[] = [
+  'greenhaven',
+  'silverbrook',
   'corporate_heights',
   'neon_market',
   'rust_docks',

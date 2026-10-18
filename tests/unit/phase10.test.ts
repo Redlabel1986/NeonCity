@@ -5,7 +5,7 @@ import { generateCity } from '../../src/sim/world/generator';
 import { migrate, serialize, type SaveFile } from '../../src/persistence/serializer';
 import type { Facing } from '../../src/sim/state';
 
-const options: NewGameOptions = { seed: 'facing', playerName: 'Dreher', difficulty: 'sandbox', background: 'restaurateur', citySize: 48 };
+const options: NewGameOptions = { progression: false, seed: 'facing', playerName: 'Dreher', difficulty: 'sandbox', background: 'restaurateur', citySize: 48 };
 
 const ALL: Facing[] = [0, 1, 2, 3];
 

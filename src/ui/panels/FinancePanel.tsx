@@ -20,7 +20,7 @@ const CATEGORY_LABELS: Record<TransactionCategory, string> = {
   tax: 'Steuern',
   donation: 'Spenden',
   loan: 'Kredite',
-  capital: 'Kapital (Anteile)',
+  capital: 'Kapital (Anteile, Bankrücklage)',
   interest: 'Zinsen',
   insurance: 'Versicherung',
   dividend: 'Dividenden',

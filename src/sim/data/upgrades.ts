@@ -184,6 +184,53 @@ UPGRADES.filters = {
 export const UPGRADE_IDS: readonly string[] = Object.keys(UPGRADES);
 
 /** Numeric effects per upgrade level (cumulative over levels). */
+// Rooms unlocked by evolution stages (data/evolution.ts)
+UPGRADES.delivery_kitchen = {
+  id: 'delivery_kitchen',
+  name: 'Lieferküche',
+  description: 'Packstation und Kuriere: Bestellungen außer Haus, unabhängig von den Sitzplätzen.',
+  levels: [
+    { cost: 3000, hours: 10, effect: '+25 % Liefernachfrage' },
+    { cost: 6000, hours: 14, effect: '+20 % Liefernachfrage' },
+  ],
+};
+UPGRADES.vip_lounge = {
+  id: 'vip_lounge',
+  name: 'VIP-Lounge',
+  description: 'Separee mit eigenem Service: zufriedenere Gäste, die höhere Preise akzeptieren.',
+  levels: [
+    { cost: 9000, hours: 18, effect: '+8 Zufriedenheit, Preisakzeptanz +5 %' },
+    { cost: 18000, hours: 24, effect: '+6 Zufriedenheit, Preisakzeptanz +5 %' },
+  ],
+};
+UPGRADES.robot_kitchen = {
+  id: 'robot_kitchen',
+  name: 'Roboterküche',
+  description: 'Kochroboter übernehmen Standardgerichte.',
+  levels: [
+    { cost: 12000, hours: 20, effect: '+40 % Kochleistung' },
+    { cost: 22000, hours: 26, effect: '+40 % Kochleistung' },
+  ],
+};
+UPGRADES.wellness_spa = {
+  id: 'wellness_spa',
+  name: 'Spa',
+  description: 'Thermen, Massagen, Synth-Sauna.',
+  levels: [
+    { cost: 20000, hours: 30, effect: '+6 Komfort, +15 ¢ Zusatzumsatz je Nacht' },
+    { cost: 36000, hours: 36, effect: '+6 Komfort, +15 ¢ Zusatzumsatz je Nacht' },
+  ],
+};
+UPGRADES.conference_rooms = {
+  id: 'conference_rooms',
+  name: 'Konferenzräume',
+  description: 'Tagungen bringen Gäste unter der Woche.',
+  levels: [
+    { cost: 14000, hours: 24, effect: '+10 % Nachfrage' },
+    { cost: 26000, hours: 30, effect: '+10 % Nachfrage' },
+  ],
+};
+
 export function upgradeEffects(upgrades: Record<string, number>): {
   seats: number;
   cookRate: number;
@@ -205,6 +252,12 @@ export function upgradeEffects(upgrades: Record<string, number>): {
   clerkRate: number;
   basket: number;
   machines: number;
+  /** Extra delivery demand share (lieferküche). */
+  delivery: number;
+  /** Multiplier on the price level guests accept (VIP lounge). */
+  priceAcceptance: number;
+  /** Credits per occupied room-night (spa). */
+  extraPerStay: number;
 } {
   const lvl = (id: string): number => upgrades[id] ?? 0;
   const seatsByLevel = [0, 6, 12, 20];
@@ -228,18 +281,25 @@ export function upgradeEffects(upgrades: Record<string, number>): {
   const clerkByLevel = [1, 1.3, 1.6];
   const basketByLevel = [1, 1.1, 1.2];
   const machinesByLevel = [1, 1.4, 1.8, 2.3];
+  const deliveryByLevel = [0, 0.25, 0.45];
+  const vipSat = [0, 8, 14];
+  const vipPrice = [1, 1.05, 1.1];
+  const robotCook = [1, 1.4, 1.8];
+  const spaComfort = [0, 6, 12];
+  const spaExtra = [0, 15, 30];
+  const conference = [1, 1.1, 1.2];
   return {
     seats: seatsByLevel[lvl('seating')] ?? 0,
-    cookRate: cookByLevel[lvl('kitchen')] ?? 1,
+    cookRate: (cookByLevel[lvl('kitchen')] ?? 1) * (robotCook[lvl('robot_kitchen')] ?? 1),
     quality: qualityByLevel[lvl('kitchen')] ?? 0,
     storage: storageByLevel[lvl('storage')] ?? 0,
     shelfLife: shelfByLevel[lvl('storage')] ?? 0,
-    satisfaction: satByLevel[lvl('decor')] ?? 0,
-    draw: (drawDecor[lvl('decor')] ?? 1) * (drawMarketing[lvl('marketing')] ?? 1),
+    satisfaction: (satByLevel[lvl('decor')] ?? 0) + (vipSat[lvl('vip_lounge')] ?? 0),
+    draw: (drawDecor[lvl('decor')] ?? 1) * (drawMarketing[lvl('marketing')] ?? 1) * (conference[lvl('conference_rooms')] ?? 1),
     hygieneLoss: hygieneByLevel[lvl('hygiene_station')] ?? 1,
     morale: moraleByLevel[lvl('staff_room')] ?? 0,
     rooms: roomsByLevel[lvl('rooms')] ?? 0,
-    comfort: comfortByLevel[lvl('lobby')] ?? 0,
+    comfort: (comfortByLevel[lvl('lobby')] ?? 0) + (spaComfort[lvl('wellness_spa')] ?? 0),
     roomCost: roomCostByLevel[lvl('housekeeping_tech')] ?? 1,
     security: securityByLevel[lvl('security')] ?? 1,
     energy: energyByLevel[lvl('charging')] ?? 1,
@@ -249,5 +309,8 @@ export function upgradeEffects(upgrades: Record<string, number>): {
     clerkRate: clerkByLevel[lvl('shelves')] ?? 1,
     basket: basketByLevel[lvl('shelves')] ?? 1,
     machines: machinesByLevel[lvl('machines')] ?? 1,
+    delivery: deliveryByLevel[lvl('delivery_kitchen')] ?? 0,
+    priceAcceptance: vipPrice[lvl('vip_lounge')] ?? 1,
+    extraPerStay: spaExtra[lvl('wellness_spa')] ?? 0,
   };
 }

@@ -3,6 +3,8 @@
  * next one. Migrations operate on plain JSON objects.
  */
 
+import { levelDef, REGION_ORDER, REGIONS, regionOfArchetype, type RegionId } from '../sim/data/regions';
+import type { DistrictArchetypeId } from '../sim/data/districts';
 import { Rng } from '../sim/core/rng';
 import { BUILDING_DEFINITIONS } from '../sim/data/buildings';
 import { createBusinessState } from '../sim/systems/business';
@@ -251,6 +253,35 @@ const migrateV12toV13: Migration = (raw) => {
   return raw;
 };
 
+/**
+ * v14: player levels, regions and business evolution. Older cities have no
+ * Greenhaven or Silverbrook districts; their players keep every region they
+ * already built in, at the level that opens it, so nothing they own locks.
+ */
+const migrateV13toV14: Migration = (raw) => {
+  const players = (raw.players ?? {}) as Record<string, Record<string, unknown>>;
+  const buildings = (raw.buildings ?? {}) as Record<string, Record<string, unknown>>;
+  const districts = (raw.districts ?? []) as { id: number; archetype: DistrictArchetypeId }[];
+  for (const [id, slice] of Object.entries(players)) {
+    if (slice.progression && typeof (slice.progression as Record<string, unknown>).xp === 'number') continue;
+    const home = ((slice.player as Record<string, unknown>)?.homeDistrictId as number) ?? 0;
+    const used = new Set<RegionId>();
+    const homeArch = districts.find((d) => d.id === home)?.archetype;
+    if (homeArch) used.add(regionOfArchetype(homeArch));
+    for (const b of Object.values(buildings)) {
+      if (b.owner !== id || typeof b.districtId !== 'number') continue;
+      const arch = districts.find((d) => d.id === b.districtId)?.archetype;
+      if (arch) used.add(regionOfArchetype(arch));
+    }
+    let level = 1;
+    for (const r of used) level = Math.max(level, REGIONS[r].requiredLevel);
+    const unlockedRegions = REGION_ORDER.filter((r) => REGIONS[r].requiredLevel <= level);
+    slice.progression = { enabled: true, level, xp: levelDef(level).xp, milestones: [], unlockedRegions, levelReachedTick: 0, pendingLevelUp: null, stats: { lifetimeIncome: 0, lifetimeExpenses: 0 } };
+  }
+  raw.version = 14;
+  return raw;
+};
+
 export const MIGRATIONS: Record<number, Migration> = {
   1: migrateV1toV2,
   2: migrateV2toV3,
@@ -264,4 +295,5 @@ export const MIGRATIONS: Record<number, Migration> = {
   10: migrateV10toV11,
   11: migrateV11toV12,
   12: migrateV12toV13,
+  13: migrateV13toV14,
 };

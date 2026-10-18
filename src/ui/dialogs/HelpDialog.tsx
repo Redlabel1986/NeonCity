@@ -51,7 +51,7 @@ export function HelpDialog({ onClose }: { onClose: () => void }) {
         <section>
           <h3 className="panel-title">So funktioniert das Spiel</h3>
           <ol className="mt-2 list-decimal space-y-1.5 pl-5 text-text/90">
-            <li>Öffne das Baumenü und platziere eine Ramenbar oder einen Streetfood-Stand auf einem freien Grundstück an einer Straße.</li>
+            <li>Öffne das Baumenü und platziere einen Asia-Imbiss oder einen Streetfood-Stand auf einem freien Grundstück an einer Straße.</li>
             <li>Grundstück und Bau kosten sofort Credits; die Baustelle braucht Zeit. Solange sie läuft, kannst du sie kostenlos zurücknehmen.</li>
             <li>Nach der Eröffnung kommen Gäste zu den Öffnungszeiten. Bezirk, Verkehr, Kaufkraft, Konkurrenz, Preis und Ruf bestimmen, wie viele.</li>
             <li>Jede Stunde werden Verkäufe und Zutaten gebucht, um Mitternacht Löhne, Betriebskosten und deine Wohnungsmiete.</li>

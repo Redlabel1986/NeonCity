@@ -12,6 +12,7 @@
 import type { BackgroundId, DifficultyId } from './data/difficulty';
 import { BACKGROUNDS, DIFFICULTIES } from './data/difficulty';
 import { FACTION_IDS } from './data/factions';
+import { createProgression, startingDistrict } from './systems/progression';
 import { createLedger } from './economy/finance';
 import { createTaskStates } from './systems/tasks';
 import { createDecisionState } from './systems/decisions';
@@ -20,7 +21,7 @@ import { createResearchState } from './systems/research';
 import { createCasinoState } from './systems/casino';
 import type { FactionState, GameState, PlayerFactionState, PlayerSlice, WorldState } from './state';
 
-const PLAYER_KEYS = new Set<PropertyKey>(['player', 'ledger', 'log', 'nextLogId', 'tasks', 'undoStack', 'decisions', 'corporate', 'research', 'casino']);
+const PLAYER_KEYS = new Set<PropertyKey>(['player', 'progression', 'ledger', 'log', 'nextLogId', 'tasks', 'undoStack', 'decisions', 'corporate', 'research', 'casino']);
 const PLAYER_POLITICS_KEYS = new Set<PropertyKey>(['influence', 'districtInfluence', 'initiativeCooldownDay', 'lifetimeTaxes', 'lifetimeDonations']);
 const PLAYER_FACTION_KEYS = new Set<PropertyKey>(['relation', 'lastActionDay', 'activeUntilDay', 'activeEffect']);
 
@@ -34,6 +35,8 @@ export interface NewPlayerOptions {
   name: string;
   background: BackgroundId;
   difficulty: DifficultyId;
+  /** Tier system with district licences (default true); false = free play. */
+  progression?: boolean;
 }
 
 export function defaultFactionState(): PlayerFactionState {
@@ -44,7 +47,7 @@ export function defaultFactionState(): PlayerFactionState {
 export function createPlayerSlice(world: WorldState, options: NewPlayerOptions): PlayerSlice {
   const difficulty = DIFFICULTIES[options.difficulty];
   const background = BACKGROUNDS[options.background];
-  const homeDistrict = world.districts.find((d) => d.archetype === background.homeDistrict) ?? world.districts[0]!;
+  const homeDistrict = world.districts[startingDistrict(world.districts, background.homeDistrict, options.progression !== false)]!;
   const startingCredits = Math.max(2000, difficulty.startingCredits + background.creditsBonus);
   const name = options.name.trim() || 'Unbekannt';
   const slice: PlayerSlice = {
@@ -58,6 +61,7 @@ export function createPlayerSlice(world: WorldState, options: NewPlayerOptions):
       reputation: 10,
       wantedLevel: 0,
     },
+    progression: createProgression(options.progression !== false),
     ledger: createLedger(startingCredits),
     log: [],
     nextLogId: 1,
@@ -103,6 +107,7 @@ function systemSlice(world: WorldState): PlayerSlice {
   const slice: PlayerSlice = {
     id: SYSTEM_PLAYER_ID,
     player: { name: 'System', background: 'restaurateur', difficulty: 'standard', apartmentRent: 0, homeDistrictId: 0, reputation: 0, wantedLevel: 0 },
+    progression: createProgression(false),
     ledger: createLedger(0),
     log: [],
     nextLogId: 1,

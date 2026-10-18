@@ -4,6 +4,8 @@
  */
 
 import type { SimContext } from '../core/context';
+import type { District } from '../state';
+import { isRegionUnlocked, regionOfDistrict } from './progression';
 import type { CrisisState, GameState } from '../state';
 import { viewOf } from '../players';
 import { CRISES } from '../data/crises';
@@ -55,11 +57,39 @@ export function closeCrisisDay(ctx: SimContext, day: number): void {
   const anyOrg = state.world.playerOrder.some((id) => !!state.world.players[id]!.underworld.org);
   const instability = 1 + avgCrime / 100 + (anyOrg ? 0.3 : 0);
   for (const def of Object.values(CRISES)) {
+    // Regional events only once a player has opened that region.
+    if (def.region && !state.world.playerOrder.some((id) => isRegionUnlocked(viewOf(state, id), def.region!))) continue;
     if (rng.chance(def.chance * instability)) {
       startCrisis(ctx, def.id, day);
       return;
     }
   }
+}
+
+/** Demand multiplier a regional event applies to businesses in a district (1 elsewhere). */
+export function regionDemandFactor(state: GameState, districtId: number, kind: 'gastronomy' | 'retail' | 'hotel' | 'transport' | 'industry'): number {
+  const c = state.crisis.active;
+  if (!c) return 1;
+  const def = CRISES[c.id];
+  if (!def?.region || regionOfDistrict(state, districtId) !== def.region) return 1;
+  switch (c.id) {
+    case 'village_fair':
+      return kind === 'transport' ? 1.2 : 1.4;
+    case 'traffic_jam':
+      return kind === 'transport' ? 0.7 : kind === 'retail' ? 0.9 : 1;
+    case 'chain_competition':
+      return kind === 'retail' ? 0.8 : 1;
+    case 'harvest_failure':
+      return kind === 'industry' ? 0.6 : 1;
+    case 'megacity_blackout':
+      return kind === 'transport' ? 0.5 : 0.85;
+    default:
+      return 1;
+  }
+}
+
+function regionDistricts(state: GameState, region: string): District[] {
+  return state.districts.filter((d) => regionOfDistrict(state, d.id) === region);
 }
 
 function startCrisis(ctx: SimContext, id: string, day: number): void {
@@ -80,6 +110,15 @@ function startCrisis(ctx: SimContext, id: string, day: number): void {
       break;
     case 'supply_chain':
       for (const g of [...INGREDIENT_IDS, ...RETAIL_GOOD_IDS]) state.market.index[g] = Math.min(1.9, (state.market.index[g] ?? 1) * 1.3);
+      break;
+    case 'harvest_failure':
+      for (const g of ['vegetables', 'herbs', 'grain']) state.market.index[g] = Math.min(1.9, (state.market.index[g] ?? 1) * 1.5);
+      break;
+    case 'corp_scandal':
+      for (const d of regionDistricts(state, 'neon_central')) d.stats.purchasingPower = Math.max(5, d.stats.purchasingPower * 0.88);
+      break;
+    case 'megacity_blackout':
+      for (const d of regionDistricts(state, 'nova_eclipse')) d.stats.energySupply = Math.max(10, d.stats.energySupply - 40);
       break;
     case 'financial_scandal': {
       for (const id of state.world.playerOrder) {
@@ -136,6 +175,15 @@ function endCrisis(ctx: SimContext, day: number): void {
       for (const d of state.districts) d.stats.landPrice = Math.max(100, Math.round(d.stats.landPrice * 0.65));
       state.crisis.bubbleApplied = false;
       events.emit({ type: 'log', tick: state.tick, level: 'danger', message: 'Die Immobilienblase platzt: Grundstückspreise −35 %. Wer jetzt verkauft, verliert.' });
+      break;
+    case 'harvest_failure':
+      for (const g of ['vegetables', 'herbs', 'grain']) state.market.index[g] = Math.max(0.5, (state.market.index[g] ?? 1) / 1.5);
+      break;
+    case 'corp_scandal':
+      for (const d of regionDistricts(state, 'neon_central')) d.stats.purchasingPower = Math.min(100, d.stats.purchasingPower / 0.88);
+      break;
+    case 'megacity_blackout':
+      for (const d of regionDistricts(state, 'nova_eclipse')) d.stats.energySupply = Math.min(100, d.stats.energySupply + 40);
       break;
     default:
       break;

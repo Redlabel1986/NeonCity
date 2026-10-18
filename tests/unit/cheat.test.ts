@@ -6,7 +6,7 @@ import { CHEAT_RAMEN_DAILY_PROFIT, CHEAT_RAMEN_HOURLY_REVENUE, CHEAT_RAMEN_NAME,
 import { MINUTES_PER_DAY, isDayBoundary } from '../../src/sim/core/clock';
 import type { Building, GastronomyState } from '../../src/sim/state';
 
-const options: NewGameOptions = { seed: 'cheat-seed', playerName: 'Cheater', difficulty: 'standard', background: 'restaurateur', citySize: 48 };
+const options: NewGameOptions = { progression: false, seed: 'cheat-seed', playerName: 'Cheater', difficulty: 'standard', background: 'restaurateur', citySize: 48 };
 
 function openRamenBar(sim: Simulation): Building {
   const { grid } = sim.state;

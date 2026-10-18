@@ -9,7 +9,7 @@ export function Dialog({ title, onClose, children, width = 'max-w-xl' }: { title
     return () => previous?.focus?.();
   }, []);
   return (
-    <div className="absolute inset-0 z-30 flex items-center justify-center bg-ink/70 p-4" onPointerDown={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="absolute inset-0 z-[60] flex items-center justify-center bg-ink/70 p-4" onPointerDown={(e) => e.target === e.currentTarget && onClose()}>
       <div ref={ref} role="dialog" aria-modal="true" aria-labelledby="dialog-title" className={`panel flex max-h-full w-full ${width} flex-col`}>
         <div className="flex items-center justify-between border-b border-line px-5 py-3">
           <h2 id="dialog-title" className="text-base font-medium text-white">

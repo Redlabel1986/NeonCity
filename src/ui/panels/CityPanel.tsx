@@ -13,7 +13,7 @@ export function CityPanel() {
   return (
     <div className="text-sm">
       <p className="text-xs text-muted">
-        Nova Eclipse, {integer(population)} Einwohner in acht Bezirken, davon {integer(citizens)} als Bürger mit Wohnung, Job und Tagesablauf simuliert.
+        Nova Eclipse, {integer(population)} Einwohner in {state.districts.length} Bezirken von Greenhaven bis Nova Eclipse, davon {integer(citizens)} als Bürger mit Wohnung, Job und Tagesablauf simuliert.
         {competitors} Gastronomiebetriebe der Konkurrenz kämpfen um dieselben Gäste. Bezirkswerte fließen direkt in Gästezahlen und Baukosten ein.
       </p>
       <ul className="mt-3 space-y-2">

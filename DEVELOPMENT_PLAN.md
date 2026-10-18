@@ -224,6 +224,20 @@ Umfang: Das Einzelspiel läuft weiter, während der Spieler weg ist: Nachholen d
 | Bericht entspricht den Engine-Ereignissen: Tage, Einnahmen, Ausgaben, Gebäude, Ereignisse; Kontostand bewegt sich um das Ergebnis | `catchup.test.ts` |
 | Im Browser: zwei Stunden Abwesenheit werden auf einen Tag gedeckelt, Bericht erscheint, abgeschaltet passiert nichts | `catchup.spec.ts` |
 
+## Phase 17 – Level, Regionen, Entwicklungsbaum, Banken ✅ abgeschlossen (über den Plan hinaus)
+
+Umfang: Spielerlevel mit XP und vier Regionen (Greenhaven → Silverbrook → Neon Central → Nova Eclipse) auf einer Karte, universeller Entwicklungsgraph für alle Betriebe mit echten Mechaniken, Banken und Greenhaven-Betriebe.
+
+| Kriterium | Nachweis |
+|---|---|
+| Zehn Bezirke, Greenhaven ländlich mit Feldern, Wäldern, Seen, Megacity im Osten | `progression.test.ts` |
+| Start in Greenhaven, Sperren für Bauen und Kaufen, Level- und Regionsbindung von Gebäuden | `progression.test.ts`, `progression.spec.ts` |
+| XP nur einmal je ID, automatischer Aufstieg, Regionen öffnen, Speichern/Laden/Migration | `progression.test.ts` |
+| Lieferzeiten und Transportkosten zwischen Regionen | `progression.test.ts` |
+| Entwicklungsgraph: Daten konsistent, gültiger Pfad, Voraussetzungen, Kapital, Abbruch, Speichern im Umbau, alte Spielstände, Spezialisierungen, Verkauf, parallele Umbauten, keine doppelten Freischaltungen, Franchise, Sterne | `evolution.test.ts` |
+| Entwicklungsbaum-UI startet und zeigt Umbauten, Gebäude ändert Stufe und Namen | `evolution.spec.ts` |
+| Banken: Einlagen, Kredite, Zinsen, Ausfälle, Aufsicht, Kapital | `bank`-Abschnitt in `evolution.test.ts` und Simulation |
+
 ## Gesamtstand
 
-Alle acht Phasen sind abgeschlossen, mit Version 0.8.1 auditiert und mit Phase 9 bis 16 erweitert. Stand der Prüfung: 131 Unit-Tests (Vitest) und 22 E2E-Tests (Playwright) laufen fehlerfrei; Typecheck strict und Lint sind sauber bis auf zwei dokumentierte Hinweise.
+Alle acht Phasen sind abgeschlossen, mit Version 0.8.1 auditiert und mit Phase 9 bis 17 erweitert. Stand der Prüfung: 147 Unit-Tests (Vitest) und 24 E2E-Tests (Playwright) laufen fehlerfrei; Typecheck strict und Lint sind sauber bis auf zwei dokumentierte Hinweise.

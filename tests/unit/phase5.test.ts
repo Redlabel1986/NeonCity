@@ -9,7 +9,7 @@ import { isResidential } from '../../src/sim/systems/property';
 import type { Building, GastronomyState, SecurityState } from '../../src/sim/state';
 import { serialize, deserialize } from '../../src/persistence/serializer';
 
-const options: NewGameOptions = { seed: 'phase5', playerName: 'Don', difficulty: 'sandbox', background: 'street_kid', citySize: 48 };
+const options: NewGameOptions = { progression: false, seed: 'phase5', playerName: 'Don', difficulty: 'sandbox', background: 'street_kid', citySize: 48 };
 
 function build(sim: Simulation, defId: string): Building {
   const { grid } = sim.state;

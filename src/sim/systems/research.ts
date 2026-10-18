@@ -6,6 +6,9 @@
 import type { SimContext } from '../core/context';
 import type { Rng } from '../core/rng';
 import type { LabModel } from '../data/buildings';
+import { effectiveUpkeep, stageEffects } from '../data/evolution';
+import { XP_PER_RESEARCH } from '../data/regions';
+import { awardXp } from './progression';
 import { BUILDING_DEFINITIONS } from '../data/buildings';
 import { RESEARCH } from '../data/research';
 import { BACKGROUNDS, DIFFICULTIES } from '../data/difficulty';
@@ -91,11 +94,12 @@ export function closeLabsDay(ctx: SimContext, day: number): void {
       const node = RESEARCH[biz.activeNodeId];
       if (!node || state.research.unlocked.includes(biz.activeNodeId)) biz.activeNodeId = null;
       else {
-        points = Math.round(labOutput(biz) * (biz.upgradeInProgress ? 0.8 : 1) * (BACKGROUNDS[state.player.background].perks?.research ?? 1));
+        points = Math.round(labOutput(biz) * stageEffects(b).throughput * (biz.upgradeInProgress || b.stageUpgrade ? 0.8 : 1) * (BACKGROUNDS[state.player.background].perks?.research ?? 1));
         state.research.progress[node.id] = (state.research.progress[node.id] ?? 0) + points;
         if ((state.research.progress[node.id] ?? 0) >= node.points) {
           state.research.unlocked.push(node.id);
           delete state.research.progress[node.id];
+          awardXp(state, events, `research:${node.id}`, XP_PER_RESEARCH, `Forschung ${node.name}`);
           biz.activeNodeId = null;
           biz.reputation = Math.min(100, biz.reputation + 5);
           events.emit({ type: 'log', tick: state.tick, level: 'success', message: `Forschung abgeschlossen: ${node.name}. ${node.effect}.`, buildingId: String(b.id) });
@@ -103,8 +107,7 @@ export function closeLabsDay(ctx: SimContext, day: number): void {
         }
       }
     }
-    const def = BUILDING_DEFINITIONS[b.defId]!;
-    biz.history.push({ day, revenue: 0, costs: wages + def.upkeepPerDay, points });
+    biz.history.push({ day, revenue: 0, costs: wages + effectiveUpkeep(b), points });
     if (biz.history.length > 30) biz.history.shift();
     generateCandidates(biz, rng, day + 1, state.districts[b.districtId]!.stats.purchasingPower, ROLES_BY_KIND.lab!);
   }

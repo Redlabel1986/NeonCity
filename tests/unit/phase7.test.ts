@@ -13,7 +13,7 @@ import { crisisFactors } from '../../src/sim/systems/crises';
 import { serialize, deserialize } from '../../src/persistence/serializer';
 import { RESEARCH } from '../../src/sim/data/research';
 
-const options: NewGameOptions = { seed: 'phase7', playerName: 'Magnate', difficulty: 'sandbox', background: 'heir', citySize: 48 };
+const options: NewGameOptions = { progression: false, seed: 'phase7', playerName: 'Magnate', difficulty: 'sandbox', background: 'heir', citySize: 48 };
 
 function build(sim: Simulation, defId: string): Building {
   const { grid } = sim.state;

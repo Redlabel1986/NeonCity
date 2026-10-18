@@ -61,6 +61,10 @@ export function sellCompany(ctx: SimContext): { ok: true; proceeds: number } | {
     delete b.business;
     delete b.property;
     b.investment = 0;
+    // A running conversion dies with the sale (its cost was part of the valuation).
+    delete b.stageUpgrade;
+    delete b.franchises;
+    delete b.stars;
   }
   for (const loan of state.corporate.loans) proceeds -= loan.remaining;
   state.corporate.loans = [];

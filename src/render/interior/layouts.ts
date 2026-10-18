@@ -7,18 +7,18 @@
  * screen, like the city). The two back walls run along x = 0 and y = 0.
  */
 
-import type { Building, EmployeeRole, Facing, GameState, GastronomyState, HotelState, IndustryState, ResearchLabState, RetailState, SecurityState, TransportState } from '../../sim/state';
+import type { Building, EmployeeRole, Facing, GameState, GastronomyState, HotelState, IndustryState, ResearchLabState, RetailState, SecurityState, TransportState, BankState } from '../../sim/state';
 import { BUILDING_DEFINITIONS } from '../../sim/data/buildings';
 import { INGREDIENTS } from '../../sim/data/ingredients';
 import { RESEARCH } from '../../sim/data/research';
 import { PRODUCTION } from '../../sim/data/production';
-import { effectiveCapacity } from '../../sim/systems/business';
+import { effectiveCapacity, isOpen } from '../../sim/systems/business';
 import { stockOf, storageCapacity, totalUnits } from '../../sim/systems/inventory';
 import { hotelRooms } from '../../sim/systems/hotel';
 import { ROLE_LABELS } from '../../sim/systems/staff';
 import { tickToDate } from '../../sim/core/clock';
 
-export type DashboardTab = 'overview' | 'menu' | 'supply' | 'staff' | 'upgrades';
+export type DashboardTab = 'overview' | 'menu' | 'supply' | 'staff' | 'upgrades' | 'evolution';
 
 export type PropKind =
   | 'table'
@@ -102,7 +102,7 @@ export interface InteriorScene {
   cleanliness: number;
 }
 
-const ACCENT = { gastronomy: 0xff2bd6, hotel: 0x19e6ff, transport: 0xffb020, retail: 0x8cff3a, security: 0xff3a5a, lab: 0x8cff3a, industry: 0xff8a1f } as const;
+const ACCENT = { gastronomy: 0xff2bd6, hotel: 0x19e6ff, transport: 0xffb020, retail: 0x8cff3a, security: 0xff3a5a, lab: 0x8cff3a, industry: 0xff8a1f, bank: 0xffb020 } as const;
 
 function staffFigures(employees: { name: string; role: EmployeeRole; morale: number }[], role: EmployeeRole, spots: [number, number][], wander: number): Figure[] {
   const out: Figure[] = [];
@@ -153,9 +153,43 @@ export function buildInteriorScene(b: Building, state: GameState): InteriorScene
       return labScene(b, biz);
     case 'industry':
       return industryScene(b, biz, state);
+    case 'bank':
+      return bankScene(b, biz);
     default:
       return null;
   }
+}
+
+// ---------------------------------------------------------------------- bank
+
+function bankScene(b: Building, biz: BankState): InteriorScene {
+  const W = 10;
+  const H = 7;
+  const ratio = biz.deposits > 0 ? biz.reserve / biz.deposits : 1;
+  const s = base(b, 'bank', W, H, `${Math.round(biz.deposits).toLocaleString('de-DE')} ¢ Einlagen · ${Math.round(biz.loansOut).toLocaleString('de-DE')} ¢ Kredite`, true, 0.95);
+  s.floorColor = 0x2a2a30;
+  s.wallColor = 0x3a3842;
+  // Counters for the bankers along the top wall
+  const bankers = biz.employees.filter((e) => e.role === 'banker').length;
+  for (let i = 0; i < Math.max(2, Math.min(5, bankers)); i++) s.props.push({ kind: 'counter', x: 1.5 + i * 1.6, y: 0.5, color: 0x4a3a20, active: i < bankers, label: i < bankers ? 'Schalter' : 'Schalter (unbesetzt)' });
+  s.zones.push({ label: 'Schalterhalle', x: 0, y: 0, w: W, h: 2.4, tab: 'overview', color: 0xffb020, status: `${bankers} Schalter · Ruf ${Math.round(biz.reputation)}` });
+  // Analysts' desks
+  const analysts = biz.employees.filter((e) => e.role === 'analyst').length;
+  for (let i = 0; i < Math.max(1, Math.min(4, analysts)); i++) s.props.push({ kind: 'desk', x: 1 + i * 1.4, y: 3.8, color: 0x2a2a38, active: i < analysts, label: i < analysts ? 'Kreditprüfung' : 'Kreditprüfung (frei)' });
+  s.zones.push({ label: 'Kreditabteilung', x: 0, y: 2.6, w: 6.5, h: 2.6, tab: 'overview', color: 0x19e6ff, status: `${analysts} Analysten` });
+  // Vault with the reserve
+  s.props.push({ kind: 'locker', x: W - 1, y: 4, color: 0x8a8a9a, label: `Tresor: ${Math.round(biz.reserve).toLocaleString('de-DE')} ¢ Rücklage` });
+  s.props.push({ kind: 'board', x: W - 3.2, y: 2.9, fill: Math.min(1, ratio / 0.5), active: !biz.supervised, color: biz.supervised ? 0xff3a5a : 0x8cff3a, label: biz.supervised ? 'Bankenaufsicht: Einlagenstopp' : `Rücklagenquote ${Math.round(ratio * 100)} %` });
+  s.zones.push({ label: 'Tresorraum', x: 6.7, y: 2.6, w: W - 6.7, h: 2.6, tab: 'staff', color: 0x8a8a9a, status: `${Math.round(biz.reserve).toLocaleString('de-DE')} ¢` });
+  if ((biz.upgrades.security ?? 0) > 0) s.props.push({ kind: 'monitor', x: W - 0.6, y: 0.3, active: true, color: 0xff3a5a, label: 'Sicherheitssystem' });
+  if ((biz.upgrades.decor ?? 0) > 0) s.props.push({ kind: 'plant', x: 0.5, y: H - 0.6 });
+  if ((biz.upgrades.staff_room ?? 0) > 0) s.props.push({ kind: 'locker', x: 0.5, y: 5.6, label: 'Personalraum' });
+  s.props.push({ kind: 'mat', x: W - 0.5, y: H / 2, label: 'Eingang' });
+  s.figures.push(...staffFigures(biz.employees, 'banker', [[1.5, 1.3], [3.1, 1.3], [4.7, 1.3], [6.3, 1.3], [7.9, 1.3]], 0.1));
+  s.figures.push(...staffFigures(biz.employees, 'analyst', [[1, 4.6], [2.4, 4.6], [3.8, 4.6], [5.2, 4.6]], 0.2));
+  s.figures.push(...staffFigures(biz.employees, 'security', [[W - 1.5, 1.2]], 0.3));
+  s.figures.push(...staffFigures(biz.employees, 'manager', [[7.5, 4.6]], 0.4));
+  return s;
 }
 
 // ---------------------------------------------------------------- gastronomy
@@ -168,7 +202,7 @@ function gastronomyScene(b: Building, biz: GastronomyState, state: GameState): I
   const W = small ? 7 : 10;
   const H = small ? 6 : 8;
   const hour = tickToDate(state.tick).hour;
-  const open = model?.kind === 'gastronomy' ? hour >= model.openHour || hour < model.closeHour % 24 : true;
+  const open = model?.kind === 'gastronomy' ? isOpen(model, hour, b) : true;
   const s = base(b, 'gastronomy', W, H, `${biz.hourGuests} Gäste gerade · ${biz.todayGuests} heute · Hygiene ${biz.hygiene} %`, open, biz.hygiene / 100);
   s.floorColor = 0x33283a;
   const up = biz.upgrades;

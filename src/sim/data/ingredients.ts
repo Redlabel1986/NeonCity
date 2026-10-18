@@ -19,6 +19,7 @@ export const INGREDIENTS: Record<string, IngredientDefinition> = {
   synthmeat: { id: 'synthmeat', name: 'Synth-Fleisch', basePrice: 2.4, shelfLifeDays: 4, category: 'food' },
   spices: { id: 'spices', name: 'Gewürze', basePrice: 0.6, shelfLifeDays: 30, category: 'food' },
   drinks: { id: 'drinks', name: 'Getränke', basePrice: 1.1, shelfLifeDays: 60, category: 'food' },
+  herbs: { id: 'herbs', name: 'Premium-Kräuter', basePrice: 3.2, shelfLifeDays: 3, category: 'food', retailMarkup: 2.4 },
   snacks: { id: 'snacks', name: 'Snacks', basePrice: 1.4, shelfLifeDays: 20, category: 'retail', retailMarkup: 2.2 },
   stims: { id: 'stims', name: 'Stims', basePrice: 3.5, shelfLifeDays: 90, category: 'retail', retailMarkup: 2.6 },
   cyber_parts: { id: 'cyber_parts', name: 'Cyber-Ersatzteile', basePrice: 9, shelfLifeDays: 365, category: 'retail', retailMarkup: 1.9 },

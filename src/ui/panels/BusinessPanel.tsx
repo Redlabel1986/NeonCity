@@ -135,6 +135,8 @@ function activityOf(biz: import('../../sim/state').BusinessState): number {
       return biz.history[biz.history.length - 1]?.points ?? 0;
     case 'industry':
       return Object.values(biz.todayProduced).reduce((s, n) => s + n, 0);
+    case 'bank':
+      return Math.round(biz.deposits);
   }
 }
 

@@ -1,6 +1,8 @@
 import { useGameStore, useSimState } from '../store/gameStore';
 import { BUILDING_DEFINITIONS, CURRENT_PHASE } from '../../sim/data/buildings';
 import { PLACEMENT_ERROR_TEXT } from '../../sim/systems/construction';
+import { effectivePlayerTier } from '../../sim/systems/progression';
+import { REGIONS } from '../../sim/data/regions';
 import { FACING_LABELS } from '../../sim/state';
 import { DIFFICULTIES, BACKGROUNDS } from '../../sim/data/difficulty';
 import { credits, duration } from '../format';
@@ -28,6 +30,7 @@ export function BuildPanel() {
   const difficulty = DIFFICULTIES[state.player.difficulty];
   const background = BACKGROUNDS[state.player.background];
   const home = state.districts[state.player.homeDistrictId]!;
+  const level = effectivePlayerTier(state);
 
   return (
     <div className="space-y-3">
@@ -66,10 +69,12 @@ export function BuildPanel() {
       <ul className="space-y-2">
         {Object.values(BUILDING_DEFINITIONS).map((def) => {
           const locked = def.availability > CURRENT_PHASE;
-          const cost = Math.round(def.cost * difficulty.costMultiplier * background.constructionBonus);
+          const levelLocked = (def.minLevel ?? 1) > level;
+          const regionNames = def.regions?.map((r) => REGIONS[r].name).join(', ');
+          const cost = Math.round(def.cost * difficulty.costMultiplier * background.constructionBonus) + (def.business?.kind === 'bank' ? Math.round(def.business.foundingCapital * difficulty.costMultiplier) : 0);
           const selected = placementDefId === def.id;
           return (
-            <li key={def.id} className={`rounded-sm border p-3 ${selected ? 'border-cyan' : 'border-line'} ${locked ? 'opacity-70' : ''}`}>
+            <li key={def.id} className={`rounded-sm border p-3 ${selected ? 'border-cyan' : 'border-line'} ${locked || levelLocked ? 'opacity-70' : ''}`} data-level-locked={levelLocked || undefined}>
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <h3 className="font-medium text-white">{def.name}</h3>
@@ -79,6 +84,8 @@ export function BuildPanel() {
                 </div>
                 {locked ? (
                   <span className="shrink-0 rounded-sm border border-line px-2 py-0.5 text-xs text-muted">Phase {def.availability}</span>
+                ) : levelLocked ? (
+                  <span className="shrink-0 rounded-sm border border-line px-2 py-0.5 text-xs text-muted">ab Level {def.minLevel}</span>
                 ) : (
                   <button type="button" className={`btn shrink-0 ${selected ? 'btn-primary' : ''}`} onClick={() => (selected ? cancelPlacement() : startPlacement(def.id))} aria-pressed={selected}>
                     {selected ? 'Aktiv' : 'Platzieren'}
@@ -86,6 +93,7 @@ export function BuildPanel() {
                 )}
               </div>
               <p className="mt-2 text-xs leading-snug text-text/80">{def.description}</p>
+              {regionNames && <p className="mt-1 text-xs text-cyan">Nur in: {regionNames}</p>}
               <dl className="num mt-2 grid grid-cols-2 gap-x-4 gap-y-0.5 text-xs">
                 <dt className="text-muted">Baukosten</dt>
                 <dd className="text-right">{credits(cost)}</dd>

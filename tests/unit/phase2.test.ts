@@ -12,7 +12,7 @@ import { SAVE_FORMAT_VERSION } from '../../src/sim/engine';
 import type { Building } from '../../src/sim/state';
 import { Rng } from '../../src/sim/core/rng';
 
-const options: NewGameOptions = { seed: 'phase2', playerName: 'Chef', difficulty: 'sandbox', background: 'restaurateur', citySize: 48 };
+const options: NewGameOptions = { progression: false, seed: 'phase2', playerName: 'Chef', difficulty: 'sandbox', background: 'restaurateur', citySize: 48 };
 
 function withRamenBar(opts: NewGameOptions = options): { sim: Simulation; b: Building } {
   const sim = new Simulation(createNewGame(opts));

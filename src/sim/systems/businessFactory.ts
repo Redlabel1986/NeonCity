@@ -10,6 +10,7 @@ import { createRetailState } from './retail';
 import { createSecurityState } from './security';
 import { createLabState } from './research';
 import { createIndustryState } from './industry';
+import { createBankState } from './bank';
 
 export function createBusinessStateFor(def: BuildingDefinition, rng: Rng, day: number, tick: number, districtSkillBias: number): BusinessState | undefined {
   const model = def.business;
@@ -29,6 +30,8 @@ export function createBusinessStateFor(def: BuildingDefinition, rng: Rng, day: n
       return createLabState(model, rng, day, tick, districtSkillBias);
     case 'industry':
       return createIndustryState(model, rng, day, tick, districtSkillBias);
+    case 'bank':
+      return createBankState(model, rng, day, tick, districtSkillBias);
     default:
       return undefined;
   }

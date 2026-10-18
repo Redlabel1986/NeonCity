@@ -13,6 +13,7 @@ import { credits, decimal, duration, integer, percent, signedCredits } from '../
 import { tickToDate } from '../../sim/core/clock';
 import { Meter, Row } from '../components/Inspector';
 import { DIFFICULTIES } from '../../sim/data/difficulty';
+import { stageEffects } from '../../sim/data/evolution';
 
 export function Kpi({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
@@ -34,7 +35,7 @@ export function HotelOverview({ b, biz }: { b: Building; biz: HotelState }) {
   if (model.kind !== 'hotel') return null;
   const rooms = hotelRooms(b);
   const demand = explainHotelDemand(state, b)!;
-  const bounds = hotelPriceBounds(b.defId)!;
+  const bounds = hotelPriceBounds(b.defId, stageEffects(b).price)!;
   const last = biz.history[biz.history.length - 1];
   const occupancy = rooms > 0 ? biz.stays.length / rooms : 0;
   const reception = biz.employees.filter((e) => e.role === 'reception').length;
@@ -93,7 +94,7 @@ export function TransportOverview({ b, biz }: { b: Building; biz: TransportState
   if (model.kind !== 'transport') return null;
   const demand = explainRideDemand(state, b)!;
   const cap = fleetCapacity(b, state)!;
-  const bounds = fareBounds(b.defId)!;
+  const bounds = fareBounds(b.defId, stageEffects(b).price)!;
   const last = biz.history[biz.history.length - 1];
   const vehiclePrice = Math.round(model.vehiclePrice * DIFFICULTIES[state.player.difficulty].costMultiplier);
   return (
@@ -196,7 +197,7 @@ export function RetailOverview({ b, biz }: { b: Building; biz: RetailState }) {
         <div className="mt-1 space-y-2">
           {model.goods.map((g) => {
             const def = INGREDIENTS[g]!;
-            const bounds = retailPriceBounds(g)!;
+            const bounds = retailPriceBounds(g, stageEffects(b).price)!;
             const price = biz.prices[g] ?? bounds.min;
             const units = stockOf(biz, g);
             return (

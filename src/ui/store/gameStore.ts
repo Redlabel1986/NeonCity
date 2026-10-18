@@ -43,9 +43,10 @@ export type Panel =
   | 'underworld'
   | 'stats'
   | 'casino'
+  | 'map'
   | 'dashboard';
 
-export type Dialog = 'saves' | 'settings' | 'help' | 'career' | 'catchup' | null;
+export type Dialog = 'saves' | 'settings' | 'help' | 'career' | 'catchup' | 'levelup' | null;
 
 export interface KeyBindings {
   pause: string;
@@ -64,6 +65,7 @@ export interface KeyBindings {
   politics: string;
   research: string;
   casino: string;
+  map: string;
   help: string;
 }
 
@@ -84,6 +86,7 @@ export const DEFAULT_KEYBINDINGS: KeyBindings = {
   politics: 'o',
   research: 'r',
   casino: 'j',
+  map: 'g',
   help: 'h',
 };
 
@@ -286,7 +289,8 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const world = createNewGame(options);
     get().loadFromState(world, `${options.playerName.trim() || 'Unbekannt'} – Nova Eclipse`);
     const me = world.players[LOCAL_PLAYER_ID]!.player;
-    get().notify('info', `Willkommen in Nova Eclipse, ${me.name}. Deine Miete beträgt ${me.apartmentRent} ¢ pro Tag.`);
+    const home = world.districts[me.homeDistrictId]!;
+    get().notify('info', `Willkommen in ${home.name}, ${me.name}. Deine Miete beträgt ${me.apartmentRent} ¢ pro Tag.${world.players[LOCAL_PLAYER_ID]!.progression.enabled ? ' Sammle Erfahrung, um die nächste Region zu öffnen (Weltkarte: G).' : ''}`);
   },
 
   loadFromState: (state, name, playerId) => {

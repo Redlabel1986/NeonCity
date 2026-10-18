@@ -11,6 +11,7 @@ import { explainDemand, isOpen } from '../../src/sim/systems/business';
 import type { Building } from '../../src/sim/state';
 
 const baseOptions: NewGameOptions = {
+  progression: false,
   seed: 'test-seed',
   playerName: 'Tester',
   difficulty: 'standard',
@@ -93,9 +94,9 @@ describe('City generator', () => {
     expect(Array.from(a.grid.kind)).not.toEqual(Array.from(c.grid.kind));
   });
 
-  it('creates eight districts, roads, water and buildable lots', () => {
+  it('creates ten districts, roads, water and buildable lots', () => {
     const city = generateCity(555, 64);
-    expect(city.districts).toHaveLength(8);
+    expect(city.districts).toHaveLength(10);
     const counts = new Map<number, number>();
     for (const k of city.grid.kind) counts.set(k, (counts.get(k) ?? 0) + 1);
     expect(counts.get(TileKind.Road)! > 200).toBe(true);

@@ -8,7 +8,8 @@ declare global {
         renderer: { focusTile: (x: number, y: number, zoom?: number) => void; zoom: number } | null;
       };
       store: { getState: () => Record<string, unknown> & { dispatch: (c: unknown) => boolean; selectedBuildingId: number | null } };
-      checkPlacement: (state: unknown, defId: string, x: number, y: number) => { ok: boolean };
+      checkPlacement: (state: unknown, defId: string, x: number, y: number) => { ok: boolean; error?: string };
+      awardXp: (state: unknown, events: unknown, id: string, xp: number, title: string) => number;
     };
   }
 }
@@ -57,7 +58,7 @@ test('city renders and a ramen bar can be built, operated, saved and loaded', as
   });
 
   await page.keyboard.press('b');
-  await expect(page.getByRole('region', { name: 'Bauen' }).getByRole('heading', { name: 'Ramenbar' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Bauen' }).getByRole('heading', { name: 'Asia-Imbiss' })).toBeVisible();
   await page.getByRole('button', { name: 'Platzieren' }).first().click();
   await expect(page.getByText('Platzierung aktiv')).toBeVisible();
 
@@ -75,7 +76,7 @@ test('city renders and a ramen bar can be built, operated, saved and loaded', as
     .toBe(1);
   const credits1 = await page.evaluate(() => window.__neon.session.sim!.state.ledger.balance);
   expect(credits1).toBeLessThan(credits0);
-  await expect(page.getByRole('complementary', { name: 'Auswahl' }).getByRole('heading', { name: 'Ramenbar' })).toBeVisible();
+  await expect(page.getByRole('complementary', { name: 'Auswahl' }).getByRole('heading', { name: 'Asia-Imbiss' })).toBeVisible();
   await expect(page.getByRole('complementary', { name: 'Auswahl' })).toContainText('Baustelle');
   await page.screenshot({ path: 'tests/e2e/output/03-construction.png' });
 

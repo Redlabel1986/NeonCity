@@ -106,7 +106,7 @@ export interface PlayerBackground {
   /** Daily rent of the starting apartment in credits. */
   apartmentRent: number;
   /** Which district the camera and apartment start in. */
-  homeDistrict: 'old_city' | 'undercity' | 'corporate_heights' | 'neon_market' | 'skyline_gardens' | 'ghost_quarter' | 'chrome_district' | 'rust_docks';
+  homeDistrict: 'greenhaven' | 'silverbrook' | 'old_city' | 'undercity' | 'corporate_heights' | 'neon_market' | 'skyline_gardens' | 'ghost_quarter' | 'chrome_district' | 'rust_docks';
   /** Multiplier on gastronomy guest draw. */
   gastronomyBonus: number;
   /** Multiplier on construction cost. */

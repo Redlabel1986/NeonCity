@@ -11,6 +11,7 @@ import { BUILDING_DEFINITIONS } from '../data/buildings';
 import { BACKGROUNDS, DIFFICULTIES } from '../data/difficulty';
 import { INGREDIENTS } from '../data/ingredients';
 import { upgradeEffects } from '../data/upgrades';
+import { effectiveUpkeep, stageEffects } from '../data/evolution';
 import { book } from '../economy/finance';
 import type { Building, GameState, RetailState } from '../state';
 import { autoReorder, spoilInventory, stockOf, takeUnits } from './inventory';
@@ -18,7 +19,7 @@ import { registerDemand } from './market';
 import { applyVisitOutcome } from './population';
 import { closeStaffDay, createEmployee, generateCandidates, roleThroughput, ROLES_BY_KIND } from './staff';
 import { techFactors } from './research';
-import { crisisFactors } from './crises';
+import { crisisFactors, regionDemandFactor } from './crises';
 import { insuranceClaim } from './corporate';
 
 export function createRetailState(model: RetailModel, rng: Rng, day: number, tick: number, districtSkillBias: number): RetailState {
@@ -91,10 +92,10 @@ export function explainRetailDemand(state: GameState, b: Building): RetailDemand
   const difficulty = DIFFICULTIES[state.player.difficulty];
   const background = BACKGROUNDS[state.player.background];
   const district = (0.5 + stats.traffic / 100) * Math.min(1.5, 0.3 + 0.7 * Math.sqrt(stats.population / 30000)) * (0.7 + stats.purchasingPower / 200);
-  const price = Math.pow(Math.max(0.2, retailPriceRatio(biz)), -(1.4 - stats.purchasingPower / 150));
+  const price = Math.pow(Math.max(0.2, retailPriceRatio(biz) / stageEffects(b).price), -(1.4 - stats.purchasingPower / 150));
   const reputation = 0.6 + (biz.reputation / 100) * 0.8;
-  const upgrades = upgradeEffects(biz.upgrades).draw;
-  const expectedPeakCustomers = model.baseDraw * district * price * reputation * upgrades * difficulty.demandMultiplier * (background.id === 'street_kid' ? 1.1 : 1);
+  const upgrades = upgradeEffects(biz.upgrades).draw * stageEffects(b).draw;
+  const expectedPeakCustomers = model.baseDraw * district * price * reputation * upgrades * difficulty.demandMultiplier * (background.id === 'street_kid' ? 1.1 : 1) * regionDemandFactor(state, b.districtId, 'retail');
   return { district, price, reputation, upgrades, expectedPeakCustomers };
 }
 
@@ -113,8 +114,8 @@ export function stepRetailHour(ctx: SimContext, hour: number): void {
     const demand = explainRetailDemand(state, b)!;
     const fx = upgradeEffects(biz.upgrades);
     const tech = techFactors(state);
-    const clerks = roleThroughput(biz, 'clerk', model.clerkRate * fx.clerkRate);
-    const capacity = clerks.count > 0 ? Math.floor(clerks.throughput * (biz.upgradeInProgress ? 0.8 : 1)) : 0;
+    const clerks = roleThroughput(biz, 'clerk', model.clerkRate * fx.clerkRate * stageEffects(b).throughput);
+    const capacity = clerks.count > 0 ? Math.floor(clerks.throughput * (biz.upgradeInProgress || b.stageUpgrade ? 0.8 : 1)) : 0;
     const walkIns = Math.round(demand.expectedPeakCustomers * HOUR_PROFILE[hour]! * rng.range(0.85, 1.15) * (state.population.citizens.length > 0 ? 0.6 : 1) * crisisFactors(state).demand);
     const citizenVisits = state.population.pendingVisits[b.id] ?? 0;
     biz.todayCitizenVisits += citizenVisits;
@@ -208,8 +209,7 @@ export function closeRetailDay(ctx: SimContext, day: number): void {
       events.emit({ type: 'log', tick: state.tick, level: 'info', message: `${b.label}: Schwund ${Math.round(biz.todayShrinkage)} Einheiten durch Ladendiebstahl.`, buildingId: String(b.id) });
     }
     autoReorder(ctx, b);
-    const def = BUILDING_DEFINITIONS[b.defId]!;
-    const costs = wages + biz.todayPurchases + def.upkeepPerDay;
+    const costs = wages + biz.todayPurchases + effectiveUpkeep(b);
     biz.history.push({ day, customers: biz.todayCustomers, revenue: biz.todayRevenue, costs, cogs: biz.todayCogs, purchases: biz.todayPurchases, shrinkage: biz.todayShrinkage });
     if (biz.history.length > 30) biz.history.shift();
     biz.todayCustomers = 0;
@@ -223,11 +223,11 @@ export function closeRetailDay(ctx: SimContext, day: number): void {
   }
 }
 
-export function retailPriceBounds(goodId: string): { min: number; max: number } | null {
+export function retailPriceBounds(goodId: string, priceLevel = 1): { min: number; max: number } | null {
   const def = INGREDIENTS[goodId];
   if (!def) return null;
   const typical = def.basePrice * (def.retailMarkup ?? 2);
-  return { min: Math.max(0.5, Math.round(typical * 0.5 * 10) / 10), max: Math.round(typical * 2.5 * 10) / 10 };
+  return { min: Math.max(0.5, Math.round(typical * 0.5 * 10) / 10), max: Math.round(typical * 2.5 * priceLevel * 10) / 10 };
 }
 
 function clamp(v: number, lo: number, hi: number): number {
