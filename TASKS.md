@@ -153,7 +153,7 @@
 - [ ] Web Worker für die Simulation, sobald NPC-Zahlen oder Branchen die Last spürbar erhöhen (Engine ist vorbereitet)
 - [ ] Bürger per Klick auf Passanten inspizieren
 - [ ] Innenansicht: Figuren mit Wegen zwischen Stationen und echten Tagesabläufen (derzeit Stationen mit kleinem Umherlaufen); Gebäudetransparenz auf der Karte
-- [ ] Innenansicht für Immobilien (Mieter, Zustand) und Konkurrenzlokale
+- [x] Innenansicht für Immobilien (Mieter, Zustand) und Konkurrenzlokale (0.20.0, alle 236 Stadtgebäude nach dem Innenansichten-Katalog)
 - [ ] Ausrichtung bestehender Gebäude nachträglich ändern (derzeit nur beim Platzieren)
 - [ ] Online: Chat, Rangliste, Admin-Befehle (Geschwindigkeit, Spieler entfernen), Übernahme fremder Spielerbetriebe, Passwort ändern
 - [ ] Casino: Teilen und Versicherung beim Blackjack, Tischlimits je Bezirk, ein eigenes Casino als Betrieb (Hausvorteil als Einnahme)

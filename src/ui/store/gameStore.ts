@@ -149,6 +149,8 @@ export interface GameStore {
   interiorBuildingId: number | null;
   /** Camera zoom to return to when leaving the interior. */
   interiorReturnZoom: number;
+  /** Zone of a city building interior whose detail card is open. */
+  interiorZone: { label: string; status: string; details: string[] } | null;
   selectedTile: { x: number; y: number } | null;
   hoverTile: { x: number; y: number } | null;
   placementDefId: string | null;
@@ -220,6 +222,7 @@ export interface GameStore {
   setDashboardTab: (tab: DashboardTab) => void;
   enterInterior: (id: number) => void;
   leaveInterior: () => void;
+  showInteriorZone: (zone: { label: string; status: string; details?: string[] } | null) => void;
 
   saveManual: (name: string) => Promise<void>;
   quickSave: () => Promise<void>;
@@ -275,6 +278,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
   dashboardTab: 'overview',
   interiorBuildingId: null,
   interiorReturnZoom: 1,
+  interiorZone: null,
   selectedTile: null,
   hoverTile: null,
   placementDefId: null,
@@ -680,7 +684,7 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const b = sim?.state.buildings[id];
     if (!b) return;
     const returnZoom = get().interiorBuildingId === null ? (r?.zoom ?? 1) : get().interiorReturnZoom;
-    set({ interiorBuildingId: id, interiorReturnZoom: returnZoom });
+    set({ interiorBuildingId: id, interiorReturnZoom: returnZoom, interiorZone: null });
     r?.flyTo(b.x + (b.w - 1) / 2, b.y + (b.h - 1) / 2, 2.6, 0.55);
   },
 
@@ -688,9 +692,11 @@ export const useGameStore = create<GameStore>((set, get) => ({
     const id = get().interiorBuildingId;
     if (id === null) return;
     const b = session.sim?.state.buildings[id];
-    set({ interiorBuildingId: null });
+    set({ interiorBuildingId: null, interiorZone: null });
     if (b) session.renderer?.flyTo(b.x + (b.w - 1) / 2, b.y + (b.h - 1) / 2, Math.min(get().interiorReturnZoom, 1.6), 0.45);
   },
+
+  showInteriorZone: (zone) => set({ interiorZone: zone ? { label: zone.label, status: zone.status, details: zone.details ?? [] } : null }),
 
   focusBuilding: (id) => {
     const sim = session.sim;

@@ -38,15 +38,31 @@ export interface SpriteCatalog {
   buildings: SpriteEntry[];
 }
 
+import { cityInterior } from './interior/cityCatalog';
+
 export const SPRITE_BASE = 'sprites/';
 
 /** Sprite kinds that read as open ground, not as a building; never used for city buildings. */
 const NOT_A_BUILDING = new Set(['decor', 'park', 'fountain', 'parking', 'solar']);
 
-/** Deterministic choice of a sprite for a city building, or null (procedural fallback). */
-export function pickCitySprite(catalog: SpriteCatalog, region: string, w: number, h: number, facing: number, variant: number): { entry: SpriteEntry; facing: SpriteFacing } | null {
+/** True for sprites whose interior is a home (house or apartment block). */
+export function isHomeSprite(id: string): boolean {
+  const a = cityInterior(id)?.archetype;
+  return a === 'house' || a === 'apartment';
+}
+
+/**
+ * Deterministic choice of a sprite for a city building, or null (procedural
+ * fallback). With `residential` given, homes get house/apartment sprites and
+ * shops, depots and offices get the others, so the interior matches who
+ * lives or works there; when the region has no fitting sprite for the
+ * footprint, any sprite of the right size is used.
+ */
+export function pickCitySprite(catalog: SpriteCatalog, region: string, w: number, h: number, facing: number, variant: number, residential?: boolean): { entry: SpriteEntry; facing: SpriteFacing } | null {
   const key = String(facing);
-  const candidates = catalog.buildings.filter((b) => b.region === region && !b.decor && !NOT_A_BUILDING.has(b.kind) && b.facings[key]?.w === w && b.facings[key]?.h === h);
+  const fitting = catalog.buildings.filter((b) => b.region === region && !b.decor && !NOT_A_BUILDING.has(b.kind) && b.facings[key]?.w === w && b.facings[key]?.h === h);
+  const byUse = residential === undefined ? fitting : fitting.filter((b) => isHomeSprite(b.id) === residential);
+  const candidates = byUse.length > 0 ? byUse : fitting;
   if (candidates.length === 0) return null;
   const entry = candidates[variant % candidates.length]!;
   return { entry, facing: entry.facings[key]! };

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { existsSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { pickCitySprite, type SpriteCatalog } from '../../src/render/spriteCatalog';
+import { isHomeSprite, pickCitySprite, type SpriteCatalog } from '../../src/render/spriteCatalog';
 import { generateCity } from '../../src/sim/world/generator';
 import { regionOfArchetype } from '../../src/sim/data/regions';
 
@@ -38,6 +38,17 @@ describe('Building sprites', () => {
       const p = pickCitySprite(catalog, 'nova_eclipse', 1, 1, v % 4, v);
       if (p) expect(['decor', 'park', 'fountain', 'parking', 'solar']).not.toContain(p.entry.kind);
     }
+  });
+
+  it('homes get house or apartment sprites, businesses the others (so interiors match residents and staff)', () => {
+    for (let v = 0; v < 30; v++) {
+      const home = pickCitySprite(catalog, 'silverbrook', 1, 1, v % 4, v, true);
+      if (home) expect(isHomeSprite(home.entry.id)).toBe(true);
+      const shop = pickCitySprite(catalog, 'silverbrook', 1, 1, v % 4, v, false);
+      if (shop) expect(isHomeSprite(shop.entry.id)).toBe(false);
+    }
+    // Nova Eclipse has no home sprites: residential lots still get a fitting sprite.
+    expect(pickCitySprite(catalog, 'nova_eclipse', 1, 1, 0, 0, true)).not.toBeNull();
   });
 
   it('covers most city buildings of a generated city with a sprite', () => {

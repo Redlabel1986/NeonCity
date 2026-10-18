@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.20.0 – Innenansichten der Stadtgebäude (2026-10-18)
+
+### Hinzugefügt
+
+- Alle 236 vorgerenderten Stadtgebäude sind begehbar: Inspektor → „Innenansicht betreten“. Grundlage ist der Innenansichten-Katalog aus `assets/` (ausgewertet von `tools/interiors/extract_interiors.py` nach `src/render/interior/cityCatalog.ts`). Jedes Gebäude bekommt die Räume, die der Katalog nennt, in dessen Reihenfolge und mit dessen Namen, etwa „Gastraum mit Tischen“, „Küche mit Herd & Abzug“, „Kühl- & Trockenlager“ und „Personalbereich“ im Restaurant oder „Hebebühnen & Fahrzeugstellplätze“ in der Werkstatt.
+- Eigene Einrichtung je Raumtyp, kein Einheitsraster. 44 Archetypen von Wohnhaus über Klinik, Polizei, Feuerwache, Rechenzentrum, Werft und Raumhafen bis Gewächshaus, mit 147 Raumrezepten und 67 neuen Möbeln und Maschinen. Dazu gehören Betten, Backöfen, Serverschränke, Laufbänder, Hebebühnen, Container, Portalkran, Schiffsrumpf, Zellen, Sitzreihen, Spielfeld, Wasserbecken und Zapfsäulen. Ein Test stellt sicher, dass keine zwei Archetypen dieselbe Ausstattung haben.
+- Materialien und Licht folgen der Region. Greenhaven hat Holzdielen, Klinker und warmes Licht. Silverbrook hat helles Holz, Putz und neutrales Licht. Neon Central hat Terrazzo, Glasfassaden und violett-cyanfarbene Akzente. Nova Eclipse hat Stahl, Gitterroste, Sicherheitsmarkierungen und kaltes Arbeitslicht. Die Böden sind je nach Raum Dielen, Fliesen, Beton, Teppich, Asphalt, Rasen, Erde, Stroh oder Gummi.
+- In den Räumen stehen die Menschen, die die Simulation dort führt. Bewohner, die gerade zu Hause sind, sitzen im Wohnbereich, Schlafende liegen im Bett. Beschäftigte im Dienst stehen an ihren Arbeitsplätzen. Konkurrenzlokale zeigen genau so viele Gäste, wie in dieser Stunde dort eingekehrt sind. Wer unterwegs ist, fehlt. Ein Tipp auf eine Person zeigt Name und Tätigkeit.
+- Bereiche anklicken öffnet eine Karte mit Simulationswerten. Wohnräume zeigen Bewohner und wie viele davon zu Hause sind. Arbeitsräume zeigen Beschäftigte im Dienst. Verkaufsräume zeigen Kaufkraft und Laufkundschaft des Bezirks, Technik zeigt Strom und Wasser, Sicherheitsräume zeigen Kriminalität und Polizeipräsenz. Dazu kommen Gäste und Ruf bei Konkurrenten, Umweltbelastung in der Industrie sowie Einfluss und Korruption in Ämtern. Gekaufte Gebäude zeigen ihren Zustand. Zusätzlich nennt die Karte, wer sich gerade im Bereich aufhält. Erfundene Zahlen gibt es nicht.
+- Objektansicht für die technischen Einträge des Katalogs, etwa Windrad, Wasserturm, Hafenkran, Trockendock, Brunnen oder Container. Das Objekt steht auf einer Prüffläche, der Katalogbereich „Objektzustand / Wartung“ ist beschriftet, aber nicht anklickbar.
+- Wohnhäuser bekommen Haus- und Apartmentbilder, Läden, Werkstätten und Ämter die übrigen, damit Bild, Innenraum und Bewohner zusammenpassen. Nova Eclipse hat keine Wohnhausbilder, dort nehmen Wohngebäude weiter ein beliebiges Bild passender Größe.
+- Tests: `cityInteriors.test.ts` prüft alle 236 Einträge mit Zonen und Möbeln im Raum, eigene Ausstattung je Archetyp, reale Bewohner und Beschäftigte sowie Gäste bei Konkurrenten. `interiors.spec.ts` betritt zehn Gebäudetypen, klickt Bereiche an und macht Screenshots.
+
+### Behoben
+
+- Der Nacht-Screenshot im Sprite-Test rechnete die Uhrzeit ohne den Spielbeginn um 7:00 und landete deshalb nicht um 22:00.
+
 ## 0.19.0 – Vier eigene Karten nach den Stadtplänen, Mitarbeiterschulung (2026-10-18)
 
 ### Hinzugefügt

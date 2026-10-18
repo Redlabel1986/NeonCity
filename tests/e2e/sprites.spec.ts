@@ -49,7 +49,7 @@ test('city buildings show pre-rendered sprites in every region, by day and night
   // Night: advance to 22:00 and shoot the city again.
   await page.evaluate(() => {
     const sim = window.__neon.session.sim as unknown as { run: (n: number) => void; state: { tick: number } };
-    const minute = sim.state.tick % 1440;
+    const minute = (sim.state.tick + 420) % 1440; // ticks start at 07:00
     sim.run((1440 + 22 * 60 - minute) % 1440);
   });
   await page.waitForTimeout(1200);

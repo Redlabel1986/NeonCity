@@ -12,15 +12,12 @@
 import { Container, Graphics, Text } from 'pixi.js';
 import type { DashboardTab, Figure, FigureRole, InteriorScene, Prop, Zone } from './layouts';
 import { FIGURE_LABELS } from './layouts';
-
-const TW = 64;
-const TH = 32;
-const HW = TW / 2;
-const HH = TH / 2;
-const WALL_H = 76;
+import { FLAT_PROPS, HH, HW, TH, WALL_H, WALL_X_PROPS, box, drawCityProp, glow, hashStr, iso, mix, shade, shadow } from './interiorDraw';
 
 export interface InteriorCallbacks {
   onTab: (tab: DashboardTab) => void;
+  /** Click on a zone without a dashboard tab (city buildings). */
+  onZone?: (zone: Zone) => void;
 }
 
 interface LiveFigure {
@@ -67,62 +64,10 @@ const ROLE_COLORS: Record<FigureRole, number> = {
   guest: 0xd8a0c8,
   vip: 0xffd700,
   customer: 0xa0c8d8,
+  resident: 0xc8b8a0,
 };
 
 const GUEST_COLORS = [0xd8a0c8, 0xa0c8d8, 0xc8d8a0, 0xffb0a0, 0xb0a0ff, 0xa0ffd8];
-
-function iso(x: number, y: number): [number, number] {
-  return [(x - y) * HW, (x + y) * HH];
-}
-
-function hashStr(s: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
-  return (h >>> 0) / 4294967296;
-}
-
-function mix(a: number, b: number, t: number): number {
-  const r = Math.round(((a >> 16) & 255) * (1 - t) + ((b >> 16) & 255) * t);
-  const g = Math.round(((a >> 8) & 255) * (1 - t) + ((b >> 8) & 255) * t);
-  const bl = Math.round((a & 255) * (1 - t) + (b & 255) * t);
-  return (r << 16) | (g << 8) | bl;
-}
-
-function shade(c: number, f: number): number {
-  const r = Math.min(255, Math.round(((c >> 16) & 255) * f));
-  const g = Math.min(255, Math.round(((c >> 8) & 255) * f));
-  const b = Math.min(255, Math.round((c & 255) * f));
-  return (r << 16) | (g << 8) | b;
-}
-
-/** Isometric box with its base centred at the origin; `w`,`d` in tiles, `h` in pixels. */
-function box(g: Graphics, w: number, d: number, h: number, color: number, z = 0): void {
-  const a = iso(-w / 2, -d / 2);
-  const b = iso(w / 2, -d / 2);
-  const c = iso(w / 2, d / 2);
-  const dd = iso(-w / 2, d / 2);
-  const up = (p: [number, number], dz: number): [number, number] => [p[0], p[1] - dz];
-  const a1 = up(a, h + z);
-  const b1 = up(b, h + z);
-  const c1 = up(c, h + z);
-  const d1 = up(dd, h + z);
-  const b0 = up(b, z);
-  const c0 = up(c, z);
-  const d0 = up(dd, z);
-  g.poly([d0[0], d0[1], c0[0], c0[1], c1[0], c1[1], d1[0], d1[1]]).fill(shade(color, 0.78));
-  g.poly([c0[0], c0[1], b0[0], b0[1], b1[0], b1[1], c1[0], c1[1]]).fill(shade(color, 0.92));
-  g.poly([a1[0], a1[1], b1[0], b1[1], c1[0], c1[1], d1[0], d1[1]]).fill(shade(color, 1.12));
-  g.moveTo(d1[0], d1[1]).lineTo(c1[0], c1[1]).lineTo(b1[0], b1[1]).stroke({ width: 0.8, color: 0xffffff, alpha: 0.18 });
-}
-
-function shadow(g: Graphics, rx: number, ry: number, alpha = 0.35): void {
-  g.ellipse(0, 1, rx, ry).fill({ color: 0x000000, alpha });
-}
-
-function glow(g: Graphics, x: number, y: number, r: number, color: number, alpha: number): void {
-  g.circle(x, y, r * 2).fill({ color, alpha: alpha * 0.35 });
-  g.circle(x, y, r).fill({ color, alpha });
-}
 
 export class InteriorRenderer {
   /** Screen-space layer; added to the city stage above world and weather. */
@@ -246,6 +191,7 @@ export class InteriorRenderer {
     this.rng = 1;
     this.drawFloor(scene);
     this.drawWalls(scene);
+    this.drawLights(scene);
     for (const z of scene.zones) this.addZone(z);
     for (const p of scene.props) this.addProp(p, scene);
     for (const f of scene.figures) this.addFigure(f);
@@ -260,6 +206,20 @@ export class InteriorRenderer {
         const [sx, sy] = iso(x, y);
         const tone = (x + y) % 2 === 0 ? 1 : 0.94;
         g.poly([sx, sy, sx + HW, sy + HH, sx, sy + TH, sx - HW, sy + HH]).fill(shade(scene.floorColor, tone));
+        if (scene.floorPattern) this.floorDetail(g, scene, x, y, sx, sy);
+      }
+    }
+    if (scene.hazard) {
+      // Yellow-black safety markings along the two open edges
+      for (let t = 0; t < scene.width; t += 0.5) {
+        const a = iso(t, scene.height - 0.12);
+        const b = iso(t + 0.5, scene.height - 0.12);
+        g.moveTo(a[0], a[1]).lineTo(b[0], b[1]).stroke({ width: 3, color: Math.round(t * 2) % 2 === 0 ? 0xffd040 : 0x1a1a1a });
+      }
+      for (let t = 0; t < scene.height; t += 0.5) {
+        const a = iso(scene.width - 0.12, t);
+        const b = iso(scene.width - 0.12, t + 0.5);
+        g.moveTo(a[0], a[1]).lineTo(b[0], b[1]).stroke({ width: 3, color: Math.round(t * 2) % 2 === 0 ? 0xffd040 : 0x1a1a1a });
       }
     }
     const [x0, y0] = iso(0, 0);
@@ -285,9 +245,94 @@ export class InteriorRenderer {
     }
   }
 
+  /** Surface detail per floor material (planks, tiles, grating, grass ...). */
+  private floorDetail(g: Graphics, scene: InteriorScene, x: number, y: number, sx: number, sy: number): void {
+    const line = (x0: number, y0: number, x1: number, y1: number, color: number, width = 0.8): void => {
+      const a = iso(x + x0, y + y0);
+      const b = iso(x + x1, y + y1);
+      g.moveTo(a[0], a[1]).lineTo(b[0], b[1]).stroke({ width, color });
+    };
+    const dark = shade(scene.floorColor, 0.72);
+    const light = shade(scene.floorColor, 1.25);
+    switch (scene.floorPattern) {
+      case 'planks': {
+        for (const t of [0.33, 0.66]) line(0, t, 1, t, dark);
+        const joint = (x * 7 + y * 3) % 3 === 0 ? 0.5 : 0.25;
+        line(joint, 0, joint, 0.33, dark);
+        break;
+      }
+      case 'tiles':
+        g.poly([sx, sy, sx + HW, sy + HH, sx, sy + TH, sx - HW, sy + HH]).stroke({ width: 0.8, color: dark });
+        line(0.5, 0, 0.5, 1, dark, 0.6);
+        line(0, 0.5, 1, 0.5, dark, 0.6);
+        break;
+      case 'concrete':
+        if (x % 3 === 0) line(0, 0, 0, 1, dark, 0.8);
+        if (y % 3 === 0) line(0, 0, 1, 0, dark, 0.8);
+        if ((x * 13 + y * 7) % 5 === 0) g.circle(sx + 4, sy + HH, 1.2).fill(dark);
+        break;
+      case 'terrazzo':
+        for (let i = 0; i < 3; i++) g.circle(sx - 10 + ((x * 17 + y * 5 + i * 11) % 20), sy + 8 + ((x * 3 + y * 11 + i * 7) % 16), 1).fill(i % 2 ? light : dark);
+        break;
+      case 'metal':
+        for (const t of [0.25, 0.5, 0.75]) {
+          line(t, 0, t, 1, dark, 0.6);
+          line(0, t, 1, t, dark, 0.6);
+        }
+        break;
+      case 'grass':
+      case 'straw':
+        for (let i = 0; i < 3; i++) {
+          const px = sx - 12 + ((x * 19 + y * 7 + i * 13) % 24);
+          const py = sy + 8 + ((x * 5 + y * 17 + i * 5) % 16);
+          g.moveTo(px, py).lineTo(px + 1.5, py - 4).stroke({ width: 1, color: scene.floorPattern === 'grass' ? light : shade(scene.floorColor, 1.35) });
+        }
+        break;
+      case 'soil':
+        line(0, 0.5, 1, 0.5, dark, 1.4);
+        break;
+      case 'carpet':
+        if ((x + y) % 2 === 0) g.circle(sx, sy + HH, 2).fill(shade(scene.floorColor, 1.18));
+        break;
+      default:
+        break;
+    }
+  }
+
+  /** Ceiling light pools per region mood (warm, neutral, neon, cold work light). */
+  private drawLights(scene: InteriorScene): void {
+    if (!scene.lighting) return;
+    const palette: Record<string, number[]> = {
+      greenhaven: [0xffc070],
+      silverbrook: [0xfff0d8],
+      neon_central: [0xc08aff, 0x19e6ff],
+      nova_eclipse: [0xbfe0ff, 0xff8a1f],
+    };
+    const colors = palette[scene.lighting] ?? [0xffffff];
+    const g = new Graphics();
+    let i = 0;
+    for (let y = 1.5; y < scene.height; y += 3)
+      for (let x = 1.5; x < scene.width; x += 3) {
+        const [sx, sy] = iso(x, y);
+        const c = colors[i++ % colors.length]!;
+        g.ellipse(sx, sy + HH, 30, 15).fill({ color: c, alpha: 0.07 });
+        g.ellipse(sx, sy + HH, 14, 7).fill({ color: c, alpha: 0.08 });
+      }
+    g.blendMode = 'add';
+    this.lights.addChild(g);
+  }
+
   private drawWalls(scene: InteriorScene): void {
     const g = this.wallGfx;
     g.clear();
+    if (scene.openAir) {
+      // Open ground: a kerb instead of walls
+      const a = iso(0, scene.height);
+      const b = iso(0, 0);
+      const c = iso(scene.width, 0);
+      g.moveTo(a[0], a[1]).lineTo(b[0], b[1]).lineTo(c[0], c[1]).stroke({ width: 4, color: 0x8a8a90 });
+      return;
+    }
     const sky = mix(0x0b0a16, 0x7fa8d8, this.daylight);
     const W = scene.width;
     const H = scene.height;
@@ -313,8 +358,47 @@ export class InteriorRenderer {
         g.poly([a[0], a[1] - y0, b[0], b[1] - y0, b[0], b[1] - y1, a[0], a[1] - y1]).fill({ color: scene.accent, alpha: 0.25 * (1 - this.daylight) });
       }
     };
-    for (let t = 0.6; t + 1.1 < H; t += 2.2) win(p0, [-HW, HH], t);
-    for (let t = 0.6; t + 1.1 < W; t += 2.2) win(p0, [HW, HH], t);
+    const style = scene.wallStyle;
+    const walls: [[number, number], number][] = [
+      [[-HW, HH], H],
+      [[HW, HH], W],
+    ];
+    if (style === 'brick' || style === 'wood') {
+      for (const [dir, len] of walls) {
+        const end: [number, number] = [p0[0] + dir[0] * len, p0[1] + dir[1] * len];
+        for (let z = 7; z < WALL_H; z += style === 'brick' ? 7 : 10) g.moveTo(p0[0], p0[1] - z).lineTo(end[0], end[1] - z).stroke({ width: 0.8, color: shade(scene.wallColor, 0.7) });
+      }
+    } else if (style === 'metal') {
+      for (const [dir, len] of walls)
+        for (let t = 0.5; t < len; t += 0.5) {
+          const x = p0[0] + dir[0] * t;
+          const y = p0[1] + dir[1] * t;
+          g.moveTo(x, y).lineTo(x, y - WALL_H).stroke({ width: 1, color: shade(scene.wallColor, 0.72) });
+        }
+    }
+    if (style === 'brick') {
+      for (const [dir, len] of walls)
+        for (let t = 0.25; t < len; t += 0.5)
+          for (let z = 7, row = 0; z < WALL_H; z += 7, row++) {
+            const tt = t + (row % 2) * 0.25;
+            const x = p0[0] + dir[0] * tt;
+            const y = p0[1] + dir[1] * tt;
+            g.moveTo(x, y - z).lineTo(x, y - z - 7).stroke({ width: 0.6, color: shade(scene.wallColor, 0.7) });
+          }
+    }
+    if (style === 'glass') {
+      // Floor-to-ceiling glazing: solid panes with mullions
+      const pane = (dir: [number, number], t0: number, t1: number): void => {
+        const a: [number, number] = [p0[0] + dir[0] * t0, p0[1] + dir[1] * t0];
+        const b: [number, number] = [p0[0] + dir[0] * t1, p0[1] + dir[1] * t1];
+        g.poly([a[0], a[1] - 10, b[0], b[1] - 10, b[0], b[1] - WALL_H + 6, a[0], a[1] - WALL_H + 6]).fill(mix(sky, scene.wallColor, 0.35));
+        g.moveTo(b[0], b[1] - 10).lineTo(b[0], b[1] - WALL_H + 6).stroke({ width: 2, color: 0x1a1a24 });
+      };
+      for (const [dir, len] of walls) for (let t = 0.3; t + 1 < len; t += 1.2) pane(dir, t, t + 1.1);
+    } else {
+      for (let t = 0.6; t + 1.1 < H; t += 2.2) win(p0, [-HW, HH], t);
+      for (let t = 0.6; t + 1.1 < W; t += 2.2) win(p0, [HW, HH], t);
+    }
     // door in a back wall for facings that point away from the camera
     if (scene.facing === 2 || scene.facing === 3) {
       const base = p0;
@@ -349,6 +433,7 @@ export class InteriorRenderer {
 
   private paintZone(gfx: Graphics, zone: Zone, hover: boolean): void {
     gfx.clear();
+    if (zone.interactive === false) hover = false;
     const a = iso(zone.x, zone.y);
     const b = iso(zone.x + zone.w, zone.y);
     const c = iso(zone.x + zone.w, zone.y + zone.h);
@@ -369,7 +454,21 @@ export class InteriorRenderer {
     let lamp: Graphics | null = null;
     const color = prop.color ?? 0x6a6a7a;
     const fill = prop.fill ?? 0;
-    switch (prop.kind) {
+    if (FLAT_PROPS.has(prop.kind) && prop.kind !== 'mat') node.zIndex = -5;
+    if (WALL_X_PROPS.has(prop.kind)) {
+      const [wx, wy] = iso(prop.x, 0);
+      node.position.set(wx, wy);
+      node.zIndex = -1;
+    }
+    if (prop.kind === 'vaultdoor') {
+      const [wx, wy] = iso(0, prop.y);
+      node.position.set(wx, wy);
+      node.zIndex = -1;
+    }
+    const city = drawCityProp(g, prop, scene.accent);
+    if (city !== undefined) {
+      lamp = city;
+    } else switch (prop.kind) {
       case 'table':
         shadow(g, 16, 8);
         g.moveTo(-10, 2).lineTo(-10, -10).moveTo(10, 2).lineTo(10, -10).stroke({ width: 1.5, color: 0x2a1c22 });
@@ -599,7 +698,11 @@ export class InteriorRenderer {
     const color = fig.role === 'guest' || fig.role === 'customer' ? GUEST_COLORS[Math.floor(hashStr(fig.name) * GUEST_COLORS.length)]! : ROLE_COLORS[fig.role];
     const skin = [0xf1c9a5, 0xd9a47c, 0xa8744f, 0x6b4a33][Math.floor(hashStr(fig.name + 's') * 4)]!;
     shadow(g, 5, 2.5, 0.35);
-    if (fig.seated) {
+    if (fig.lying) {
+      g.roundRect(-7, -12, 13, 5, 2).fill(color);
+      g.circle(-9, -11, 3).fill(skin);
+      g.rect(-2, -13, 9, 3).fill(0xe8e8f0);
+    } else if (fig.seated) {
       g.rect(-3.5, -12, 7, 8).fill(color);
       g.circle(0, -15, 3.2).fill(skin);
     } else {
@@ -650,7 +753,7 @@ export class InteriorRenderer {
     this.lights.alpha = 0.55 + 0.45 * (1 - this.daylight);
     const motion = !this.reducedMotion;
     for (const f of this.figures) {
-      if (motion && !f.fig.seated && f.fig.wander > 0) {
+      if (motion && !f.fig.seated && !f.fig.lying && f.fig.wander > 0) {
         const dx = f.tx - f.x;
         const dy = f.ty - f.y;
         const dist = Math.hypot(dx, dy);
@@ -670,7 +773,7 @@ export class InteriorRenderer {
         }
       }
       const [sx, sy] = iso(f.x, f.y);
-      const bob = motion && !f.fig.seated ? Math.sin(this.time * 4 + f.phase) * 0.8 : 0;
+      const bob = motion && !f.fig.seated && !f.fig.lying ? Math.sin(this.time * 4 + f.phase) * 0.8 : 0;
       f.node.position.set(sx, sy + bob);
       f.node.zIndex = (f.x + f.y) * 10 + 2;
     }
@@ -699,6 +802,13 @@ export class InteriorRenderer {
     return { x: (wx / HW + wy / HH) / 2, y: (wy / HH - wx / HW) / 2 };
   }
 
+  /** Canvas point of a room position (for tests and overlays). */
+  screenPointOf(x: number, y: number): { x: number; y: number } {
+    const [sx, sy] = iso(x, y);
+    const s = this.root.scale.x;
+    return { x: this.root.position.x + sx * s, y: this.root.position.y + sy * s };
+  }
+
   /** True when the canvas point lies inside the interior viewport. */
   contains(px: number, py: number): boolean {
     const { x, y, w, h } = this.viewport;
@@ -723,13 +833,15 @@ export class InteriorRenderer {
     const t = this.toRoom(px, py);
     const zone = this.zoneAt(t.x, t.y);
     if (!zone) return false;
-    this.callbacks.onTab(zone.zone.tab);
+    if (zone.zone.tab) this.callbacks.onTab(zone.zone.tab);
+    else this.callbacks.onZone?.(zone.zone);
     return true;
   }
 
   private zoneAt(x: number, y: number): LiveZone | null {
     for (const z of this.zones) {
       const zz = z.zone;
+      if (zz.interactive === false) continue;
       if (x >= zz.x && x <= zz.x + zz.w && y >= zz.y && y <= zz.y + zz.h) return z;
     }
     return null;
@@ -749,7 +861,7 @@ export class InteriorRenderer {
     if (!text) {
       for (const f of this.figures) {
         if (Math.hypot(f.x - t.x, f.y - t.y) < 0.45) {
-          text = `${f.fig.name} · ${FIGURE_LABELS[f.fig.role]}${f.fig.morale !== undefined ? ` · Moral ${Math.round(f.fig.morale)}` : ''}`;
+          text = `${f.fig.name} · ${FIGURE_LABELS[f.fig.role]}${f.fig.morale !== undefined ? ` · Moral ${Math.round(f.fig.morale)}` : ''}${f.fig.note ? ` · ${f.fig.note}` : ''}`;
           break;
         }
       }
@@ -761,7 +873,7 @@ export class InteriorRenderer {
       this.hoverZone = zone;
     }
     if (this.canvas) this.canvas.style.cursor = zone ? 'pointer' : 'default';
-    if (!text && zone) text = `${zone.zone.label}: ${zone.zone.status} · Klick öffnet den Reiter`;
+    if (!text && zone) text = `${zone.zone.label}: ${zone.zone.status} · ${zone.zone.tab ? 'Klick öffnet den Reiter' : 'Klick zeigt Details'}`;
     if (text) {
       this.tooltipText.text = text;
       this.tooltipBg.clear();

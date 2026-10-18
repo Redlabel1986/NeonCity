@@ -23,6 +23,7 @@ export function CityCanvas() {
         useGameStore.getState().bumpStructure();
       },
       onInteriorTab: (tab) => useGameStore.getState().setDashboardTab(tab),
+      onInteriorZone: (zone) => useGameStore.getState().showInteriorZone(zone),
     });
     let cancelled = false;
     void renderer.init(host, { effects: store.settings.effects, reducedMotion: store.settings.reducedMotion, traffic: store.settings.traffic }).then(() => {

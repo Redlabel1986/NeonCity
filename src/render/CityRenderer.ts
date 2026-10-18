@@ -8,12 +8,13 @@
 
 import { Application, Assets, Container, Graphics, Sprite, Text, type Texture } from 'pixi.js';
 import { loadSpriteCatalog, pickCitySprite, SPRITE_BASE, type SpriteCatalog } from './spriteCatalog';
+import { isResidential } from '../sim/systems/property';
 import { regionOfArchetype, type RegionId } from '../sim/data/regions';
 import { ArtCache, roadLamp, SEED_VARIANTS, type ArtStyle, type BuildingArtKey, type GeneratedTexture } from './art';
 import { TrafficLayer } from './traffic';
 import { WeatherLayer } from './weather';
 import { InteriorRenderer } from './interior/InteriorRenderer';
-import type { DashboardTab } from './interior/layouts';
+import type { DashboardTab, Zone } from './interior/layouts';
 import { depthOf, HALF_H, HALF_W, isoToScreen, screenToTile, TILE_H } from './iso';
 import type { Building, Facing, GameState } from '../sim/state';
 import { TileKind } from '../sim/world/grid';
@@ -29,6 +30,7 @@ export interface RendererCallbacks {
   onMapChange?: (region: RegionId) => void;
   /** A zone inside the interior view was clicked. */
   onInteriorTab?: (tab: DashboardTab) => void;
+  onInteriorZone?: (zone: Zone) => void;
 }
 
 export interface RenderSettings {
@@ -111,7 +113,7 @@ export class CityRenderer {
   private readonly traffic = new TrafficLayer();
   private readonly weather = new WeatherLayer();
   /** Interior view layer (screen space, above world and weather). */
-  readonly interior = new InteriorRenderer({ onTab: (tab) => this.callbacks.onInteriorTab?.(tab) });
+  readonly interior = new InteriorRenderer({ onTab: (tab) => this.callbacks.onInteriorTab?.(tab), onZone: (zone) => this.callbacks.onInteriorZone?.(zone) });
   private weatherKind: 'clear' | 'rain' | 'fog' | 'storm' = 'clear';
   private weatherIntensity = 0;
   private trafficDensity = 0.5;
@@ -362,7 +364,7 @@ export class CityRenderer {
     if (!this.sprites || b.owner !== 'city' || b.defId !== 'city') return null;
     const district = state.districts[b.districtId];
     if (!district) return null;
-    return pickCitySprite(this.sprites, regionOfArchetype(district.archetype), b.w, b.h, b.facing, b.variant);
+    return pickCitySprite(this.sprites, regionOfArchetype(district.archetype), b.w, b.h, b.facing, b.variant, isResidential(b));
   }
 
   /** Re-adds every city building whose sprite is ready. */
@@ -381,6 +383,18 @@ export class CityRenderer {
   /** Name of the pre-rendered building a city building shows, if any. */
   spriteNameFor(id: number): string | null {
     return this.spriteNames.get(id) ?? null;
+  }
+
+  /**
+   * Catalogue id of the pre-rendered building a city lot stands for (also
+   * after the player bought it); null before the catalogue has loaded or
+   * when no sprite fits the footprint.
+   */
+  spriteIdFor(state: GameState, b: Building): string | null {
+    if (!this.sprites || b.defId !== 'city') return null;
+    const district = state.districts[b.districtId];
+    if (!district) return null;
+    return pickCitySprite(this.sprites, regionOfArchetype(district.archetype), b.w, b.h, b.facing, b.variant, isResidential(b))?.entry.id ?? null;
   }
 
   /** Dims the ground of districts the player may not use yet and marks their labels. */

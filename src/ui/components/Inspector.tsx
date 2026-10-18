@@ -17,6 +17,7 @@ import { quotePlacement } from '../../sim/systems/construction';
 import { credits, duration, integer, percent, signedCredits } from '../format';
 import { tickToDate } from '../../sim/core/clock';
 import type { Building } from '../../sim/state';
+import { hasCityInterior } from '../../render/interior/cityLayouts';
 
 export function Inspector() {
   const state = useSimState();
@@ -82,6 +83,7 @@ function BuildingDetails({ b }: { b: Building }) {
   const [renaming, setRenaming] = useState<string | null>(null);
   const openDashboard = useGameStore((s) => s.openDashboard);
   const setDashboardTab = useGameStore((s) => s.setDashboardTab);
+  const enterInterior = useGameStore((s) => s.enterInterior);
   if (!state) return null;
   const district = state.districts[b.districtId]!;
   const arch = DISTRICT_ARCHETYPES[district.archetype];
@@ -141,6 +143,11 @@ function BuildingDetails({ b }: { b: Building }) {
           }}
         >
           Entwicklungsbaum öffnen
+        </button>
+      )}
+      {!b.business && b.status === 'operational' && hasCityInterior(session.renderer?.spriteIdFor(state, b)) && (
+        <button type="button" className="btn mt-3 w-full" onClick={() => enterInterior(b.id)} data-testid="enter-city-interior">
+          Innenansicht betreten
         </button>
       )}
       {!isPlayer && !otherOwner && <PurchaseOffer b={b} />}

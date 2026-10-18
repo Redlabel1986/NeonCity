@@ -71,6 +71,8 @@ Gebäude werden um `BUILDING_INSET` (0,14 Felder) in ihre Grundfläche eingerüc
 
 `render/interior/layouts.ts` beschreibt den Innenraum eines Betriebs als Daten (Zonen mit Dashboard-Reiter, Einrichtung mit Füllstand, Figuren je Mitarbeiter und Gast) und ist ohne Pixi testbar; `InteriorRenderer` zeichnet die Szene als Ebene in derselben Pixi-Anwendung wie die Stadt (`CityRenderer.interior`). Eine zweite Pixi-Anwendung ist bewusst vermieden: Pixi 8 teilt interne Pools zwischen Anwendungen, und das Zerstören der zweiten beschädigte die erste. Während die Innenansicht aktiv ist, leitet der CityRenderer Zeigereingaben an sie weiter und friert Kamera und Tasten der Karte ein; `flyTo` animiert den Flug hinein und zurück.
 
+Stadtgebäude nutzen denselben Weg: `render/interior/cityCatalog.ts` ist aus dem Innenansichten-Katalog erzeugt (Archetyp, Ansichtstyp, benannte Zonen je Sprite-ID), `render/interior/cityLayouts.ts` richtet die Zonen je Archetyp mit eigenen Raumrezepten ein und setzt die Bürger hinein, deren `homeBuildingId` oder `workBuildingId` auf das Gebäude zeigt und die gerade dort sind. Zonen ohne Dashboard-Reiter melden Klicks über `onZone`; die UI zeigt ihre `details`. `CityRenderer.spriteIdFor` liefert die Sprite-ID unabhängig vom Eigentümer, damit auch gekaufte Gebäude ihre Innenansicht behalten. Die Möbel der Stadtgebäude zeichnet `render/interior/interiorDraw.ts`.
+
 `render/traffic.ts` baut Fahrzeuge als isometrische Körper für die x-Achse (vorwärts/rückwärts) und spiegelt sie für die y-Achse; Spurversatz hält sie rechts, Richtungswechsel tauschen Textur und Lichtsprite.
 
 ### Persistenz

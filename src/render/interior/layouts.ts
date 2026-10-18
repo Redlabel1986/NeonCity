@@ -17,6 +17,7 @@ import { stockOf, storageCapacity, totalUnits } from '../../sim/systems/inventor
 import { hotelRooms } from '../../sim/systems/hotel';
 import { ROLE_LABELS } from '../../sim/systems/staff';
 import { tickToDate } from '../../sim/core/clock';
+import { cityInteriorScene } from './cityLayouts';
 
 export type DashboardTab = 'overview' | 'menu' | 'supply' | 'staff' | 'upgrades' | 'evolution';
 
@@ -46,7 +47,78 @@ export type PropKind =
   | 'locker'
   | 'sink'
   | 'filter'
-  | 'mat';
+  | 'mat'
+  | 'awning'
+  | 'sack'
+  | 'espresso'
+  | 'display'
+  | 'oven'
+  | 'meetingtable'
+  | 'bed'
+  | 'scanner'
+  | 'lamp'
+  | 'tv'
+  | 'bathtub'
+  | 'toilet'
+  | 'mailbox'
+  | 'washer'
+  | 'pipes'
+  | 'server'
+  | 'console'
+  | 'tank'
+  | 'pump'
+  | 'screenwall'
+  | 'generator'
+  | 'toolwall'
+  | 'conveyor'
+  | 'forklift'
+  | 'labbench'
+  | 'animal'
+  | 'crate'
+  | 'tractor'
+  | 'bookshelf'
+  | 'container'
+  | 'press'
+  | 'scale'
+  | 'flowerstand'
+  | 'bike'
+  | 'lanes'
+  | 'kiosk'
+  | 'firetruck'
+  | 'bunk'
+  | 'fuelpump'
+  | 'turnstile'
+  | 'fence'
+  | 'flag'
+  | 'bars'
+  | 'seats'
+  | 'popcorn'
+  | 'stage'
+  | 'pedestal'
+  | 'treadmill'
+  | 'weights'
+  | 'pitch'
+  | 'goal'
+  | 'tracks'
+  | 'escalator'
+  | 'shopfront'
+  | 'crane'
+  | 'hull'
+  | 'welder'
+  | 'pool'
+  | 'plantbed'
+  | 'cage'
+  | 'vaultdoor'
+  | 'shuttle'
+  | 'turbine'
+  | 'solarpanel'
+  | 'tree'
+  | 'swing'
+  | 'barrel';
+
+export type FloorPattern = 'planks' | 'tiles' | 'concrete' | 'carpet' | 'terrazzo' | 'metal' | 'asphalt' | 'grass' | 'soil' | 'straw' | 'rubber';
+
+export type WallStyle = 'brick' | 'plaster' | 'glass' | 'metal' | 'wood';
 
 export interface Prop {
   kind: PropKind;
@@ -58,9 +130,12 @@ export interface Prop {
   active?: boolean;
   color?: number;
   label?: string;
+  /** Size in tiles for props that stretch (rows of seats, pitches, conveyors). */
+  w?: number;
+  h?: number;
 }
 
-export type FigureRole = EmployeeRole | 'guest' | 'vip' | 'customer';
+export type FigureRole = EmployeeRole | 'guest' | 'vip' | 'customer' | 'resident';
 
 export interface Figure {
   role: FigureRole;
@@ -71,6 +146,10 @@ export interface Figure {
   wander: number;
   name: string;
   morale?: number;
+  /** Lying in bed (asleep). */
+  lying?: boolean;
+  /** Extra tooltip text, e.g. what the citizen is doing. */
+  note?: string;
 }
 
 export interface Zone {
@@ -79,10 +158,15 @@ export interface Zone {
   y: number;
   w: number;
   h: number;
-  tab: DashboardTab;
+  /** Dashboard tab a click opens (player businesses); without one a click shows `details`. */
+  tab?: DashboardTab;
   color: number;
   /** Short live status shown under the label. */
   status: string;
+  /** Lines for the detail card (city buildings). */
+  details?: string[];
+  /** False: label only, not clickable (catalogue zones marked non-interactive). */
+  interactive?: boolean;
 }
 
 export interface InteriorScene {
@@ -100,6 +184,14 @@ export interface InteriorScene {
   figures: Figure[];
   /** Hygiene / cleanliness / condition 0..1 (floor dirt overlay). */
   cleanliness: number;
+  floorPattern?: FloorPattern;
+  wallStyle?: WallStyle;
+  /** No walls (yards, squares, technical objects). */
+  openAir?: boolean;
+  /** Yellow-black safety markings along the floor edge. */
+  hazard?: boolean;
+  /** Region whose light mood the room uses. */
+  lighting?: string;
 }
 
 const ACCENT = { gastronomy: 0xff2bd6, hotel: 0x19e6ff, transport: 0xffb020, retail: 0x8cff3a, security: 0xff3a5a, lab: 0x8cff3a, industry: 0xff8a1f, bank: 0xffb020 } as const;
@@ -134,10 +226,14 @@ function base(b: Building, kind: keyof typeof ACCENT, width: number, height: num
   };
 }
 
-/** Builds the scene for any player business; null for buildings without one or still under construction. */
-export function buildInteriorScene(b: Building, state: GameState): InteriorScene | null {
+/**
+ * Builds the scene for a player business, or for a city building with a
+ * catalogued interior (pass the id of the sprite it shows); null otherwise.
+ */
+export function buildInteriorScene(b: Building, state: GameState, spriteId?: string | null): InteriorScene | null {
   const biz = b.business;
-  if (!biz || b.status !== 'operational') return null;
+  if (!biz) return b.status === 'operational' ? cityInteriorScene(b, state, spriteId) : null;
+  if (b.status !== 'operational') return null;
   switch (biz.kind) {
     case 'gastronomy':
       return gastronomyScene(b, biz, state);
@@ -509,4 +605,5 @@ export const FIGURE_LABELS: Record<FigureRole, string> = {
   guest: 'Gast',
   vip: 'VIP-Gast',
   customer: 'Kunde',
+  resident: 'Bewohner',
 };
