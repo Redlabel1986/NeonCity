@@ -1,0 +1,1657 @@
+{
+ "source": "neon_dynasty_complete_v2.zip (Gebäudeliste nach den Postern)",
+ "buildings": [
+  {
+   "id": "greenhaven.strassenstand",
+   "region": "greenhaven",
+   "name": "Straßenstand",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "greenhaven.imbissstand",
+   "region": "greenhaven",
+   "name": "Imbissstand",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "greenhaven.kiosk",
+   "region": "greenhaven",
+   "name": "Kiosk",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "greenhaven.kleine_baeckerei",
+   "region": "greenhaven",
+   "name": "Kleine Bäckerei",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "greenhaven.caf_stand",
+   "region": "greenhaven",
+   "name": "Café-Stand",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "greenhaven.blumenladen",
+   "region": "greenhaven",
+   "name": "Blumenladen",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "greenhaven.gemuesestand",
+   "region": "greenhaven",
+   "name": "Gemüsestand",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "greenhaven.fahrradwerkstatt",
+   "region": "greenhaven",
+   "name": "Fahrradwerkstatt",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "greenhaven.ladestation",
+   "region": "greenhaven",
+   "name": "Ladestation",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "greenhaven.wasserturm_klein",
+   "region": "greenhaven",
+   "name": "Wasserturm (klein)",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "greenhaven.windrad_klein",
+   "region": "greenhaven",
+   "name": "Windrad (klein)",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "greenhaven.solarturm_klein",
+   "region": "greenhaven",
+   "name": "Solarturm (klein)",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "greenhaven.brunnen",
+   "region": "greenhaven",
+   "name": "Brunnen",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "greenhaven.baumgruppe",
+   "region": "greenhaven",
+   "name": "Baumgruppe",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "greenhaven.wohnhaus_klein",
+   "region": "greenhaven",
+   "name": "Wohnhaus (klein)",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "greenhaven.reihenhaus",
+   "region": "greenhaven",
+   "name": "Reihenhaus",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "greenhaven.dorfladen",
+   "region": "greenhaven",
+   "name": "Dorfladen",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "greenhaven.restaurant_klein",
+   "region": "greenhaven",
+   "name": "Restaurant (klein)",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "greenhaven.werkstatt",
+   "region": "greenhaven",
+   "name": "Werkstatt",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "greenhaven.tierarztpraxis",
+   "region": "greenhaven",
+   "name": "Tierarztpraxis",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "greenhaven.bushaltestelle",
+   "region": "greenhaven",
+   "name": "Bushaltestelle",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "greenhaven.fahrradverleih",
+   "region": "greenhaven",
+   "name": "Fahrradverleih",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "greenhaven.lager_klein",
+   "region": "greenhaven",
+   "name": "Lager (klein)",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "greenhaven.gewaechshaus_klein",
+   "region": "greenhaven",
+   "name": "Gewächshaus (klein)",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "greenhaven.solaranlage_lang",
+   "region": "greenhaven",
+   "name": "Solaranlage (lang)",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "greenhaven.parkplatz_klein",
+   "region": "greenhaven",
+   "name": "Parkplatz (klein)",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "greenhaven.einfamilienhaus",
+   "region": "greenhaven",
+   "name": "Einfamilienhaus",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "greenhaven.landgasthof",
+   "region": "greenhaven",
+   "name": "Landgasthof",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "greenhaven.baeckerei",
+   "region": "greenhaven",
+   "name": "Bäckerei",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "greenhaven.restaurant",
+   "region": "greenhaven",
+   "name": "Restaurant",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "greenhaven.pension_klein",
+   "region": "greenhaven",
+   "name": "Pension (klein)",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "greenhaven.klinik_klein",
+   "region": "greenhaven",
+   "name": "Klinik (klein)",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "greenhaven.feuerwehr",
+   "region": "greenhaven",
+   "name": "Feuerwehr",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "greenhaven.polizeiposten",
+   "region": "greenhaven",
+   "name": "Polizeiposten",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "greenhaven.supermarkt_klein",
+   "region": "greenhaven",
+   "name": "Supermarkt (klein)",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "greenhaven.kino_klein",
+   "region": "greenhaven",
+   "name": "Kino (klein)",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "greenhaven.fitnessstudio",
+   "region": "greenhaven",
+   "name": "Fitnessstudio",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "greenhaven.recyclinghof_klein",
+   "region": "greenhaven",
+   "name": "Recyclinghof (klein)",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "greenhaven.schule",
+   "region": "greenhaven",
+   "name": "Schule",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "greenhaven.hotel",
+   "region": "greenhaven",
+   "name": "Hotel",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "greenhaven.krankenhaus",
+   "region": "greenhaven",
+   "name": "Krankenhaus",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "greenhaven.einkaufszentrum_klein",
+   "region": "greenhaven",
+   "name": "Einkaufszentrum (klein)",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "greenhaven.logistikzentrum",
+   "region": "greenhaven",
+   "name": "Logistikzentrum",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "greenhaven.hochschule_forschungszentrum",
+   "region": "greenhaven",
+   "name": "Hochschule / Forschungszentrum",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "greenhaven.energiezentrale_wind_solar",
+   "region": "greenhaven",
+   "name": "Energiezentrale (Wind/Solar)",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "greenhaven.klaeranlage",
+   "region": "greenhaven",
+   "name": "Kläranlage",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "greenhaven.wasserwerk",
+   "region": "greenhaven",
+   "name": "Wasserwerk",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "greenhaven.bauhof",
+   "region": "greenhaven",
+   "name": "Bauhof",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "greenhaven.grosser_bauernhof",
+   "region": "greenhaven",
+   "name": "Großer Bauernhof",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "greenhaven.vertikale_farm",
+   "region": "greenhaven",
+   "name": "Vertikale Farm",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "greenhaven.landhotel_gross",
+   "region": "greenhaven",
+   "name": "Landhotel (groß)",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "greenhaven.industriehof_landwirtschaft",
+   "region": "greenhaven",
+   "name": "Industriehof (Landwirtschaft)",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "greenhaven.grosses_einkaufszentrum",
+   "region": "greenhaven",
+   "name": "Großes Einkaufszentrum",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "greenhaven.universitaet_campus_modul",
+   "region": "greenhaven",
+   "name": "Universität (Campus-Modul)",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "greenhaven.forschungspark_natur_biotech",
+   "region": "greenhaven",
+   "name": "Forschungspark (Natur & Biotech)",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "greenhaven.regionaler_bahnhof",
+   "region": "greenhaven",
+   "name": "Regionaler Bahnhof",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "greenhaven.tourismuszentrum_kurpark",
+   "region": "greenhaven",
+   "name": "Tourismuszentrum / Kurpark",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "greenhaven.messegelaende_regional",
+   "region": "greenhaven",
+   "name": "Messegelände (regional)",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "silverbrook.einfamilienhaus_klein",
+   "region": "silverbrook",
+   "name": "Einfamilienhaus (klein)",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "silverbrook.gartenhaus",
+   "region": "silverbrook",
+   "name": "Gartenhaus",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "silverbrook.briefkasten",
+   "region": "silverbrook",
+   "name": "Briefkasten",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "silverbrook.bushaltestelle",
+   "region": "silverbrook",
+   "name": "Bushaltestelle",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "silverbrook.kiosk",
+   "region": "silverbrook",
+   "name": "Kiosk",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "silverbrook.kleine_baeckerei",
+   "region": "silverbrook",
+   "name": "Kleine Bäckerei",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "silverbrook.caf_stand",
+   "region": "silverbrook",
+   "name": "Café-Stand",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "silverbrook.blumenladen",
+   "region": "silverbrook",
+   "name": "Blumenladen",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "silverbrook.gemuesestand",
+   "region": "silverbrook",
+   "name": "Gemüsestand",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "silverbrook.spielplatz_klein",
+   "region": "silverbrook",
+   "name": "Spielplatz (klein)",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "silverbrook.brunnen",
+   "region": "silverbrook",
+   "name": "Brunnen",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "silverbrook.baumgruppe",
+   "region": "silverbrook",
+   "name": "Baumgruppe",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "silverbrook.reihenhaus",
+   "region": "silverbrook",
+   "name": "Reihenhaus",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "silverbrook.doppelhaus",
+   "region": "silverbrook",
+   "name": "Doppelhaus",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "silverbrook.dorfladen",
+   "region": "silverbrook",
+   "name": "Dorfladen",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "silverbrook.restaurant_klein",
+   "region": "silverbrook",
+   "name": "Restaurant (klein)",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "silverbrook.werkstatt",
+   "region": "silverbrook",
+   "name": "Werkstatt",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "silverbrook.tierarztpraxis",
+   "region": "silverbrook",
+   "name": "Tierarztpraxis",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "silverbrook.fahrradverleih",
+   "region": "silverbrook",
+   "name": "Fahrradverleih",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "silverbrook.lager_klein",
+   "region": "silverbrook",
+   "name": "Lager (klein)",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "silverbrook.gewaechshaus_lang",
+   "region": "silverbrook",
+   "name": "Gewächshaus (lang)",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "silverbrook.solaranlage_lang",
+   "region": "silverbrook",
+   "name": "Solaranlage (lang)",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "silverbrook.parkplatz_klein",
+   "region": "silverbrook",
+   "name": "Parkplatz (klein)",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "silverbrook.einfamilienhaus",
+   "region": "silverbrook",
+   "name": "Einfamilienhaus",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "silverbrook.landgasthof",
+   "region": "silverbrook",
+   "name": "Landgasthof",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "silverbrook.baeckerei",
+   "region": "silverbrook",
+   "name": "Bäckerei",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "silverbrook.restaurant",
+   "region": "silverbrook",
+   "name": "Restaurant",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "silverbrook.pension_klein",
+   "region": "silverbrook",
+   "name": "Pension (klein)",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "silverbrook.klinik_klein",
+   "region": "silverbrook",
+   "name": "Klinik (klein)",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "silverbrook.feuerwehr",
+   "region": "silverbrook",
+   "name": "Feuerwehr",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "silverbrook.polizeiposten",
+   "region": "silverbrook",
+   "name": "Polizeiposten",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "silverbrook.supermarkt_klein",
+   "region": "silverbrook",
+   "name": "Supermarkt (klein)",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "silverbrook.fitnessstudio",
+   "region": "silverbrook",
+   "name": "Fitnessstudio",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "silverbrook.recyclinghof_klein",
+   "region": "silverbrook",
+   "name": "Recyclinghof (klein)",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "silverbrook.schule",
+   "region": "silverbrook",
+   "name": "Schule",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "silverbrook.hotel",
+   "region": "silverbrook",
+   "name": "Hotel",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "silverbrook.krankenhaus",
+   "region": "silverbrook",
+   "name": "Krankenhaus",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "silverbrook.einkaufszentrum_klein",
+   "region": "silverbrook",
+   "name": "Einkaufszentrum (klein)",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "silverbrook.logistikzentrum",
+   "region": "silverbrook",
+   "name": "Logistikzentrum",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "silverbrook.hochschule_forschungszentrum",
+   "region": "silverbrook",
+   "name": "Hochschule / Forschungszentrum",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "silverbrook.energiezentrale_wind_solar",
+   "region": "silverbrook",
+   "name": "Energiezentrale (Wind/Solar)",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "silverbrook.klaeranlage",
+   "region": "silverbrook",
+   "name": "Kläranlage",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "silverbrook.bahnhof",
+   "region": "silverbrook",
+   "name": "Bahnhof",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "silverbrook.grosser_bauernhof",
+   "region": "silverbrook",
+   "name": "Großer Bauernhof",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "silverbrook.vertikale_farm",
+   "region": "silverbrook",
+   "name": "Vertikale Farm",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "silverbrook.landhotel_gross",
+   "region": "silverbrook",
+   "name": "Landhotel (groß)",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "silverbrook.industriehof_landwirtschaft",
+   "region": "silverbrook",
+   "name": "Industriehof (Landwirtschaft)",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "silverbrook.grosses_einkaufszentrum",
+   "region": "silverbrook",
+   "name": "Großes Einkaufszentrum",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "silverbrook.universitaet_campus_modul",
+   "region": "silverbrook",
+   "name": "Universität (Campus-Modul)",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "silverbrook.forschungspark_natur_biotech",
+   "region": "silverbrook",
+   "name": "Forschungspark (Natur & Biotech)",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "silverbrook.regionaler_bahnhof",
+   "region": "silverbrook",
+   "name": "Regionaler Bahnhof",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "silverbrook.tourismuszentrum_kurpark",
+   "region": "silverbrook",
+   "name": "Tourismuszentrum / Kurpark",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "neon_central.wohnhaus_city",
+   "region": "neon_central",
+   "name": "Wohnhaus (City)",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "neon_central.kleines_buero",
+   "region": "neon_central",
+   "name": "Kleines Büro",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "neon_central.caf",
+   "region": "neon_central",
+   "name": "Café",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "neon_central.bar",
+   "region": "neon_central",
+   "name": "Bar",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "neon_central.food_stand",
+   "region": "neon_central",
+   "name": "Food-Stand",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "neon_central.shop_einzelhandel",
+   "region": "neon_central",
+   "name": "Shop (Einzelhandel)",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "neon_central.kiosk_digital",
+   "region": "neon_central",
+   "name": "Kiosk (Digital)",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "neon_central.werbetafel",
+   "region": "neon_central",
+   "name": "Werbetafel",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "neon_central.ladestation_e_auto",
+   "region": "neon_central",
+   "name": "Ladestation (E-Auto)",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "neon_central.u_bahn_zugang",
+   "region": "neon_central",
+   "name": "U-Bahn-Zugang",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "neon_central.strassenbaum",
+   "region": "neon_central",
+   "name": "Straßenbaum",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "neon_central.sitzbank",
+   "region": "neon_central",
+   "name": "Sitzbank",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "neon_central.platzbrunnen",
+   "region": "neon_central",
+   "name": "Platzbrunnen",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "neon_central.skulptur",
+   "region": "neon_central",
+   "name": "Skulptur",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "neon_central.gruenflaeche",
+   "region": "neon_central",
+   "name": "Grünfläche",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "neon_central.apartmenthaus",
+   "region": "neon_central",
+   "name": "Apartmenthaus",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "neon_central.buerogebaeude_klein",
+   "region": "neon_central",
+   "name": "Bürogebäude (klein)",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "neon_central.restaurant",
+   "region": "neon_central",
+   "name": "Restaurant",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "neon_central.coworking_space",
+   "region": "neon_central",
+   "name": "Coworking-Space",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "neon_central.boutique",
+   "region": "neon_central",
+   "name": "Boutique",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "neon_central.elektronikmarkt",
+   "region": "neon_central",
+   "name": "Elektronikmarkt",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "neon_central.apotheke",
+   "region": "neon_central",
+   "name": "Apotheke",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "neon_central.fitnessstudio",
+   "region": "neon_central",
+   "name": "Fitnessstudio",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "neon_central.werkstatt",
+   "region": "neon_central",
+   "name": "Werkstatt",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "neon_central.kunstgalerie",
+   "region": "neon_central",
+   "name": "Kunstgalerie",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "neon_central.ladenpassage",
+   "region": "neon_central",
+   "name": "Ladenpassage",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "neon_central.parkhaus_lang",
+   "region": "neon_central",
+   "name": "Parkhaus (lang)",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "neon_central.busbahnhof",
+   "region": "neon_central",
+   "name": "Busbahnhof",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "neon_central.wohn_und_geschaeftshaus",
+   "region": "neon_central",
+   "name": "Wohn- und Geschäftshaus",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "neon_central.hotel_mittel",
+   "region": "neon_central",
+   "name": "Hotel (mittel)",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "neon_central.buerokomplex",
+   "region": "neon_central",
+   "name": "Bürokomplex",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "neon_central.einkaufszentrum_mittel",
+   "region": "neon_central",
+   "name": "Einkaufszentrum (mittel)",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "neon_central.klinik_mittel",
+   "region": "neon_central",
+   "name": "Klinik (mittel)",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "neon_central.polizeistation",
+   "region": "neon_central",
+   "name": "Polizeistation",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "neon_central.feuerwache_city",
+   "region": "neon_central",
+   "name": "Feuerwache (City)",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "neon_central.bank",
+   "region": "neon_central",
+   "name": "Bank",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "neon_central.kino_mittel",
+   "region": "neon_central",
+   "name": "Kino (mittel)",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "neon_central.theater",
+   "region": "neon_central",
+   "name": "Theater",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "neon_central.konferenzzentrum",
+   "region": "neon_central",
+   "name": "Konferenzzentrum",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "neon_central.medienzentrum",
+   "region": "neon_central",
+   "name": "Medienzentrum",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "neon_central.datenzentrum",
+   "region": "neon_central",
+   "name": "Datenzentrum",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "neon_central.hochhaus_wohnen",
+   "region": "neon_central",
+   "name": "Hochhaus (Wohnen)",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "neon_central.bueroturm",
+   "region": "neon_central",
+   "name": "Büroturm",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "neon_central.einkaufszentrum_gross",
+   "region": "neon_central",
+   "name": "Einkaufszentrum (groß)",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "neon_central.klinikum_gross",
+   "region": "neon_central",
+   "name": "Klinikum (groß)",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "neon_central.forschungszentrum_tech",
+   "region": "neon_central",
+   "name": "Forschungszentrum (Tech)",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "neon_central.messezentrum",
+   "region": "neon_central",
+   "name": "Messezentrum",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "neon_central.kulturzentrum",
+   "region": "neon_central",
+   "name": "Kulturzentrum",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "neon_central.sportarena",
+   "region": "neon_central",
+   "name": "Sportarena",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "neon_central.rathaus",
+   "region": "neon_central",
+   "name": "Rathaus",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "neon_central.fernsehturm_medien",
+   "region": "neon_central",
+   "name": "Fernsehturm / Medien",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "neon_central.finanzzentrum",
+   "region": "neon_central",
+   "name": "Finanzzentrum",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "neon_central.zentralbahnhof",
+   "region": "neon_central",
+   "name": "Zentralbahnhof",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "neon_central.universitaet_city",
+   "region": "neon_central",
+   "name": "Universität (City)",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "neon_central.finanzdistrikt_hochhauskomplex",
+   "region": "neon_central",
+   "name": "Finanzdistrikt (Hochhauskomplex)",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "neon_central.zentralbahnhof_gross",
+   "region": "neon_central",
+   "name": "Zentralbahnhof (groß)",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "neon_central.universitaet_campus_modul",
+   "region": "neon_central",
+   "name": "Universität (Campus-Modul)",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "neon_central.forschungspark_ki_tech",
+   "region": "neon_central",
+   "name": "Forschungspark (KI & Tech)",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "neon_central.sportkomplex_stadion",
+   "region": "neon_central",
+   "name": "Sportkomplex (Stadion)",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "neon_central.mediencampus",
+   "region": "neon_central",
+   "name": "Mediencampus",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "neon_central.regierungsviertel",
+   "region": "neon_central",
+   "name": "Regierungsviertel",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "neon_central.messegelaende_city",
+   "region": "neon_central",
+   "name": "Messegelände (City)",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "neon_central.raumhafen_skyport",
+   "region": "neon_central",
+   "name": "Raumhafen / Skyport",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "neon_central.datenzentrum_gross",
+   "region": "neon_central",
+   "name": "Datenzentrum (groß)",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "neon_central.kongresszentrum",
+   "region": "neon_central",
+   "name": "Kongresszentrum",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "neon_central.opernhaus",
+   "region": "neon_central",
+   "name": "Opernhaus",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "neon_central.stadion_city",
+   "region": "neon_central",
+   "name": "Stadion (City)",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "nova_eclipse.container_einzeln",
+   "region": "nova_eclipse",
+   "name": "Container (einzeln)",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "nova_eclipse.lagerkiste",
+   "region": "nova_eclipse",
+   "name": "Lagerkiste",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "nova_eclipse.hafenstand",
+   "region": "nova_eclipse",
+   "name": "Hafenstand",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "nova_eclipse.werkzeugcontainer",
+   "region": "nova_eclipse",
+   "name": "Werkzeugcontainer",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "nova_eclipse.wachhaeuschen",
+   "region": "nova_eclipse",
+   "name": "Wachhäuschen",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "nova_eclipse.solarmast",
+   "region": "nova_eclipse",
+   "name": "Solarmast",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "nova_eclipse.flutlichtmast",
+   "region": "nova_eclipse",
+   "name": "Flutlichtmast",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "nova_eclipse.kran_klein",
+   "region": "nova_eclipse",
+   "name": "Kran (klein)",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "nova_eclipse.treibstoffstation",
+   "region": "nova_eclipse",
+   "name": "Treibstoffstation",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "nova_eclipse.wasserpumpe",
+   "region": "nova_eclipse",
+   "name": "Wasserpumpe",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "nova_eclipse.faesser",
+   "region": "nova_eclipse",
+   "name": "Fässer",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "nova_eclipse.palette",
+   "region": "nova_eclipse",
+   "name": "Palette",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "nova_eclipse.materialstapel",
+   "region": "nova_eclipse",
+   "name": "Materialstapel",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "nova_eclipse.schrott",
+   "region": "nova_eclipse",
+   "name": "Schrott",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "nova_eclipse.zaun",
+   "region": "nova_eclipse",
+   "name": "Zaun",
+   "w": 1,
+   "h": 1
+  },
+  {
+   "id": "nova_eclipse.lagerhalle_klein",
+   "region": "nova_eclipse",
+   "name": "Lagerhalle (klein)",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "nova_eclipse.werkstatt",
+   "region": "nova_eclipse",
+   "name": "Werkstatt",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "nova_eclipse.kuehlhaus",
+   "region": "nova_eclipse",
+   "name": "Kühlhaus",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "nova_eclipse.logistikbuero",
+   "region": "nova_eclipse",
+   "name": "Logistikbüro",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "nova_eclipse.frachtbuero",
+   "region": "nova_eclipse",
+   "name": "Frachtbüro",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "nova_eclipse.zollstation",
+   "region": "nova_eclipse",
+   "name": "Zollstation",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "nova_eclipse.lkw_werkstatt",
+   "region": "nova_eclipse",
+   "name": "Lkw-Werkstatt",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "nova_eclipse.tankstelle_lkw",
+   "region": "nova_eclipse",
+   "name": "Tankstelle (Lkw)",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "nova_eclipse.containerlager_lang",
+   "region": "nova_eclipse",
+   "name": "Containerlager (lang)",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "nova_eclipse.gleisstrecke",
+   "region": "nova_eclipse",
+   "name": "Gleisstrecke",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "nova_eclipse.werftmodul_klein",
+   "region": "nova_eclipse",
+   "name": "Werftmodul (klein)",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "nova_eclipse.hafenmauer",
+   "region": "nova_eclipse",
+   "name": "Hafenmauer",
+   "w": 2,
+   "h": 1
+  },
+  {
+   "id": "nova_eclipse.produktionshalle",
+   "region": "nova_eclipse",
+   "name": "Produktionshalle",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "nova_eclipse.lagerhalle_mittel",
+   "region": "nova_eclipse",
+   "name": "Lagerhalle (mittel)",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "nova_eclipse.speditionszentrum",
+   "region": "nova_eclipse",
+   "name": "Speditionszentrum",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "nova_eclipse.fischverarbeitung",
+   "region": "nova_eclipse",
+   "name": "Fischverarbeitung",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "nova_eclipse.recyclinganlage",
+   "region": "nova_eclipse",
+   "name": "Recyclinganlage",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "nova_eclipse.wasseraufbereitung",
+   "region": "nova_eclipse",
+   "name": "Wasseraufbereitung",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "nova_eclipse.feuerwehr_hafen",
+   "region": "nova_eclipse",
+   "name": "Feuerwehr (Hafen)",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "nova_eclipse.polizeiposten_hafen",
+   "region": "nova_eclipse",
+   "name": "Polizeiposten (Hafen)",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "nova_eclipse.kraftwerk_klein",
+   "region": "nova_eclipse",
+   "name": "Kraftwerk (klein)",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "nova_eclipse.kuehlanlage",
+   "region": "nova_eclipse",
+   "name": "Kühlanlage",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "nova_eclipse.chemielager_klein",
+   "region": "nova_eclipse",
+   "name": "Chemielager (klein)",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "nova_eclipse.containerterminal_klein",
+   "region": "nova_eclipse",
+   "name": "Containerterminal (klein)",
+   "w": 2,
+   "h": 2
+  },
+  {
+   "id": "nova_eclipse.werft",
+   "region": "nova_eclipse",
+   "name": "Werft",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "nova_eclipse.industrieanlage",
+   "region": "nova_eclipse",
+   "name": "Industrieanlage",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "nova_eclipse.kraftwerk_gross",
+   "region": "nova_eclipse",
+   "name": "Kraftwerk (groß)",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "nova_eclipse.oelterminal",
+   "region": "nova_eclipse",
+   "name": "Ölterminal",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "nova_eclipse.schiffbauhalle",
+   "region": "nova_eclipse",
+   "name": "Schiffbauhalle",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "nova_eclipse.logistikzentrum",
+   "region": "nova_eclipse",
+   "name": "Logistikzentrum",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "nova_eclipse.muellverbrennungsanlage",
+   "region": "nova_eclipse",
+   "name": "Müllverbrennungsanlage",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "nova_eclipse.wasserwerk",
+   "region": "nova_eclipse",
+   "name": "Wasserwerk",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "nova_eclipse.hafenkran_gross",
+   "region": "nova_eclipse",
+   "name": "Hafenkran (groß)",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "nova_eclipse.dock_trockendock",
+   "region": "nova_eclipse",
+   "name": "Dock (Trockendock)",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "nova_eclipse.containerterminal_gross",
+   "region": "nova_eclipse",
+   "name": "Containerterminal (groß)",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "nova_eclipse.forschungszentrum_marine",
+   "region": "nova_eclipse",
+   "name": "Forschungszentrum (Marine)",
+   "w": 3,
+   "h": 3
+  },
+  {
+   "id": "nova_eclipse.raffinerie",
+   "region": "nova_eclipse",
+   "name": "Raffinerie",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "nova_eclipse.containerhafen_terminal",
+   "region": "nova_eclipse",
+   "name": "Containerhafen (Terminal)",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "nova_eclipse.schiffswerft_gross",
+   "region": "nova_eclipse",
+   "name": "Schiffswerft (groß)",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "nova_eclipse.hafenverwaltung",
+   "region": "nova_eclipse",
+   "name": "Hafenverwaltung",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "nova_eclipse.energiezentrale_offshore",
+   "region": "nova_eclipse",
+   "name": "Energiezentrale (Offshore)",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "nova_eclipse.forschungszentrum_marinetech",
+   "region": "nova_eclipse",
+   "name": "Forschungszentrum (MarineTech)",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "nova_eclipse.industriepark_schwerindustrie",
+   "region": "nova_eclipse",
+   "name": "Industriepark (Schwerindustrie)",
+   "w": 4,
+   "h": 4
+  },
+  {
+   "id": "nova_eclipse.flughafen_frachtbereich",
+   "region": "nova_eclipse",
+   "name": "Flughafen (Frachtbereich)",
+   "w": 4,
+   "h": 4
+  }
+ ]
+}

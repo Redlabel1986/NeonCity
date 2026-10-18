@@ -6,7 +6,9 @@
  * labels (district names at macro zoom).
  */
 
-import { Application, Container, Graphics, Sprite, Text } from 'pixi.js';
+import { Application, Assets, Container, Graphics, Sprite, Text, type Texture } from 'pixi.js';
+import { loadSpriteCatalog, pickCitySprite, SPRITE_BASE, type SpriteCatalog } from './spriteCatalog';
+import { regionOfArchetype } from '../sim/data/regions';
 import { ArtCache, roadLamp, SEED_VARIANTS, type ArtStyle, type BuildingArtKey, type GeneratedTexture } from './art';
 import { TrafficLayer } from './traffic';
 import { WeatherLayer } from './weather';
@@ -111,6 +113,11 @@ export class CityRenderer {
   private labelNames: string[] = [];
   /** Increments on every loadWorld, so callers can re-apply per-world state. */
   worldGeneration = 0;
+  /** Pre-rendered building sprites; null until loaded or when unavailable (procedural drawing stays). */
+  private sprites: SpriteCatalog | null = null;
+  private spriteTextures = new Map<string, Texture>();
+  /** Name of the sprite a city building shows (for the inspector). */
+  private spriteNames = new Map<number, string>();
   private groundCull: Cullable[] = [];
   private cullDirty = true;
   private citySize = 0;
@@ -259,6 +266,62 @@ export class CityRenderer {
     this.worldGeneration += 1;
     this.lockedDistricts = new Set();
     this.cullDirty = true;
+    void this.loadSprites(state, this.worldGeneration);
+  }
+
+  /** Loads the catalog and the sprites this world needs, then swaps them in for the procedural city buildings. */
+  private async loadSprites(state: GameState, generation: number): Promise<void> {
+    if (!this.sprites) this.sprites = await loadSpriteCatalog();
+    const catalog = this.sprites;
+    if (!catalog || generation !== this.worldGeneration || this.destroyed) return;
+    const urls = new Set<string>();
+    for (const b of Object.values(state.buildings)) {
+      const pick = this.citySpriteFor(state, b);
+      if (!pick) continue;
+      urls.add(pick.facing.day);
+      if (pick.facing.night) urls.add(pick.facing.night);
+    }
+    const missing = [...urls].filter((u) => !this.spriteTextures.has(u));
+    // Load in small batches so the first sprites appear quickly.
+    for (let i = 0; i < missing.length; i += 40) {
+      const batch = missing.slice(i, i + 40);
+      const loaded = await Promise.all(
+        batch.map((u) =>
+          Assets.load<Texture>({ src: `${SPRITE_BASE}${u}`, data: { resolution: catalog.scale } })
+            .then((t) => [u, t] as const)
+            .catch(() => null),
+        ),
+      );
+      for (const item of loaded) if (item) this.spriteTextures.set(item[0], item[1]);
+      if (generation !== this.worldGeneration || this.destroyed) return;
+      this.refreshCitySprites(state);
+    }
+    this.refreshCitySprites(state);
+  }
+
+  private citySpriteFor(state: GameState, b: Building) {
+    if (!this.sprites || b.owner !== 'city' || b.defId !== 'city') return null;
+    const district = state.districts[b.districtId];
+    if (!district) return null;
+    return pickCitySprite(this.sprites, regionOfArchetype(district.archetype), b.w, b.h, b.facing, b.variant);
+  }
+
+  /** Re-adds every city building whose sprite is ready. */
+  private refreshCitySprites(state: GameState): void {
+    for (const [id, visual] of this.buildings) {
+      const b = state.buildings[id];
+      if (!b || b.owner !== 'city' || this.spriteNames.has(id)) continue;
+      const pick = this.citySpriteFor(state, b);
+      if (!pick || !this.spriteTextures.has(pick.facing.day)) continue;
+      this.removeBuildingVisual(id, visual);
+      this.addBuilding(state, b);
+    }
+    this.cullDirty = true;
+  }
+
+  /** Name of the pre-rendered building a city building shows, if any. */
+  spriteNameFor(id: number): string | null {
+    return this.spriteNames.get(id) ?? null;
   }
 
   /** Dims the ground of districts the player may not use yet and marks their labels. */
@@ -344,6 +407,26 @@ export class CityRenderer {
 
   private addBuilding(state: GameState, b: Building): void {
     if (!this.art) return;
+    const pick = this.citySpriteFor(state, b);
+    const dayTexture = pick ? this.spriteTextures.get(pick.facing.day) : undefined;
+    if (pick && dayTexture) {
+      const dayTex: GeneratedTexture = { texture: dayTexture, ox: pick.facing.ox, oy: pick.facing.oy };
+      const day = this.placeSprite(this.buildingLayer, dayTex, b.x, b.y);
+      day.zIndex = depthOf(b.x, b.y, b.w, b.h);
+      this.shade(day);
+      const cull: Cullable[] = [this.cullEntry(day, b.x, b.y, dayTex)];
+      let night: Sprite | null = null;
+      const nightTexture = pick.facing.night ? this.spriteTextures.get(pick.facing.night) : undefined;
+      if (nightTexture) {
+        const entry = this.placeNight({ texture: nightTexture, ox: pick.facing.ox, oy: pick.facing.oy }, b.x, b.y, day.zIndex + 0.5);
+        cull.push(entry);
+        night = entry.sprite;
+      }
+      this.spriteNames.set(b.id, pick.entry.name);
+      this.buildings.set(b.id, { day, night, status: b.status, stageId: b.stageId, floors: b.floors, cull });
+      return;
+    }
+    this.spriteNames.delete(b.id);
     const key = artKeyFor(state, b);
     const dayTex = this.art.building(key, false);
     const day = this.placeSprite(this.buildingLayer, dayTex, b.x, b.y);

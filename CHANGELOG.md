@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.18.1 – Gebäudegrafiken für alle vier Regionen (2026-10-18)
+
+### Hinzugefügt
+
+- 236 vorgerenderte Gebäude (Liste nach den Asset-Postern: Greenhaven, Silverbrook, Neon Central, Nova Eclipse) in vier Ausrichtungen, je mit Tagbild und Nachtebene, zusammen 1.724 Bilder in `public/sprites` mit `catalog.json`. Erzeugt von `tools/sprites/render_buildings.py` im Raster des Spiels (64 × 32, 11 px je Etage, doppelte Auflösung, Kantenglättung): nur die sichtbaren Wände, Fenster auf beiden Seiten, Satteldächer und Fachwerk im Umland, Ladenfronten mit Markisen und Schildern, Türme mit Lichtleisten, Hallen mit Rolltoren, Fabriken mit Schornsteinen und Tanks, Höfe mit Silo und Feldern, Gewächshäuser, Windräder, Wassertürme, Kräne mit Containern, Schiffe, Stadien. Die Nachtebene enthält nur Leuchtendes; Verdecktes ist ausgeschnitten.
+- Stadtgebäude wählen ein Bild ihrer Region mit passender Grundfläche und Ausrichtung, fest aus der Variante (jeder Client sieht dasselbe). Ohne passendes Bild (z. B. 2×3-Türme) zeichnet das Spiel das Gebäude weiter selbst. Bilder laden paketweise im Hintergrund, die Stadt füllt sich schrittweise. Der Inspektor nennt das Gebäude nach seinem Bild (z. B. „Tierarztpraxis“).
+- Tests: `sprites.test.ts` (Katalog vollständig, Grundflächen je Ausrichtung, Auswahl, Abdeckung einer generierten Stadt über 80 %), `sprites.spec.ts` (Bilder geladen, Abdeckung, Screenshots je Region und Nacht, Inspektorname).
+
+### Behoben
+
+- `src/sim/data/regions.ts` und `evolution.ts` fehlten im Repository, weil die `.gitignore`-Regel `data` auch `src/sim/data` traf; der Vercel-Build brach ab. Die Regel gilt jetzt nur für `/data`.
+
 ## 0.18.0 – Von Greenhaven bis Nova Eclipse: Level, Regionen, Entwicklungsbaum und Banken (2026-10-18)
 
 ### Hinzugefügt

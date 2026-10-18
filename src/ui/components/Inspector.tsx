@@ -93,7 +93,7 @@ function BuildingDetails({ b }: { b: Building }) {
   return (
     <div>
       <Header
-        title={b.label}
+        title={b.owner === 'city' ? (session.renderer?.spriteNameFor(b.id) ?? b.label) : b.label}
         subtitle={`${isPlayer ? (b.business ? stageName(b) : (def?.name ?? 'Eigenes Gebäude')) : otherOwner ? `Gebäude von ${otherOwner}` : 'Stadtgebäude'} · ${district.name}${REGIONS[regionOfDistrict(state, district.id)].name !== district.name ? ` · ${REGIONS[regionOfDistrict(state, district.id)].name}` : ''}`}
         color={isPlayer ? 0xff2bd6 : otherOwner ? 0xffb020 : arch.color}
         onClose={() => selectBuilding(null)}
